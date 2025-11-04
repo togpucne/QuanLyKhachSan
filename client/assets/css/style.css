@@ -1,0 +1,33 @@
+/* Tông màu chủ đạo */
+:root {
+    --primary-color: #F4A261;
+    --secondary-color: #E76F51;
+    --dark-bg: #1B1B1B;
+}
+
+/* Hiệu ứng focus cho form */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 6px rgba(244, 162, 97, 0.6);
+}
+
+/* Hiệu ứng nút bấm */
+.btn:hover {
+    opacity: 0.95;
+    transform: translateY(-2px);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Card hover sang trọng */
+.card {
+    transition: all 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* Tiêu đề nổi bật */
+.card-header h4 {
+    letter-spacing: 0.5px;
+}

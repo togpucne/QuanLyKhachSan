@@ -1,6 +1,6 @@
 <?php
 // VIEW TỰ REQUIRED MODEL VÀ LẤY DỮ LIỆU
-require_once '../model/DichVuModel.php';
+require_once '../../model/DichVuModel.php';
 
 // Tạo instance của Model
 $dichVuModel = new DichVuModel();
@@ -68,7 +68,7 @@ $dsDichVu = $dsDichVu ?? [];
 $loaiDichVu = $loaiDichVu ?? [];
 ?>
 
-<?php include 'layouts/header.php'; ?>
+<?php include '../layouts/header.php'; ?>
 
 <div class="container-fluid">
     <div class="row">
@@ -415,4 +415,4 @@ $(document).ready(function() {
 });
 </script>
 
-<?php include 'layouts/footer.php'; ?>
+<?php include '../layouts/footer.php'; ?>

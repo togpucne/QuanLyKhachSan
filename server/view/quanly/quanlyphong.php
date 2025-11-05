@@ -1,26 +1,19 @@
 <?php
-// FILE NÀY TRUY CẬP TRỰC TIẾP - TỰ ĐỘNG LOAD MODEL VÀ CONTROLLER
-
-// Khai báo biến
 $dsPhong = array();
-
-// Tự động load data
-require_once '../model/PhongModel.php';
+require_once '../../model/PhongModel.php';
 $model = new PhongModel();
 $dsPhong = $model->getDanhSachPhong();
 
-// Đảm bảo là mảng
 if ($dsPhong === null) {
     $dsPhong = array();
 }
 
-// Lấy danh sách hạng phòng và tầng duy nhất cho bộ lọc
 $hangPhongList = array_unique(array_column($dsPhong, 'HangPhong'));
 $tangList = array_unique(array_column($dsPhong, 'Tang'));
 sort($tangList);
 ?>
 
-<?php include 'layouts/header.php'; ?>
+<?php include '../layouts/header.php'; ?>
 <style>
     .btn-icon {
         width: 40px;
@@ -663,4 +656,4 @@ sort($tangList);
     });
 </script>
 
-<?php include 'layouts/footer.php'; ?>
+<?php include '../layouts/footer.php'; ?>

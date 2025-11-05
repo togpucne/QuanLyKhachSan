@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "Tổng quan - ABC Resort";
-include_once 'layouts/header.php';
+include_once '../layouts/header.php';
 
 // Content khác nhau theo vai trò
 $roleContents = [
@@ -102,4 +102,4 @@ $content = $roleContents[$role] ?? $roleContents['quanly'];
 </div>
 <?php endif; ?>
 
-<?php include_once 'layouts/footer.php'; ?>
+<?php include_once '../layouts/footer.php'; ?>

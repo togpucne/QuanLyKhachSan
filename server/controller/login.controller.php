@@ -3,15 +3,18 @@ session_start(); // Phải có session_start() ở đầu file
 
 include_once '../model/login.model.php';
 
-class LoginController {
+class LoginController
+{
     private $loginModel;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->loginModel = new LoginModel();
     }
 
     // Xử lý đăng nhập
-    public function processLogin() {
+    public function processLogin()
+    {
         // Kiểm tra nếu là POST request
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tenDangNhap = $_POST['username'] ?? '';
@@ -28,10 +31,10 @@ class LoginController {
 
             // Kiểm tra đăng nhập
             $result = $this->loginModel->logIn($tenDangNhap, $matKhau);
-            
+
             if ($result && $result->num_rows > 0) {
                 $user = $result->fetch_assoc();
-                
+
                 // Lưu thông tin user vào SESSION
                 $_SESSION['user'] = [
                     'id' => $user['id'],
@@ -47,7 +50,7 @@ class LoginController {
 
                 // Lưu COOKIE với thời gian 30 ngày
                 $cookie_time = time() + (30 * 24 * 60 * 60); // 30 ngày
-                
+
                 setcookie('user_role', $user['VaiTro'], $cookie_time, "/");
                 setcookie('username', $user['TenDangNhap'], $cookie_time, "/");
                 setcookie('user_id', $user['id'], $cookie_time, "/");
@@ -61,7 +64,6 @@ class LoginController {
                 // Chuyển hướng đến dashboard
                 header('Location: ../view/home/dashboard.php');
                 exit();
-                
             } else {
                 $_SESSION['error'] = "Tên đăng nhập hoặc mật khẩu không đúng!";
                 header('Location: ../view/login/login.php');
@@ -75,23 +77,27 @@ class LoginController {
     }
 
     // Đăng xuất
-    public function logout() {
+    public function logout()
+    {
         // Xóa SESSION
         session_unset();
         session_destroy();
-        
+
         // Xóa COOKIE
         setcookie('user_role', '', time() - 3600, "/");
         setcookie('username', '', time() - 3600, "/");
         setcookie('user_id', '', time() - 3600, "/");
         setcookie('is_logged_in', '', time() - 3600, "/");
-        
+
+        // Chuyển hướng về trang login
         header('Location: ../view/login/login.php');
         exit();
     }
 
+
     // Kiểm tra đăng nhập (middleware)
-    public function checkAuth() {
+    public function checkAuth()
+    {
         // Ưu tiên kiểm tra SESSION trước
         if (isset($_SESSION['user']) && isset($_SESSION['vaitro'])) {
             return [
@@ -99,11 +105,11 @@ class LoginController {
                 'role' => $_SESSION['vaitro']
             ];
         }
-        
+
         // Nếu không có SESSION, kiểm tra COOKIE
         if (isset($_COOKIE['is_logged_in']) && $_COOKIE['is_logged_in'] === 'true') {
             if (isset($_COOKIE['user_role']) && isset($_COOKIE['username'])) {
-                
+
                 // Khôi phục SESSION từ COOKIE
                 $_SESSION['user'] = [
                     'id' => $_COOKIE['user_id'] ?? '',
@@ -112,14 +118,14 @@ class LoginController {
                 ];
                 $_SESSION['vaitro'] = $_COOKIE['user_role'];
                 $_SESSION['username'] = $_COOKIE['username'];
-                
+
                 return [
                     'user' => $_SESSION['user'],
                     'role' => $_COOKIE['user_role']
                 ];
             }
         }
-        
+
         // Nếu không đăng nhập, chuyển hướng về login
         header('Location: ../view/login.php');
         exit();
@@ -130,7 +136,7 @@ class LoginController {
 if (isset($_GET['action'])) {
     $controller = new LoginController();
     $action = $_GET['action'];
-    
+
     if (method_exists($controller, $action)) {
         $controller->$action();
     } else {
@@ -138,4 +144,3 @@ if (isset($_GET['action'])) {
         exit();
     }
 }
-?>

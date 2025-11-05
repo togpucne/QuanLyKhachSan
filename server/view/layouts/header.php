@@ -16,31 +16,31 @@ $role = $_SESSION['vaitro'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tỏa Sáng Resort</title>
+    <title>Hệ thống quản ly Tỏa Sáng Resort</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="../assets/images/logo/logo_toasang-removebg.png">
+    <link rel="icon" type="image/png" href="../../assets/images/logo/logo_toasang-removebg.png">
     <style>
         :root {
-            --primary: #292d33;
+            --primary: #292D33;
             /* Xanh dương chính */
             --secondary: #43a047;
             /* Xanh lá điểm nhấn */
-            --accent: #292d33;
+            --accent: #292D33;
             /* Xanh dương đậm */
             --light: #e3f2fd;
             /* Xanh dương nhạt */
-            --dark: #292d33;
+            --dark: #292D33;
             /* Xanh dương tối */
             --success: #4caf50;
             /* Xanh lá */
-            --sidebar-bg: #292d33;
+            --sidebar-bg: #292D33;
             /* Xanh sidebar */
         }
 
         .sidebar {
-            background: linear-gradient(135deg, #292d33 0%, #292d33 100%);
+            background: linear-gradient(135deg, #292D33 0%, #292D33 100%);
             color: white;
             min-height: 100vh;
             padding: 0;
@@ -76,7 +76,7 @@ $role = $_SESSION['vaitro'];
         }
 
         .navbar {
-            background: linear-gradient(135deg, #292d33 0%, #292d33 100%) !important;
+            background: linear-gradient(135deg, #292D33 0%, #292D33 100%) !important;
             border-bottom: 3px solid #e9dfcb;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
         }
@@ -93,7 +93,7 @@ $role = $_SESSION['vaitro'];
         }
 
         .welcome-card {
-            background: linear-gradient(135deg, #292d33 0%, #292d33 100%);
+            background: linear-gradient(135deg, #292D33 0%, #292D33 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -111,7 +111,7 @@ $role = $_SESSION['vaitro'];
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
             background: white;
-            border-left: 4px solid #292d33;
+            border-left: 4px solid #292D33;
         }
 
         .stat-card:hover {
@@ -120,7 +120,7 @@ $role = $_SESSION['vaitro'];
         }
 
         .stat-card.primary {
-            border-left-color: #292d33;
+            border-left-color: #292D33;
         }
 
         .stat-card.success {
@@ -330,17 +330,17 @@ $role = $_SESSION['vaitro'];
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.php">
-                <i class="fas fa-hotel me-2"></i>ABC RESORT
+            <a class="navbar-brand" href="../home/dashboard.php">
+                <i class="fas fa-hotel me-2"></i>Tỏa Sáng Resort
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
                     <i class="fas fa-user me-1"></i>
-                    <?php echo $user['username']; ?>
-                    <span class="badge bg-warning role-badge"><?php echo strtoupper($role); ?></span>
+                    <?php echo isset($user['username']) ? $user['username'] : 'Guest'; ?>
+                    <span class="badge bg-warning role-badge"><?php echo isset($role) ? strtoupper($role) : 'USER'; ?></span>
                 </span>
-                <a href="../controller/login.controller.php?action=logout" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt me-1"></i>Đăng xuất
+                <a href="../../../server/controller/login.controller.php?action=logout" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sign-out-alt me-1"></i>Đăng Xuất
                 </a>
             </div>
         </div>
@@ -360,10 +360,10 @@ $role = $_SESSION['vaitro'];
                     $menus = [
                         'quanly' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => 'quanlynhanvien.php'],
-                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => 'quanlykhachhang.php'],
-                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => 'quanlydichvu.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => 'quanlyphong.php'],
+                            ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '../quanly/quanlynhanvien.php'],
+                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '../quanly/quanlykhachhang.php'],
+                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '../quanly/quanlydichvu.php'],
+                            ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '../quanly/quanlyphong.php'],
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
                         ],
                         'ketoan' => [

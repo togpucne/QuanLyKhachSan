@@ -62,7 +62,7 @@ $_SESSION['captcha'] = $captcha;
             <?php endif; ?>
 
             <!-- Sửa action cho chính xác -->
-            <form action="../controller/login.controller.php?action=processLogin" method="POST">
+            <form action="../../controller/login.controller.php?action=processLogin" method="POST">
                 <div class="mb-3">
                     <label class="form-label">Tên tài khoản</label>
                     <input type="text" class="form-control" name="username" required 

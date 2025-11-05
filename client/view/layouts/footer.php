@@ -9,7 +9,7 @@
                     <div class="d-flex flex-column gap-3">
                         <div>
                             <h6 class="text-warning">Hợp tác với chúng tôi</h6>
-                            <p class="text-muted small">Đối tác du lịch và nghỉ dưỡng uy tín</p>
+                            <p class="text"><img src="assets/images/logo/logo_toasang-removebg.png" alt="" height="auto" width="200px"></p>
                         </div>
                         <div>
                             <h6 class="text-warning">Đối tác thanh toán</h6>

@@ -16,9 +16,11 @@ $role = $_SESSION['vaitro'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ABC Resort - Hệ thống quản lý</title>
+    <title>Tỏa Sáng Resort</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/images/logo/logo_toasang-removebg.png">
     <style>
         :root {
             --primary: #292d33;
@@ -226,7 +228,7 @@ $role = $_SESSION['vaitro'];
             background: linear-gradient(135deg, #292D33 0%, #292D33 100%);
             color: white;
             border-top: 3px solid #43a047;
-            
+
         }
 
         footer p {

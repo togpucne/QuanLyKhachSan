@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tỏa Sáng Resort - Trang Chủ</title>
+    <title>Tỏa Sáng Resort</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../assets/css/style.css" rel="stylesheet">
+      <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/images/logo/logo_toasang-removebg.png">
     <style>
         .room-card {
             transition: all 0.3s ease;
@@ -39,7 +41,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-umbrella-beach me-2"></i>Tỏa Sáng RESORT
+                <img src="assets/images/logo/logo_toasang-removebg.png" width="60px" height="60px" alt="" >  Tỏa Sáng RESORT
             </a>
             
             <!-- Mobile toggle button -->

@@ -59,17 +59,17 @@ class LoginController {
                 error_log("Cookie set for role: " . $user['VaiTro']);
 
                 // Chuyển hướng đến dashboard
-                header('Location: ../view/dashboard.php');
+                header('Location: ../view/home/dashboard.php');
                 exit();
                 
             } else {
                 $_SESSION['error'] = "Tên đăng nhập hoặc mật khẩu không đúng!";
-                header('Location: ../view/login.php');
+                header('Location: ../view/login/login.php');
                 exit();
             }
         } else {
             // Nếu không phải POST, quay lại login
-            header('Location: ../view/login.php');
+            header('Location: ../view/login/login.php');
             exit();
         }
     }
@@ -86,7 +86,7 @@ class LoginController {
         setcookie('user_id', '', time() - 3600, "/");
         setcookie('is_logged_in', '', time() - 3600, "/");
         
-        header('Location: ../view/login.php');
+        header('Location: ../view/login/login.php');
         exit();
     }
 

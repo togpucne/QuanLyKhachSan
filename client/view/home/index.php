@@ -44,88 +44,95 @@ include __DIR__ . '/../layouts/header.php';
 
 <div class="container">
     <!-- Bộ lọc & tìm kiếm phòng -->
-<div class="card mb-5 shadow-lg border-0 rounded-4" style="overflow:hidden; background-color: #1B1B1B;">
-    <div class="card-header py-3 border-0" 
-         style="background: linear-gradient(90deg, #F4A261, #E76F51); color: #fff;">
-        <h4 class="mb-0 fw-bold text-uppercase">
-            <i class="fas fa-search me-2"></i>Tìm Kiếm & Lọc Phòng
-        </h4>
-    </div>
+    <div class="card mb-5 shadow-lg border-0 rounded-4" style="overflow:hidden; background-color: #1B1B1B;">
+        <div class="card-header py-3 border-0"
+            style="background: linear-gradient(90deg, #435663, #313647); color: #fff;">
+        </div>
 
-    <div class="card-body p-4" style="background-color: #F8F9FA;">
-        <form id="filterForm">
-            <div class="row g-4">
-                <!-- Tìm kiếm theo số phòng -->
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-dark">Tìm kiếm:</label>
-                    <input type="text" class="form-control rounded-3 border-0 shadow-sm" 
-                           id="roomNumber" placeholder="Nhập tên phòng...">
-                </div>
+        <div class="card-body p-4" style="background-color: #F8F9FA;">
+            <form id="filterForm">
+                <div class="row g-4">
+                    <!-- Tìm kiếm theo số phòng -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Tìm kiếm:</label>
+                        <input type="text" class="form-control rounded-3 border-0 shadow-sm"
+                            id="roomNumber" placeholder="Nhập tên phòng...">
+                    </div>
 
-                <!-- Lọc theo tầng -->
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-dark">Tầng</label>
-                    <select class="form-select rounded-3 border-0 shadow-sm" id="floorFilter">
-                        <option value="">Tất cả tầng</option>
-                        <option value="1">Tầng 1</option>
-                        <option value="2">Tầng 2</option>
-                    </select>
-                </div>
+                    <!-- Lọc theo tầng -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Tầng</label>
+                        <select class="form-select rounded-3 border-0 shadow-sm" id="floorFilter">
+                            <option value="">Tất cả tầng</option>
+                            <option value="1">Tầng 1</option>
+                            <option value="2">Tầng 2</option>
+                        </select>
+                    </div>
 
-                <!-- Lọc theo hạng phòng -->
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-dark">Hạng Phòng</label>
-                    <select class="form-select rounded-3 border-0 shadow-sm" id="roomClassFilter">
-                        <option value="">Tất cả hạng</option>
-                        <option value="Cao cấp">Cao cấp</option>
-                        <option value="Thương gia">Thương gia</option>
-                        <option value="Tiêu chuẩn">Tiêu chuẩn</option>
-                    </select>
-                </div>
+                    <!-- Lọc theo hạng phòng -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Hạng Phòng</label>
+                        <select class="form-select rounded-3 border-0 shadow-sm" id="roomClassFilter">
+                            <option value="">Tất cả hạng</option>
+                            <option value="Cao cấp">Cao cấp</option>
+                            <option value="Thương gia">Thương gia</option>
+                            <option value="Tiêu chuẩn">Tiêu chuẩn</option>
+                        </select>
+                    </div>
 
-                <!-- Lọc theo trạng thái -->
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-dark">Trạng Thái</label>
-                    <select class="form-select rounded-3 border-0 shadow-sm" id="statusFilter">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="Trống">Phòng trống</option>
-                        <option value="Đang sử dụng">Đang sử dụng</option>
-                        <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                    </select>
-                </div>
+                    <!-- Lọc theo trạng thái -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Trạng Thái</label>
+                        <select class="form-select rounded-3 border-0 shadow-sm" id="statusFilter">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="Trống">Phòng trống</option>
+                            <option value="Đang sử dụng">Đang sử dụng</option>
+                            <option value="Đang dọn dẹp">Đang dọn dẹp</option>
+                        </select>
+                    </div>
 
-                <!-- Lọc theo giá -->
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold text-dark">
-                        Khoảng giá: 
-                        <span id="priceRangeValue" class="fw-bold" style="color: #E76F51;">
-                            0 - 10,000,000 VND
-                        </span>
-                    </label>
-                    <input type="range" class="form-range" id="priceRange" 
-                           min="0" max="10000000" step="500000" value="10000000"
-                           style="accent-color: #E76F51;">
-                </div>
+                    <!-- Lọc theo giá -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-dark">
+                            Khoảng giá:
+                            <span id="priceRangeValue" class="fw-bold" style="color: #37353E;">
+                                0 - 10,000,000 VND
+                            </span>
+                        </label>
+                        <input type="range" class="form-range" id="priceRange"
+                            min="0" max="10000000" step="100000" value="10000000"
+                            style="color: red ;accent-color: #37353E;">
+                    </div>
 
-                <!-- Nút tìm kiếm -->
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="d-flex gap-2 w-100">
-                        <button type="submit" 
+                    <!-- Nút tìm kiếm -->
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="d-flex gap-2 w-100">
+                            <button type="submit"
                                 class="btn text-white flex-fill shadow-sm"
-                                style="background: linear-gradient(90deg, #F4A261, #E76F51); font-weight:600;">
-                            <i class="fas fa-search me-2"></i>Tìm Kiếm
-                        </button>
-                        <button type="reset" 
+                                style="background: linear-gradient(90deg, #37353E, #37353E); font-weight:600;">
+                                <i class="fas fa-search me-2"></i>Tìm Kiếm
+                            </button>
+                            <button type="reset"
                                 class="btn flex-fill fw-semibold border-2"
-                                style="border-color: #F4A261; color: #1B1B1B;">
-                            <i class="fas fa-redo me-2"></i>Đặt Lại
-                        </button>
+                                style="border-color: #37353E; color: #37353E;">
+                                <i class="fas fa-redo me-2"></i>Đặt Lại
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
+        
     </div>
-</div>
+    <!--  Banner Khuyến Mãi  -->
+    <div class="row mb-5">
+        <div class="">
+            <img src="assets/images/banner/banner_khuyenmai.webp" height="250px" width="100%" alt=""
+            style="border-radius: 10px;"
+            >
+        </div>
+
+    </div>
 
 
     <!-- Thống kê nhanh -->

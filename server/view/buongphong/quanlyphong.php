@@ -1,6 +1,6 @@
 <?php
 $dsPhong = array();
-require_once '../../model/quanlyphong.model.php';
+require_once '../../model/buongphongQLPhong.model.php';
 $model = new PhongModel();
 $dsPhong = $model->getDanhSachPhong();
 

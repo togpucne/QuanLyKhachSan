@@ -359,9 +359,10 @@ $role = $_SESSION['vaitro'];
                     // Menu cho từng vai trò
                     $menus = [
                         'quanly' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '../home/dashboard.php'],
                             ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '../quanly/quanlynhanvien.php'],
-                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '../quanly/quanlykhachhang.php'],
+                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '../quanly/quanlyKH.php'],
+                            ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '../quanly/quanlydoan.php'],
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '../quanly/quanlydichvu.php'],
                             ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '../quanly/quanlyphong.php'],
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
@@ -385,7 +386,7 @@ $role = $_SESSION['vaitro'];
                         ],
                         'buongphong' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => 'quanlyphong.php'],
+                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],
                             ['icon' => 'fas fa-broom', 'text' => 'Vệ sinh phòng', 'link' => 'vesinhphong.php'],
                             ['icon' => 'fas fa-tools', 'text' => 'Bảo trì phòng', 'link' => 'baotriphong.php'],
                             ['icon' => 'fas fa-clipboard-list', 'text' => 'Kiểm kê trang thiết bị', 'link' => 'kiemke.php'],

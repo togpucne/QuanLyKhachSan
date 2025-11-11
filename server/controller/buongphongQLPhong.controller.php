@@ -1,5 +1,5 @@
 <?php
-require_once '../model/PhongModel.php';
+require_once '../model/quanlyphong.model.php';
 
 class PhongController {
     private $phongModel;

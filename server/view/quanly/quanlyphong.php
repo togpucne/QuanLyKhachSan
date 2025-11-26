@@ -1,659 +1,780 @@
 <?php
-$dsPhong = array();
-require_once '../../model/quanlyphong.model.php';
-$model = new PhongModel();
-$dsPhong = $model->getDanhSachPhong();
-
-if ($dsPhong === null) {
-    $dsPhong = array();
+// KIỂM TRA SESSION
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-$hangPhongList = array_unique(array_column($dsPhong, 'HangPhong'));
-$tangList = array_unique(array_column($dsPhong, 'Tang'));
-sort($tangList);
+// Kiểm tra quyền truy cập 
+if (!isset($_SESSION['vaitro']) || $_SESSION['vaitro'] !== 'quanly') {
+    header('Location: ../login/login.php');
+    exit();
+}
+
+// GỌI MODEL
+include_once '../../model/quanlyphong.model.php';
+$model = new QuanLyPhongModel();
+
+// LẤY DANH SÁCH LOẠI PHÒNG
+$dsLoaiPhong = $model->getDanhSachLoaiPhong();
+
+// XỬ LÝ CÁC ACTION
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+
+    if ($action === 'xoa' && isset($_GET['ma_phong'])) {
+        $maPhong = $_GET['ma_phong'];
+        if ($model->xoaPhong($maPhong)) {
+            $_SESSION['success'] = "Xóa phòng thành công!";
+        } else {
+            $_SESSION['error'] = "Lỗi khi xóa phòng!";
+        }
+        header('Location: quanlyphong.php');
+        exit();
+    }
+}
+
+// XỬ LÝ THÊM THIẾT BỊ
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'them_thiet_bi') {
+    $data = [
+        'TenThietBi' => $_POST['ten_thiet_bi'],
+        'TinhTrang' => $_POST['tinh_trang'],
+        'MaPhong' => $_POST['ma_phong']
+    ];
+
+    if ($model->themThietBi($data)) {
+        $_SESSION['success'] = "Thêm thiết bị thành công!";
+    } else {
+        $_SESSION['error'] = "Lỗi khi thêm thiết bị!";
+    }
+    header('Location: quanlyphong.php');
+    exit();
+}
+
+// XỬ LÝ XÓA THIẾT BỊ
+if (isset($_GET['action']) && $_GET['action'] === 'xoa_thiet_bi' && isset($_GET['ma_thiet_bi'])) {
+    $maThietBi = $_GET['ma_thiet_bi'];
+    if ($model->xoaThietBi($maThietBi)) {
+        $_SESSION['success'] = "Xóa thiết bị thành công!";
+    } else {
+        $_SESSION['error'] = "Lỗi khi xóa thiết bị!";
+    }
+    header('Location: quanlyphong.php');
+    exit();
+}
+
+// XỬ LÝ THÊM PHÒNG
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'them') {
+    $data = [
+        'Tang' => $_POST['tang'],
+        'MaLoaiPhong' => $_POST['ma_loai_phong'],
+        'TrangThai' => $_POST['trang_thai'],
+        'roomName' => $_POST['room_name']
+    ];
+
+    // Lấy file upload
+    $avatarFile = isset($_FILES['avatar']) ? $_FILES['avatar'] : null;
+    $imageFiles = isset($_FILES['danh_sach_anh']) ? $_FILES['danh_sach_anh'] : null;
+
+    // GỌI PHƯƠNG THỨC MỚI
+    $result = $model->themPhongMoi($data, $avatarFile, $imageFiles);
+
+    if ($result['success']) {
+        $_SESSION['success'] = "Thêm phòng thành công! Mã phòng: " . $result['soPhong'];
+    } else {
+        $_SESSION['error'] = "Lỗi khi thêm phòng!";
+    }
+    header('Location: quanlyphong.php');
+    exit();
+}
+// XỬ LÝ SỬA PHÒNG
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'sua') {
+    $maPhong = $_POST['ma_phong'];
+    $data = [
+        'SoPhong' => $_POST['so_phong'],
+        'Tang' => $_POST['tang'],
+        'MaLoaiPhong' => $_POST['ma_loai_phong'],
+        'TrangThai' => $_POST['trang_thai'],
+        'Avatar' => $_POST['avatar'] ?? '',
+        'DanhSachPhong' => $_POST['danh_sach_phong'] ?? '',
+        'roomName' => $_POST['room_name']
+    ];
+
+    if ($model->suaPhong($maPhong, $data)) {
+        $_SESSION['success'] = "Cập nhật phòng thành công!";
+    } else {
+        $_SESSION['error'] = "Lỗi khi cập nhật phòng!";
+    }
+    header('Location: quanlyphong.php');
+    exit();
+}
+
+// XỬ LÝ AJAX - LẤY THÔNG TIN PHÒNG ĐỂ SỬA
+if (isset($_GET['action']) && $_GET['action'] === 'get_phong_info' && isset($_GET['ma_phong'])) {
+    $maPhong = $_GET['ma_phong'];
+    $phong = $model->getChiTietPhong($maPhong);
+
+    if ($phong) {
+        echo json_encode([
+            'success' => true,
+            'data' => $phong
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Không tìm thấy phòng'
+        ]);
+    }
+    exit();
+}
+
+// XỬ LÝ AJAX - LẤY THIẾT BỊ PHÒNG
+if (isset($_GET['action']) && $_GET['action'] === 'get_thiet_bi' && isset($_GET['ma_phong'])) {
+    $maPhong = $_GET['ma_phong'];
+    $dsThietBi = $model->getThietBiPhong($maPhong);
+
+    if (empty($dsThietBi)) {
+        echo '<tr><td colspan="4" class="text-center text-muted">Chưa có thiết bị</td></tr>';
+    } else {
+        $stt = 1;
+        foreach ($dsThietBi as $tb) {
+            echo '<tr>';
+            echo '<td>' . $stt++ . '</td>';
+            echo '<td>' . htmlspecialchars($tb['TenThietBi']) . '</td>';
+            echo '<td>';
+            if ($tb['TinhTrang'] === 'Tốt') {
+                echo '<span class="badge bg-success">Tốt</span>';
+            } elseif ($tb['TinhTrang'] === 'Hỏng') {
+                echo '<span class="badge bg-danger">Hỏng</span>';
+            } else {
+                echo '<span class="badge bg-warning">' . $tb['TinhTrang'] . '</span>';
+            }
+            echo '</td>';
+            echo '<td>';
+            echo '<button type="button" class="btn btn-danger btn-sm" ' .
+                'onclick="confirmXoaThietBi(\'' . $tb['MaThietBi'] . '\', \'' . htmlspecialchars($tb['TenThietBi']) . '\')">' .
+                '<i class="fas fa-trash"></i></button>';
+            echo '</td>';
+            echo '</tr>';
+        }
+    }
+    exit();
+}
+
+// Lấy tham số filter
+$keyword = $_GET['keyword'] ?? '';
+$tang = $_GET['tang'] ?? '';
+$loaiPhong = $_GET['loaiPhong'] ?? '';
+$trangThai = $_GET['trangThai'] ?? '';
+
+// Lấy dữ liệu
+$danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangThai);
+$thongKe = $model->thongKePhong();
 ?>
 
-<?php include '../layouts/header.php'; ?>
-<style>
-    .btn-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 2px;
-        transition: all 0.3s ease;
-    }
+<?php include_once '../layouts/header.php'; ?>
 
-    .btn-icon:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-group .btn {
-        border: 1px solid #dee2e6;
-    }
-
-    .btn-outline-danger:hover {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .btn-outline-warning:hover {
-        background-color: #ffc107;
-        color: black;
-    }
-
-    .btn-outline-info:hover {
-        background-color: #0dcaf0;
-        color: white;
-    }
-
-    .table th {
-        border-top: none;
-        font-weight: 600;
-    }
-
-    .badge {
-        font-size: 0.8em;
-        padding: 0.5em 0.75em;
-    }
-
-    .card {
-        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-        border: 1px solid #e3e6f0;
-    }
-
-    .card-header {
-        background: linear-gradient(180deg, #f8f9fc 0%, #e2e6f0 100%);
-        border-bottom: 1px solid #e3e6f0;
-    }
-</style>
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="mt-4">Quản Lý Buồng Phòng</h1>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-hotel me-2"></i>Quản Lý Phòng
+        </h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#themPhongModal">
+            <i class="fas fa-plus me-2"></i>Thêm Phòng Mới
+        </button>
+    </div>
 
-            <!-- Bộ lọc và tìm kiếm -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <form id="formFilter">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label">Tìm kiếm:</label>
-                                <input type="text" class="form-control" id="searchKeyword" placeholder="Nhập từ khóa và Enter...">
+    <!-- Thống kê nhanh -->
+    <?php if ($thongKe): ?>
+        <div class="row mb-4">
+            <div class="col-md-3 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Tổng Phòng
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    <?php echo $thongKe['tongPhong']; ?>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Hạng phòng:</label>
-                                <select class="form-select" id="filterHangPhong">
-                                    <option value="">Tất cả hạng</option>
-                                    <?php foreach ($hangPhongList as $hang): ?>
-                                        <option value="<?php echo $hang; ?>"><?php echo $hang; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Tầng:</label>
-                                <select class="form-select" id="filterTang">
-                                    <option value="">Tất cả tầng</option>
-                                    <?php foreach ($tangList as $tang): ?>
-                                        <option value="<?php echo $tang; ?>">Tầng <?php echo $tang; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Trạng thái:</label>
-                                <select class="form-select" id="filterTrangThai">
-                                    <option value="">Tất cả trạng thái</option>
-                                    <option value="Trống">Trống</option>
-                                    <option value="Đang sử dụng">Đang sử dụng</option>
-                                    <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                                    <option value="Bảo trì">Bảo trì</option>
-                                </select>
+                            <div class="col-auto">
+                                <i class="fas fa-door-closed fa-2x text-gray-300"></i>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-md-12 text-end">
-                                <button type="button" class="btn btn-secondary" id="btnResetFilter">
-                                    <i class="fas fa-redo"></i> Hiển thị tất cả
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Bảng danh sách phòng -->
-            <!-- Bảng danh sách phòng -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Danh sách phòng (<span id="roomCount"><?php echo count($dsPhong); ?></span> phòng)</h5>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped" id="tablePhong">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Mã phòng</th>
-                                    <th>Số phòng</th>
-                                    <th>Tầng</th>
-                                    <th>Hạng phòng</th>
-                                    <th>Đơn giá</th>
-                                    <th>Trạng thái</th>
-                                    <th width="180px" class="text-center">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (count($dsPhong) > 0): ?>
-                                    <?php foreach ($dsPhong as $phong): ?>
-                                        <tr>
-                                            <td><?php echo $phong['MaPhong']; ?></td>
-                                            <td>
-                                                <strong><?php echo $phong['SoPhong']; ?></strong>
-                                            </td>
-                                            <td>Tầng <?php echo $phong['Tang']; ?></td>
-                                            <td><?php echo $phong['HangPhong']; ?></td>
-                                            <td><?php echo number_format($phong['DonGia']); ?> VNĐ</td>
-                                            <td>
-                                                <span class="badge 
-                                        <?php
-                                        switch ($phong['TrangThai']) {
-                                            case 'Trống':
-                                                echo 'bg-success';
-                                                break;
-                                            case 'Đang sử dụng':
-                                                echo 'bg-primary';
-                                                break;
-                                            case 'Đang dọn dẹp':
-                                                echo 'bg-warning';
-                                                break;
-                                            case 'Bảo trì':
-                                                echo 'bg-danger';
-                                                break;
-                                            default:
-                                                echo 'bg-secondary';
-                                        }
-                                        ?>">
-                                                    <?php echo $phong['TrangThai']; ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group btn-group-sm" role="group">
-                                                    <button type="button" class="btn btn-outline-danger btn-action btn-icon"
-                                                        data-action="suCo"
-                                                        data-maphong="<?php echo $phong['MaPhong']; ?>"
-                                                        data-sophong="<?php echo $phong['SoPhong']; ?>"
-                                                        title="Ghi nhận sự cố">
-                                                        <i class="fas fa-exclamation-triangle"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-warning btn-action btn-icon"
-                                                        data-action="chiPhi"
-                                                        data-maphong="<?php echo $phong['MaPhong']; ?>"
-                                                        data-sophong="<?php echo $phong['SoPhong']; ?>"
-                                                        title="Ghi nhận chi phí">
-                                                        <i class="fas fa-money-bill-wave"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-info btn-action btn-icon"
-                                                        data-action="trangThai"
-                                                        data-maphong="<?php echo $phong['MaPhong']; ?>"
-                                                        data-sophong="<?php echo $phong['SoPhong']; ?>"
-                                                        data-trangthai="<?php echo $phong['TrangThai']; ?>"
-                                                        title="Cập nhật trạng thái">
-                                                        <i class="fas fa-sync-alt"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted">Không có dữ liệu phòng</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Phòng Trống
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    <?php echo $thongKe['tongTrong']; ?>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-bed fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Đang Sử Dụng
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    <?php echo $thongKe['tongDangSuDung']; ?>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-left-danger shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Bảo Trì
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    <?php echo $thongKe['tongBaoTri']; ?>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-tools fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    <?php endif; ?>
 
-<!-- Modal Ghi nhận sự cố -->
-<div class="modal fade" id="modalSuCo" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ghi nhận sự cố</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formSuCo">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Phòng:</label>
-                        <div id="selectedRoomSuCo" class="alert alert-info">
-                            <strong id="roomInfoSuCo"></strong>
-                        </div>
+    <!-- Search and Filter -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="GET" action="">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <input type="text" class="form-control" name="keyword"
+                            placeholder="Tìm theo số phòng, tên..."
+                            value="<?php echo htmlspecialchars($keyword); ?>">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mô tả sự cố:</label>
-                        <textarea class="form-control" name="moTaSuCo" rows="3" required placeholder="Mô tả chi tiết sự cố..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Chi phí sửa chữa (VNĐ):</label>
-                        <input type="number" class="form-control" name="chiPhi" step="1000" min="0" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary">Ghi nhận</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Ghi nhận chi phí -->
-<div class="modal fade" id="modalChiPhi" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ghi nhận chi phí</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formChiPhi">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Phòng:</label>
-                        <div id="selectedRoomChiPhi" class="alert alert-info">
-                            <strong id="roomInfoChiPhi"></strong>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Loại chi phí:</label>
-                        <input type="text" class="form-control" name="loaiChiPhi" required placeholder="Ví dụ: Vệ sinh, Bảo trì...">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Số tiền (VNĐ):</label>
-                        <input type="number" class="form-control" name="soTien" step="1000" min="0" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ghi chú:</label>
-                        <textarea class="form-control" name="ghiChu" rows="2" placeholder="Ghi chú thêm..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary">Ghi nhận</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Cập nhật trạng thái -->
-<div class="modal fade" id="modalTrangThai" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cập nhật trạng thái phòng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formTrangThai">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Phòng:</label>
-                        <div id="selectedRoomTrangThai" class="alert alert-info">
-                            <strong id="roomInfoTrangThai"></strong>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Trạng thái mới:</label>
-                        <select class="form-select" name="trangThaiMoi" required>
-                            <option value="Trống">Trống</option>
-                            <option value="Đang sử dụng">Đang sử dụng</option>
-                            <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                            <option value="Bảo trì">Bảo trì</option>
+                    <div class="col-md-2 mb-2">
+                        <select class="form-control" name="tang">
+                            <option value="">Tất cả tầng</option>
+                            <option value="1" <?php echo $tang === '1' ? 'selected' : ''; ?>>Tầng 1</option>
+                            <option value="2" <?php echo $tang === '2' ? 'selected' : ''; ?>>Tầng 2</option>
+                            <option value="3" <?php echo $tang === '3' ? 'selected' : ''; ?>>Tầng 3</option>
                         </select>
                     </div>
+                    <div class="col-md-3 mb-2">
+                        <select class="form-control" name="loaiPhong">
+                            <option value="">Tất cả loại phòng</option>
+                            <?php foreach ($dsLoaiPhong as $lp): ?>
+                                <option value="<?php echo $lp['MaLoaiPhong']; ?>"
+                                    <?php echo $loaiPhong == $lp['MaLoaiPhong'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($lp['HangPhong'] . ' - ' . $lp['HinhThuc']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <select class="form-control" name="trangThai">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="Trống" <?php echo $trangThai === 'Trống' ? 'selected' : ''; ?>>Trống</option>
+                            <option value="Đang sử dụng" <?php echo $trangThai === 'Đang sử dụng' ? 'selected' : ''; ?>>Đang sử dụng</option>
+                            <option value="Bảo trì" <?php echo $trangThai === 'Bảo trì' ? 'selected' : ''; ?>>Bảo trì</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-1"></i>Tìm
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            <?php echo $_SESSION['success'];
+            unset($_SESSION['success']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <?php echo $_SESSION['error'];
+            unset($_SESSION['error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Danh sách phòng -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h6 class="m-0 font-weight-bold">
+                <i class="fas fa-list me-2"></i>Danh Sách Phòng
+                <span class="badge bg-light text-dark ms-2"><?php echo count($danhSachPhong); ?> phòng</span>
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="50"><input type="checkbox" id="selectAll"></th>
+                            <th width="60">STT</th>
+                            <th width="100">Số Phòng</th>
+                            <th width="80">Tầng</th>
+                            <th>Tên Phòng</th>
+                            <th width="150">Loại Phòng</th>
+                            <th width="120">Đơn Giá</th>
+                            <th width="120">Trạng Thái</th>
+                            <th width="150" class="text-center">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($danhSachPhong)): ?>
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="fas fa-door-closed fa-2x mb-3"></i><br>
+                                    Không có dữ liệu phòng
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php $stt = 1; ?>
+                            <?php foreach ($danhSachPhong as $phong): ?>
+                                <tr>
+                                    <td><input type="checkbox" name="ma_phong_list[]" value="<?php echo $phong['MaPhong']; ?>" class="row-checkbox"></td>
+                                    <td><?php echo $stt++; ?></td>
+                                    <td>
+                                        <span class="badge bg-success fs-6"><?php echo htmlspecialchars($phong['SoPhong']); ?></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">Tầng <?php echo $phong['Tang']; ?></span>
+                                    </td>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($phong['roomName']); ?></strong>
+                                        <?php if (!empty($phong['GhiChu'])): ?>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($phong['GhiChu']); ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php echo htmlspecialchars($phong['HangPhong']); ?>
+                                        <br><small class="text-muted"><?php echo htmlspecialchars($phong['HinhThuc']); ?></small>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success"><?php echo number_format($phong['DonGia'], 0, ',', '.'); ?> đ</strong>
+                                    </td>
+                                    <td>
+                                        <?php if ($phong['TrangThai'] === 'Trống'): ?>
+                                            <span class="badge bg-success">Trống</span>
+                                        <?php elseif ($phong['TrangThai'] === 'Đang sử dụng'): ?>
+                                            <span class="badge bg-warning">Đang sử dụng</span>
+                                        <?php elseif ($phong['TrangThai'] === 'Bảo trì'): ?>
+                                            <span class="badge bg-danger">Bảo trì</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary"><?php echo $phong['TrangThai']; ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm w-100">
+                                            <button type="button" class="btn btn-info"
+                                                onclick="showThietBiModal('<?php echo $phong['MaPhong']; ?>', '<?php echo htmlspecialchars($phong['roomName']); ?>')"
+                                                title="Quản lý thiết bị">
+                                                <i class="fas fa-tools"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-warning"
+                                                onclick="showSuaPhongModal('<?php echo $phong['MaPhong']; ?>')"
+                                                title="Sửa thông tin phòng">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <a href="quanlyphong.php?action=xoa&ma_phong=<?php echo $phong['MaPhong']; ?>"
+                                                class="btn btn-danger"
+                                                onclick="return confirm('Bạn có chắc muốn xóa phòng <?php echo $phong['SoPhong']; ?>?')"
+                                                title="Xóa phòng">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Phòng -->
+<div class="modal fade" id="themPhongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Thêm Phòng Mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="quanlyphong.php?action=them" id="formThemPhong" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Mã phòng sẽ được tự động tạo ngẫu nhiên (P123, P456, ...)
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tầng <span class="text-danger">*</span></label>
+                            <select class="form-control" name="tang" required>
+                                <option value="">-- Chọn tầng --</option>
+                                <option value="1">Tầng 1</option>
+                                <option value="2">Tầng 2</option>
+                                <option value="3">Tầng 3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Loại Phòng <span class="text-danger">*</span></label>
+                            <select class="form-control" name="ma_loai_phong" required>
+                                <option value="">-- Chọn loại phòng --</option>
+                                <?php foreach ($dsLoaiPhong as $lp): ?>
+                                    <option value="<?php echo $lp['MaLoaiPhong']; ?>">
+                                        <?php echo htmlspecialchars($lp['HangPhong'] . ' - ' . $lp['HinhThuc'] . ' - ' . number_format($lp['DonGia'], 0, ',', '.') . ' đ'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
+                            <select class="form-control" name="trang_thai" required>
+                                <option value="Trống">Trống</option>
+                                <option value="Đang sử dụng">Đang sử dụng</option>
+                                <option value="Bảo trì">Bảo trì</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Tên Phòng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="room_name" required
+                                placeholder="VD: Phòng Deluxe View Biển">
+                        </div>
+                        
+                        <!-- Upload ảnh -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ảnh Đại Diện (Avatar)</label>
+                            <input type="file" class="form-control" name="avatar" accept="image/*">
+                            <small class="text-muted">Chọn ảnh đại diện cho phòng</small>
+                            <div id="avatar_preview" class="mt-2"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Danh Sách Ảnh Phòng</label>
+                            <input type="file" class="form-control" name="danh_sach_anh[]" multiple accept="image/*">
+                            <small class="text-muted">Chọn nhiều ảnh cho phòng</small>
+                            <div id="images_preview" class="mt-2"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    <button type="submit" class="btn btn-primary">Thêm Phòng</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Modal Sửa Phòng -->
+<div class="modal fade" id="suaPhongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Sửa Thông Tin Phòng
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="quanlyphong.php?action=sua" id="formSuaPhong">
+                <input type="hidden" name="ma_phong" id="sua_ma_phong">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Sửa thông tin phòng <strong id="sua_so_phong_display"></strong>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Số Phòng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="so_phong" id="sua_so_phong" required
+                                placeholder="VD: P101, P201">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tầng <span class="text-danger">*</span></label>
+                            <select class="form-control" name="tang" id="sua_tang" required>
+                                <option value="">-- Chọn tầng --</option>
+                                <option value="1">Tầng 1</option>
+                                <option value="2">Tầng 2</option>
+                                <option value="3">Tầng 3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Loại Phòng <span class="text-danger">*</span></label>
+                            <select class="form-control" name="ma_loai_phong" id="sua_ma_loai_phong" required>
+                                <option value="">-- Chọn loại phòng --</option>
+                                <?php foreach ($dsLoaiPhong as $lp): ?>
+                                    <option value="<?php echo $lp['MaLoaiPhong']; ?>">
+                                        <?php echo htmlspecialchars($lp['HangPhong'] . ' - ' . $lp['HinhThuc'] . ' - ' . number_format($lp['DonGia'], 0, ',', '.') . ' đ'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
+                            <select class="form-control" name="trang_thai" id="sua_trang_thai" required>
+                                <option value="Trống">Trống</option>
+                                <option value="Đang sử dụng">Đang sử dụng</option>
+                                <option value="Bảo trì">Bảo trì</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Tên Phòng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="room_name" id="sua_room_name" required
+                                placeholder="VD: Phòng Deluxe View Biển">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-warning">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Quản lý Thiết bị -->
+<div class="modal fade" id="thietBiModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="thietBiModalTitle">
+                    <i class="fas fa-tools me-2"></i>Quản lý Thiết bị
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="currentMaPhong">
+
+                <!-- Form thêm thiết bị mới -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-plus me-2"></i>Thêm Thiết bị Mới
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="quanlyphong.php?action=them_thiet_bi" id="formThemThietBi">
+                            <input type="hidden" name="ma_phong" id="maPhongThemThietBi">
+                            <div class="row">
+                                <div class="col-md-5 mb-2">
+                                    <input type="text" class="form-control" name="ten_thiet_bi" required
+                                        placeholder="Tên thiết bị">
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <select class="form-control" name="tinh_trang" required>
+                                        <option value="Tốt">Tốt</option>
+                                        <option value="Hỏng">Hỏng</option>
+                                        <option value="Cần bảo trì">Cần bảo trì</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <button type="submit" class="btn btn-success w-100">Thêm</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Danh sách thiết bị hiện tại -->
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Danh sách Thiết bị
+                            <span class="badge bg-light text-dark ms-2" id="totalThietBi">0 thiết bị</span>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="50">STT</th>
+                                        <th>Tên thiết bị</th>
+                                        <th width="120">Tình trạng</th>
+                                        <th width="80">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableThietBi">
+                                    <!-- Danh sách thiết bị sẽ được load bằng JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    $(document).ready(function() {
-        // Tự động tìm kiếm khi nhập
-        $('#searchKeyword').on('input', function() {
-            filterRooms();
-        });
+    // Xem trước ảnh khi chọn file
+    function previewImage(input, previewElementId) {
+        const preview = document.getElementById(previewElementId);
+        preview.innerHTML = '';
 
-        // Tự động lọc khi thay đổi select
-        $('#filterHangPhong, #filterTang, #filterTrangThai').change(function() {
-            filterRooms();
-        });
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
 
-        // Nút hiển thị tất cả
-        $('#btnResetFilter').click(function() {
-            $('#searchKeyword').val('');
-            $('#filterHangPhong').val('');
-            $('#filterTang').val('');
-            $('#filterTrangThai').val('');
-            filterRooms();
-        });
-
-        // Hành động cho từng phòng
-        $('.btn-action').click(function() {
-            const action = $(this).data('action');
-            const maPhong = $(this).data('maphong');
-            const soPhong = $(this).data('sophong');
-            const trangThai = $(this).data('trangthai');
-
-            if (action === 'suCo') {
-                $('#roomInfoSuCo').text(soPhong + ' (Mã: ' + maPhong + ')');
-                $('#modalSuCo').modal('show');
-            } else if (action === 'chiPhi') {
-                $('#roomInfoChiPhi').text(soPhong + ' (Mã: ' + maPhong + ')');
-                $('#modalChiPhi').modal('show');
-            } else if (action === 'trangThai') {
-                $('#roomInfoTrangThai').text(soPhong + ' (Mã: ' + maPhong + ') - Hiện tại: ' + trangThai);
-                $('#modalTrangThai').modal('show');
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '200px';
+                img.style.maxHeight = '150px';
+                img.className = 'img-thumbnail m-1';
+                preview.appendChild(img);
             }
-        });
 
-        // Hàm lọc phòng
-        // Hàm lọc phòng - FIX LỖI LỌC TRẠNG THÁI
-        function filterRooms() {
-            const keyword = $('#searchKeyword').val().toLowerCase();
-            const hangPhong = $('#filterHangPhong').val();
-            const tang = $('#filterTang').val();
-            const trangThai = $('#filterTrangThai').val();
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
 
-            let visibleCount = 0;
+    // Xem trước nhiều ảnh
+    function previewMultipleImages(input, previewElementId) {
+        const preview = document.getElementById(previewElementId);
+        preview.innerHTML = '';
 
-            $('tbody tr').each(function() {
-                const $row = $(this);
-                const soPhong = $row.find('td:eq(1)').text().toLowerCase();
-                const hang = $row.find('td:eq(3)').text();
-                const tangText = $row.find('td:eq(2)').text();
-                const trangthai = $row.find('td:eq(5) .badge').text().trim(); // ĐÃ CÓ .trim()
+        if (input.files) {
+            for (let i = 0; i < input.files.length; i++) {
+                const reader = new FileReader();
 
-                let showRow = true;
-
-                // DEBUG: Hiển thị giá trị để kiểm tra
-                console.log('Trạng thái từ filter:', trangThai, 'Trạng thái từ bảng:', trangthai, 'So sánh:', trangthai === trangThai);
-
-                // Lọc theo keyword
-                if (keyword && !soPhong.includes(keyword) && !trangthai.toLowerCase().includes(keyword)) {
-                    showRow = false;
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.maxWidth = '200px';
+                    img.style.maxHeight = '150px';
+                    img.className = 'img-thumbnail m-1';
+                    preview.appendChild(img);
                 }
 
-                // Lọc theo hạng phòng
-                if (hangPhong && hang !== hangPhong) {
-                    showRow = false;
-                }
-
-                // Lọc theo tầng
-                if (tang) {
-                    const currentTang = tangText.replace('Tầng ', '').trim();
-                    if (currentTang !== tang) {
-                        showRow = false;
-                    }
-                }
-
-                // Lọc theo trạng thái - FIX CHI TIẾT
-                if (trangThai) {
-                    // So sánh chính xác, loại bỏ mọi khoảng trắng
-                    const trangThaiFromTable = trangthai.replace(/\s+/g, ' ').trim();
-                    const trangThaiFromFilter = trangThai.replace(/\s+/g, ' ').trim();
-
-                    if (trangThaiFromTable !== trangThaiFromFilter) {
-                        showRow = false;
-                    }
-                }
-
-                if (showRow) {
-                    $row.show();
-                    visibleCount++;
-                } else {
-                    $row.hide();
-                }
-            });
-
-            // Cập nhật số lượng phòng hiển thị
-            $('#roomCount').text(visibleCount);
-
-            // Hiển thị thông báo nếu không có kết quả
-            if (visibleCount === 0) {
-                if ($('#noResults').length === 0) {
-                    $('tbody').append('<tr id="noResults"><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-search me-2"></i>Không tìm thấy phòng nào phù hợp</td></tr>');
-                }
-            } else {
-                $('#noResults').remove();
+                reader.readAsDataURL(input.files[i]);
             }
         }
+    }
 
+    // Thêm event listeners
+    document.querySelector('input[name="avatar"]')?.addEventListener('change', function() {
+        previewImage(this, 'avatar_preview');
+    });
 
-        // Xử lý submit form CẬP NHẬT TRẠNG THÁI
-        $('#formTrangThai').submit(function(e) {
-            e.preventDefault();
-
-            try {
-                const formData = $(this).serializeArray();
-                const trangThaiMoi = formData.find(f => f.name === 'trangThaiMoi').value;
-                const roomInfo = $('#roomInfoTrangThai').text();
-                const maPhongMatch = roomInfo.match(/Mã:\s*(\d+)/);
-                const maPhong = maPhongMatch ? maPhongMatch[1] : '';
-
-                console.log("=== BẮT ĐẦU CẬP NHẬT ===");
-                console.log("MaPhong:", maPhong);
-                console.log("TrangThai:", trangThaiMoi);
-                console.log("RoomInfo:", roomInfo);
-
-                if (!maPhong) {
-                    alert('❌ Không thể lấy mã phòng!');
-                    return;
-                }
-
-                // HIỂN THỊ LOADING
-                const submitBtn = $(this).find('button[type="submit"]');
-                const originalText = submitBtn.html();
-                submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
-                submitBtn.prop('disabled', true);
-
-                // Gửi request đến server
-                $.ajax({
-                    url: '../controller/phongController.php',
-                    type: 'POST',
-                    data: {
-                        action: 'capNhatTrangThai',
-                        maPhong: maPhong,
-                        trangThai: trangThaiMoi
-                    },
-                    success: function(response) {
-                        console.log("=== RESPONSE THÀNH CÔNG ===");
-                        console.log("Raw Response:", response);
-
-                        // KHÔI PHỤC BUTTON
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-
-                        let result;
-                        try {
-                            // PARSE JSON
-                            if (typeof response === 'string') {
-                                result = JSON.parse(response);
-                            } else {
-                                result = response;
-                            }
-
-                            console.log("Parsed Result:", result);
-
-                            if (result.success) {
-                                console.log("✅ Cập nhật THÀNH CÔNG");
-
-                                // ĐÓNG MODAL
-                                $('#modalTrangThai').modal('hide');
-
-                                // HIỂN THỊ THÔNG BÁO THÀNH CÔNG
-                                alert('✅ ' + result.message);
-
-                                // RELOAD TRANG SAU 1.5 GIÂY
-                                setTimeout(function() {
-                                    console.log("🔄 Đang reload trang...");
-                                    location.reload();
-                                }, 500);
-
-                            } else {
-                                console.log("❌ Cập nhật THẤT BẠI:", result.message);
-                                alert('❌ ' + result.message);
-                            }
-
-                        } catch (parseError) {
-                            console.error("=== LỖI PARSE JSON ===");
-                            console.error("Error:", parseError);
-                            console.log("Response that failed:", response);
-                            alert('⚠️ Lỗi xử lý dữ liệu từ server. Kiểm tra console!');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("=== LỖI AJAX ===");
-                        console.error("Status:", status);
-                        console.error("Error:", error);
-                        console.log("Response Text:", xhr.responseText);
-
-                        // KHÔI PHỤC BUTTON
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-
-                        alert('❌ Lỗi kết nối server: ' + error);
-                    },
-                    complete: function() {
-                        console.log("=== AJAX COMPLETE ===");
-                        // ĐẢM BẢO BUTTON LUÔN ĐƯỢC KHÔI PHỤC
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-                    }
-                });
-
-            } catch (error) {
-                console.error("=== LỖI TRONG SỰ KIỆN SUBMIT ===");
-                console.error("Error:", error);
-                alert('❌ Lỗi xử lý form: ' + error.message);
-            }
-        });
-
-        // Xử lý submit form CẬP NHẬT TRẠNG THÁI - FIX LỖI JSON
-        $('#formTrangThai').submit(function(e) {
-            e.preventDefault();
-            const formData = $(this).serializeArray();
-            const trangThaiMoi = formData.find(f => f.name === 'trangThaiMoi').value;
-            const roomInfo = $('#roomInfoTrangThai').text();
-            const maPhong = $('#roomInfoTrangThai').text().match(/Mã: (\d+)/)[1];
-
-            console.log("Gửi request:", {
-                maPhong,
-                trangThaiMoi
-            }); // DEBUG
-
-            // Gửi request đến server
-            $.ajax({
-                url: '../controller/phongController.php',
-                type: 'POST',
-                data: {
-                    action: 'capNhatTrangThai',
-                    maPhong: maPhong,
-                    trangThai: trangThaiMoi
-                },
-                success: function(response) {
-                    console.log("Nhận response:", response); // DEBUG
-
-                    // KIỂM TRA NẾU RESPONSE ĐÃ LÀ OBJECT
-                    if (typeof response === 'object') {
-                        // Response đã là object (tự động parse)
-                        if (response.success) {
-                            $('#modalTrangThai').modal('hide');
-                            location.reload();
-                        } else {
-                            alert('Lỗi: ' + response.message);
-                        }
-                    } else {
-                        // Response là string, cần parse
-                        try {
-                            const result = JSON.parse(response);
-                            if (result.success) {
-                                $('#modalTrangThai').modal('hide');
-                                location.reload();
-                            } else {
-                                alert('Lỗi: ' + result.message);
-                            }
-                        } catch (e) {
-                            console.error("Lỗi parse JSON:", e);
-                            console.error("Response raw:", response);
-                            alert('Lỗi: Dữ liệu từ server không hợp lệ. Kiểm tra console!');
-                        }
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Lỗi AJAX:", error);
-                    alert('Lỗi kết nối server: ' + error);
-                }
-            });
-
-            $(this)[0].reset();
-        });
-        // Xử lý submit form GHI NHẬN CHI PHÍ
-        $('#formChiPhi').submit(function(e) {
-            e.preventDefault();
-            const formData = $(this).serializeArray();
-            const roomInfo = $('#roomInfoChiPhi').text();
-            const maPhong = $('#roomInfoChiPhi').text().match(/Mã: (\d+)/)[1];
-            const loaiChiPhi = formData.find(f => f.name === 'loaiChiPhi').value;
-            const soTien = formData.find(f => f.name === 'soTien').value;
-            const ghiChu = formData.find(f => f.name === 'ghiChu').value;
-
-            // Gửi request đến server
-            $.ajax({
-                url: '../controller/phongController.php',
-                type: 'POST',
-                data: {
-                    action: 'ghiNhanChiPhi',
-                    maPhong: maPhong,
-                    loaiChiPhi: loaiChiPhi,
-                    soTien: soTien,
-                    ghiChu: ghiChu
-                },
-                success: function(response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.success) {
-                            alert('Ghi nhận chi phí thành công!');
-                        } else {
-                            alert('Lỗi: ' + result.message);
-                        }
-                    } catch (e) {
-                        alert('Lỗi xử lý dữ liệu');
-                    }
-                },
-                error: function() {
-                    alert('Lỗi kết nối server');
-                }
-            });
-
-            $('#modalChiPhi').modal('hide');
-            $(this)[0].reset();
+    document.querySelector('input[name="danh_sach_anh[]"]')?.addEventListener('change', function() {
+        previewMultipleImages(this, 'images_preview');
+    });
+    
+    // Chọn tất cả
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
         });
     });
+
+    // Hiển thị modal sửa phòng
+    function showSuaPhongModal(maPhong) {
+        fetch('quanlyphong.php?action=get_phong_info&ma_phong=' + maPhong)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const phong = data.data;
+
+                    // Điền dữ liệu vào form
+                    document.getElementById('sua_ma_phong').value = phong.MaPhong;
+                    document.getElementById('sua_so_phong_display').textContent = phong.SoPhong;
+                    document.getElementById('sua_so_phong').value = phong.SoPhong;
+                    document.getElementById('sua_tang').value = phong.Tang;
+                    document.getElementById('sua_ma_loai_phong').value = phong.MaLoaiPhong;
+                    document.getElementById('sua_trang_thai').value = phong.TrangThai;
+                    document.getElementById('sua_room_name').value = phong.roomName;
+
+                    // Hiển thị modal
+                    new bootstrap.Modal(document.getElementById('suaPhongModal')).show();
+                } else {
+                    alert('Không thể tải thông tin phòng!');
+                }
+            })
+            .catch(error => {
+                console.error('Lỗi:', error);
+                alert('Lỗi khi tải thông tin phòng!');
+            });
+    }
+
+    // Hiển thị modal quản lý thiết bị
+    function showThietBiModal(maPhong, tenPhong) {
+        document.getElementById('thietBiModalTitle').innerHTML =
+            '<i class="fas fa-tools me-2"></i>Quản lý Thiết bị - ' + tenPhong;
+        document.getElementById('currentMaPhong').value = maPhong;
+        document.getElementById('maPhongThemThietBi').value = maPhong;
+
+        // Load danh sách thiết bị hiện tại
+        loadThietBiPhong(maPhong);
+
+        // Hiển thị modal
+        new bootstrap.Modal(document.getElementById('thietBiModal')).show();
+    }
+
+    // Load danh sách thiết bị phòng
+    function loadThietBiPhong(maPhong) {
+        fetch('quanlyphong.php?action=get_thiet_bi&ma_phong=' + maPhong)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('tableThietBi').innerHTML = data;
+                // Cập nhật tổng số thiết bị
+                const totalRows = document.getElementById('tableThietBi').querySelectorAll('tr').length;
+                document.getElementById('totalThietBi').textContent = totalRows + ' thiết bị';
+            });
+    }
+
+    // Xác nhận xóa thiết bị
+    function confirmXoaThietBi(maThietBi, tenThietBi) {
+        if (confirm('Bạn có chắc muốn xóa thiết bị "' + tenThietBi + '"?')) {
+            window.location.href = 'quanlyphong.php?action=xoa_thiet_bi&ma_thiet_bi=' + maThietBi;
+        }
+    }
 </script>
 
-<?php include '../layouts/footer.php'; ?>
+<?php include_once '../layouts/footer.php'; ?>

@@ -395,7 +395,7 @@ $role = $_SESSION['vaitro'];
                         ],
                         'kinhdoanh' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => 'khuyenmai.php'],
+                            ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => '../kinhdoanh/khuyenmai.php'],
                             ['icon' => 'fas fa-comments', 'text' => 'Phản hồi khách hàng', 'link' => 'phanhoi.php'],
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 

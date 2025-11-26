@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "Quản lý khuyến mãi - ABC Resort";
-include_once 'layouts/header.php';
+
 
 // TỰ LẤY DỮ LIỆU TRONG VIEW ĐỂ ĐẢM BẢO LUÔN CÓ
 require_once '../model/KhuyenMaiModel.php';

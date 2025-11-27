@@ -1,7 +1,30 @@
 <?php
 include __DIR__ . '/../layouts/header.php';
-?>
 
+// DÙNG include_once THAY VÌ include
+include_once $_SERVER['DOCUMENT_ROOT'] . '/ABC-Resort/client/model/connectDB.php';
+
+// Tạo kết nối
+$connect = new Connect();
+$conn = $connect->openConnect();
+
+// Lấy khuyến mãi từ database ptud
+$sql = "SELECT * FROM KhuyenMai";
+$result = mysqli_query($conn, $sql);
+
+$khuyenMaiList = [];
+if ($result && mysqli_num_rows($result) > 0) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $khuyenMaiList[] = $row;
+    }
+}
+
+// DEBUG
+echo "<!-- DEBUG: Số khuyến mãi: " . count($khuyenMaiList) . " -->";
+
+// Đóng kết nối
+$connect->closeConnect($conn);
+?>
 <!-- Banner Carousel -->
 <div id="resortCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
     <div class="carousel-indicators">
@@ -170,6 +193,7 @@ include __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 
+
     <!-- Danh sách phòng -->
     <h2 id="room-list" class="text-center mb-4">DANH SÁCH PHÒNG RESORT</h2>
 
@@ -300,8 +324,45 @@ include __DIR__ . '/../layouts/header.php';
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
-</div>
+    <!-- Hiển thị khuyến mãi từ CSDL -->
+    <div class="row mb-5" id="khuyen-mai"> <!-- THÊM ID Ở ĐÂY -->
+        <div class="col-12">
+            <h2 class="text-center mb-4">KHUYẾN MÃI ĐANG DIỄN RA</h2>
 
+            <div class="row">
+                <?php if (!empty($khuyenMaiList)): ?>
+                    <?php foreach ($khuyenMaiList as $km): ?>
+                        <div class="col-lg-3 col-md-6 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <img src="<?php echo $km['HinhAnh']; ?>"
+                                    class="card-img-top"
+                                    alt="<?php echo $km['TenKhuyenMai']; ?>"
+                                    style="height: 200px; object-fit: cover;"
+                                    onerror="this.src='assets/images/default-room.jpg'">
+                                <div class="card-body d-flex flex-column">
+                                    <span class="badge bg-primary mb-2"><?php echo $km['LoaiKhuyenMai']; ?></span>
+                                    <h5 class="card-title"><?php echo $km['TenKhuyenMai']; ?></h5>
+                                    <p class="card-text flex-grow-1"><?php echo $km['MoTa']; ?></p>
+                                    <div class="mt-auto">
+                                        <p class="text-success fw-bold mb-1">Giảm: <?php echo $km['MucGiamGia']; ?>%</p>
+                                        <small class="text-muted d-block">
+                                            <?php echo date('d/m/Y', strtotime($km['NgayBatDau'])); ?> -
+                                            <?php echo date('d/m/Y', strtotime($km['NgayKetThuc'])); ?>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="col-12 text-center">
+                        <p class="text-muted">Hiện không có khuyến mãi nào</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     function bookRoom(roomId) {
         alert('Đặt phòng: ' + roomId + '\nTính năng đang phát triển...');

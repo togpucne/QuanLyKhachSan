@@ -36,10 +36,16 @@ $userName = $_SESSION['user_name'] ?? '';
             transform: translateY(-8px);
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
         }
-        
+
         .user-welcome {
             color: #fff;
             margin-right: 15px;
+        }
+
+        #room-list,
+        #khuyen-mai {
+            scroll-margin-top: 100px;
+            /* Điều chỉnh khoảng cách với header */
         }
     </style>
 </head>
@@ -62,7 +68,7 @@ $userName = $_SESSION['user_name'] ?? '';
                 <div class="navbar-nav ms-auto">
                     <!-- TRANG CHỦ SỬA VỀ INDEX.PHP -->
                     <a class="nav-link active" href="<?php echo $base_url; ?>/client/index.php">Trang Chủ</a>
-                    
+
                     <!-- PHÒNG SỬA VỀ INDEX.PHP KÈM ANCHOR -->
                     <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#room-list">Phòng</a>
 
@@ -72,14 +78,12 @@ $userName = $_SESSION['user_name'] ?? '';
                             <i class="fas fa-gift me-1"></i>Khuyến mãi
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-percentage me-2"></i>Ưu đãi đặc biệt
+                            <!-- SỬA: Dùng href trực tiếp đến #khuyen-mai -->
+                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
+                                    <i class="fas fa-bed me-2"></i>Khuyến mãi Chỗ Ở
                                 </a></li>
-                            <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-tag me-2"></i>Combo tiết kiệm
-                                </a></li>
-                            <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-star me-2"></i>Ưu đãi thành viên
+                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
+                                    <i class="fas fa-plane me-2"></i>Khuyến mãi Ưu đãi Hoạt động
                                 </a></li>
                         </ul>
                     </div>
@@ -104,7 +108,7 @@ $userName = $_SESSION['user_name'] ?? '';
 
                     <a class="nav-link" href="#">Đặt Phòng</a>
                     <a class="nav-link" href="#">Liên Hệ</a>
-                    
+
                     <!-- Dropdown Tài khoản -->
                     <div class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -115,16 +119,20 @@ $userName = $_SESSION['user_name'] ?? '';
                             <?php if ($isLoggedIn): ?>
                                 <!-- Đã đăng nhập - THÊM THÔNG TIN USER -->
                                 <li><span class="dropdown-item-text small text-muted">
-                                    <i class="fas fa-user-tag me-2"></i><?php echo htmlspecialchars($userRole); ?>
-                                </span></li>
-                                <li><hr class="dropdown-divider"></li>
+                                        <i class="fas fa-user-tag me-2"></i><?php echo htmlspecialchars($userRole); ?>
+                                    </span></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
                                 <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-suitcase me-2"></i>Đặt chỗ của tôi
-                                </a></li>
+                                        <i class="fas fa-suitcase me-2"></i>Đặt chỗ của tôi
+                                    </a></li>
                                 <li><a class="dropdown-item" href="#">
-                                    <i class="fas fa-user-edit me-2"></i>Thông tin tài khoản
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
+                                        <i class="fas fa-user-edit me-2"></i>Thông tin tài khoản
+                                    </a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
                                 <li><a class="dropdown-item text-danger" href="<?php echo $base_url; ?>/client/controller/user.controller.php?action=logout">
                                         <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
                                     </a></li>
@@ -143,3 +151,55 @@ $userName = $_SESSION['user_name'] ?? '';
             </div>
         </div>
     </nav>
+    <script>
+        // Xử lý scroll mượt cho tất cả anchor links
+        document.addEventListener('DOMContentLoaded', function() {
+            // Xử lý cho link Phòng
+            const roomLink = document.querySelector('a[href*="#room-list"]');
+            if (roomLink) {
+                roomLink.addEventListener('click', function(e) {
+                    if (window.location.pathname.includes('index.php')) {
+                        e.preventDefault();
+                        const roomSection = document.getElementById('room-list');
+                        if (roomSection) {
+                            roomSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Xử lý cho link Khuyến mãi
+            const promotionLinks = document.querySelectorAll('a[href*="#khuyen-mai"]');
+            promotionLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (window.location.pathname.includes('index.php')) {
+                        e.preventDefault();
+                        const promotionSection = document.getElementById('khuyen-mai');
+                        if (promotionSection) {
+                            promotionSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Xử lý URL có anchor khi load trang
+            if (window.location.hash && window.location.pathname.includes('index.php')) {
+                const targetId = window.location.hash.substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    setTimeout(() => {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }, 100);
+                }
+            }
+        });
+    </script>

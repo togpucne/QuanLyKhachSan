@@ -36,19 +36,23 @@ $userName = $_SESSION['user_name'] ?? '';
             transform: translateY(-8px);
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
         }
+        
+        .user-welcome {
+            color: #fff;
+            margin-right: 15px;
+        }
     </style>
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <!-- LOGO DÙNG BASE URL -->
-            <a class="navbar-brand" href="<?php echo $base_url; ?>/client/view/home/index.php">
+            <!-- LOGO SỬA VỀ TRANG CHỦ QUA INDEX.PHP -->
+            <a class="navbar-brand" href="<?php echo $base_url; ?>/client/index.php">
                 <img src="<?php echo $base_url; ?>/client/assets/images/logo/logo_toasang-removebg.png" width="60" height="60" alt="Logo">
                 Tỏa Sáng RESORT
             </a>
 
-            <!-- ... rest of navbar code ... -->
             <!-- Mobile toggle button -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -56,8 +60,11 @@ $userName = $_SESSION['user_name'] ?? '';
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto">
-                    <a class="nav-link active" href="index.php">Trang Chủ</a>
-                    <a class="nav-link" href="#room-list">Phòng</a>
+                    <!-- TRANG CHỦ SỬA VỀ INDEX.PHP -->
+                    <a class="nav-link active" href="<?php echo $base_url; ?>/client/index.php">Trang Chủ</a>
+                    
+                    <!-- PHÒNG SỬA VỀ INDEX.PHP KÈM ANCHOR -->
+                    <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#room-list">Phòng</a>
 
                     <!-- Dropdown Khuyến mãi -->
                     <div class="nav-item dropdown">
@@ -97,6 +104,7 @@ $userName = $_SESSION['user_name'] ?? '';
 
                     <a class="nav-link" href="#">Đặt Phòng</a>
                     <a class="nav-link" href="#">Liên Hệ</a>
+                    
                     <!-- Dropdown Tài khoản -->
                     <div class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -105,7 +113,18 @@ $userName = $_SESSION['user_name'] ?? '';
                         </a>
                         <ul class="dropdown-menu">
                             <?php if ($isLoggedIn): ?>
-                                <!-- Đã đăng nhập -->
+                                <!-- Đã đăng nhập - THÊM THÔNG TIN USER -->
+                                <li><span class="dropdown-item-text small text-muted">
+                                    <i class="fas fa-user-tag me-2"></i><?php echo htmlspecialchars($userRole); ?>
+                                </span></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-suitcase me-2"></i>Đặt chỗ của tôi
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="fas fa-user-edit me-2"></i>Thông tin tài khoản
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="<?php echo $base_url; ?>/client/controller/user.controller.php?action=logout">
                                         <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
                                     </a></li>
@@ -121,4 +140,6 @@ $userName = $_SESSION['user_name'] ?? '';
                         </ul>
                     </div>
                 </div>
+            </div>
+        </div>
     </nav>

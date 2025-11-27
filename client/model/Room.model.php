@@ -15,6 +15,7 @@ class RoomModel
         $conn = $this->connect->openConnect();
 
         $sql = "SELECT p.MaPhong, p.SoPhong, p.Tang, p.TrangThai, p.roomName,
+                   p.GiaPhong, p.TongGia,  -- THÊM TONG GIA
                    lp.MaLoaiPhong, lp.HangPhong, lp.HinhThuc, lp.DonGia, 
                    p.Avatar, p.DanhSachPhong
             FROM phong p

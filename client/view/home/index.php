@@ -122,14 +122,13 @@ include __DIR__ . '/../layouts/header.php';
                 </div>
             </form>
         </div>
-        
+
     </div>
     <!--  Banner Khuyến Mãi  -->
     <div class="row mb-5">
         <div class="">
             <img src="assets/images/banner/banner_khuyenmai.webp" height="250px" width="100%" alt=""
-            style="border-radius: 10px;"
-            >
+                style="border-radius: 10px;">
         </div>
 
     </div>
@@ -213,7 +212,7 @@ include __DIR__ . '/../layouts/header.php';
                     data-floor="<?php echo htmlspecialchars($room['Tang']); ?>"
                     data-class="<?php echo htmlspecialchars($room['HangPhong']); ?>"
                     data-status="<?php echo htmlspecialchars($room['TrangThai']); ?>"
-                    data-price="<?php echo $room['DonGia']; ?>">
+                    data-price="<?php echo $room['TongGia']; ?>">
                     <div class="card room-card h-100 shadow-sm">
                         <!-- Ảnh phòng - LẤY TỪ CỘT AVATAR -->
                         <div class="room-image position-relative">
@@ -275,7 +274,11 @@ include __DIR__ . '/../layouts/header.php';
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                    <span><strong>Giá:</strong> <span class="text-success fw-bold"><?php echo number_format($room['DonGia']); ?> VND</span></span>
+                                    <span><strong>Giá:</strong>
+                                        <span class="text-success fw-bold">
+                                            <?php echo number_format($room['TongGia']); ?> VND
+                                        </span>
+                                    </span>
                                 </div>
                             </div>
                         </div>

@@ -73,13 +73,13 @@ class UserController
                     'cmnd' => $cmnd
                 ];
 
-                // THÊM VÀO DATABASE
                 if ($this->userModel->createUser($userData)) {
                     $_SESSION['register_success'] = "🎉 Đăng ký thành công! Tài khoản đã được tạo. Bạn có thể đăng nhập ngay.";
+                    // THÊM SESSION CHO ALERT
+                    $_SESSION['show_alert'] = "success";
+                    $_SESSION['alert_message'] = "🎉 Đăng ký thành công!";
                     header("Location: user.controller.php?action=login");
                     exit();
-                } else {
-                    $errors['general'] = "❌ Có lỗi xảy ra khi đăng ký. Vui lòng thử lại!";
                 }
             }
 
@@ -169,7 +169,10 @@ class UserController
                     $_SESSION['vaitro'] = $user['VaiTro'];
                     $_SESSION['email'] = $user['Email'];
 
-                    // REDIRECT VỀ CLIENT/INDEX.PHP
+                    // THÊM SESSION CHO ALERT ĐĂNG NHẬP THÀNH CÔNG
+                    $_SESSION['show_alert'] = "success";
+                    $_SESSION['alert_message'] = "🎉 Đăng nhập thành công! Chào mừng " . $user['TenDangNhap'] . "!";
+
                     header("Location: ../../client/index.php");
                     exit();
                 } else {

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../model/Room.model.php';
 
+
 class RoomController {
     private $roomModel;
 

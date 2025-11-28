@@ -1,12 +1,29 @@
 <?php
 include __DIR__ . '/../layouts/header.php';
-
-// DÙNG include_once THAY VÌ include
 include_once $_SERVER['DOCUMENT_ROOT'] . '/ABC-Resort/client/model/connectDB.php';
 
 // Tạo kết nối
 $connect = new Connect();
 $conn = $connect->openConnect();
+
+// LẤY DANH SÁCH PHÒNG TỪ DATABASE - THÊM PHẦN NÀY
+$sqlRooms = "SELECT p.*, lp.HangPhong, lp.HinhThuc 
+             FROM Phong p 
+             LEFT JOIN LoaiPhong lp ON p.MaLoaiPhong = lp.MaLoaiPhong";
+$resultRooms = mysqli_query($conn, $sqlRooms);
+
+$rooms = [];
+$roomCounts = ['Trống' => 0, 'Đang sử dụng' => 0, 'Đang dọn dẹp' => 0];
+
+if ($resultRooms && mysqli_num_rows($resultRooms) > 0) {
+    while ($row = mysqli_fetch_assoc($resultRooms)) {
+        $rooms[] = $row;
+        // Đếm số phòng theo trạng thái
+        if (isset($roomCounts[$row['TrangThai']])) {
+            $roomCounts[$row['TrangThai']]++;
+        }
+    }
+}
 
 // Lấy khuyến mãi từ database ptud
 $sql = "SELECT * FROM KhuyenMai";
@@ -21,10 +38,97 @@ if ($result && mysqli_num_rows($result) > 0) {
 
 // DEBUG
 echo "<!-- DEBUG: Số khuyến mãi: " . count($khuyenMaiList) . " -->";
+echo "<!-- DEBUG: Số phòng: " . count($rooms) . " -->";
 
 // Đóng kết nối
 $connect->closeConnect($conn);
 ?>
+
+<style>
+    .custom-range {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .custom-range::-webkit-slider-track {
+        background: #e9ecef;
+        height: 8px;
+        border-radius: 4px;
+    }
+
+    .custom-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #37353E;
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .custom-range::-moz-range-track {
+        background: #e9ecef;
+        height: 8px;
+        border-radius: 4px;
+        border: none;
+    }
+
+    .custom-range::-moz-range-thumb {
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #37353E;
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+.room-card {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.room-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.card-img-top {
+    transition: transform 0.3s ease;
+}
+
+.room-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.price-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    margin: 0 -12px -12px -12px;
+    padding: 15px 12px 12px 12px;
+}
+
+.btn-dark {
+    background: #2c3e50;
+    border: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-dark:hover {
+    background: #34495e;
+    transform: translateY(-1px);
+}
+</style>
 <!-- Banner Carousel -->
 <div id="resortCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
     <div class="carousel-indicators">
@@ -74,6 +178,89 @@ $connect->closeConnect($conn);
 
         <div class="card-body p-4" style="background-color: #F8F9FA;">
             <form id="filterForm">
+                <!-- Phần mới: Ngày đến, ngày đi, số người -->
+                <div class="row g-3 mb-4">
+                    <!-- Ngày đến -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Ngày đến</label>
+                        <input type="date" class="form-control rounded-3 border-0 shadow-sm"
+                            id="checkinDate"
+                            min="<?php echo date('Y-m-d'); ?>">
+                    </div>
+
+                    <!-- Ngày đi -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Ngày đi</label>
+                        <input type="date" class="form-control rounded-3 border-0 shadow-sm"
+                            id="checkoutDate"
+                            min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
+                    </div>
+
+                    <!-- Số người - Dropdown -->
+                    <!-- Số người - Dropdown -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold text-dark">Số người</label>
+                        <div class="dropdown" id="guestDropdownContainer">
+                            <button class="btn btn-light w-100 text-start rounded-3 border-0 shadow-sm dropdown-toggle"
+                                type="button"
+                                id="guestDropdown"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="outside"
+                                aria-expanded="false">
+                                <span id="guestDisplay">1 Adult(s), 1 Room</span>
+                            </button>
+                            <div class="dropdown-menu p-3" style="width: 280px;">
+                                <div class="row g-3">
+                                    <!-- Adult -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-semibold">Adult</label>
+                                            <div class="d-flex align-items-center">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                    onclick="changeGuestCount('adult', -1)">-</button>
+                                                <span class="mx-3 fw-semibold" id="adultCount">1</span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                    onclick="changeGuestCount('adult', 1)">+</button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Từ 13 tuổi trở lên</small>
+                                    </div>
+
+                                    <!-- Room -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-semibold">Room</label>
+                                            <div class="d-flex align-items-center">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                    onclick="changeGuestCount('room', -1)">-</button>
+                                                <span class="mx-3 fw-semibold" id="roomCount">1</span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                    onclick="changeGuestCount('room', 1)">+</button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Số phòng</small>
+                                    </div>
+
+                                    <!-- Nút áp dụng và đóng -->
+                                    <div class="col-12 pt-2">
+                                        <button type="button" class="btn btn-primary w-100 mb-2"
+                                            onclick="applyGuestSelection()">Áp dụng</button>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hiển thị số đêm -->
+                    <div class="col-md-3">
+                        <div class="text-center p-2 bg-white rounded-3 border-0 shadow-sm">
+                            <small class="text-muted d-block">Số đêm</small>
+                            <span class="fw-bold" style="color: #37353E;" id="nightCount">1</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-4">
                     <!-- Tìm kiếm theo số phòng -->
                     <div class="col-md-3">
@@ -103,17 +290,6 @@ $connect->closeConnect($conn);
                         </select>
                     </div>
 
-                    <!-- Lọc theo trạng thái -->
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold text-dark">Trạng Thái</label>
-                        <select class="form-select rounded-3 border-0 shadow-sm" id="statusFilter">
-                            <option value="">Tất cả trạng thái</option>
-                            <option value="Trống">Phòng trống</option>
-                            <option value="Đang sử dụng">Đang sử dụng</option>
-                            <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                        </select>
-                    </div>
-
                     <!-- Lọc theo giá -->
                     <div class="col-md-6">
                         <label class="form-label fw-semibold text-dark">
@@ -122,9 +298,13 @@ $connect->closeConnect($conn);
                                 0 - 10,000,000 VND
                             </span>
                         </label>
-                        <input type="range" class="form-range" id="priceRange"
+                        <input type="range" class="form-range custom-range" id="priceRange"
                             min="0" max="10000000" step="100000" value="10000000"
-                            style="color: red ;accent-color: #37353E;">
+                            style="width: 100%; height: 8px; background: #e9ecef; border-radius: 4px;">
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">0 VND</small>
+                            <small class="text-muted">10,000,000 VND</small>
+                        </div>
                     </div>
 
                     <!-- Nút tìm kiếm -->
@@ -145,10 +325,10 @@ $connect->closeConnect($conn);
                 </div>
             </form>
         </div>
-
     </div>
-    <!--  Banner Khuyến Mãi  -->
-    <div class="row mb-5">
+
+     <!--  Banner Khuyến Mãi  -->
+    <div class="row mb-5 mt-5">
         <div class="">
             <img src="assets/images/banner/banner_khuyenmai.webp" height="250px" width="100%" alt=""
                 style="border-radius: 10px;">
@@ -157,48 +337,11 @@ $connect->closeConnect($conn);
     </div>
 
 
-    <!-- Thống kê nhanh -->
-    <div class="row mb-5">
-        <div class="col-md-3 mb-3">
-            <div class="card text-center border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="text-success"><?php echo isset($roomCounts['Trống']) ? $roomCounts['Trống'] : 0; ?></h3>
-                    <p class="text-muted mb-0">Phòng Trống</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="text-danger"><?php echo isset($roomCounts['Đang sử dụng']) ? $roomCounts['Đang sử dụng'] : 0; ?></h3>
-                    <p class="text-muted mb-0">Đang Sử Dụng</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="text-warning"><?php echo isset($roomCounts['Đang dọn dẹp']) ? $roomCounts['Đang dọn dẹp'] : 0; ?></h3>
-                    <p class="text-muted mb-0">Đang Dọn Dẹp</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center border-0 shadow-sm">
-                <div class="card-body">
-                    <h3 class="text-info"><?php echo count($rooms); ?></h3>
-                    <p class="text-muted mb-0">Tổng Số Phòng</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
     <!-- Danh sách phòng -->
-    <h2 id="room-list" class="text-center mb-4">DANH SÁCH PHÒNG RESORT</h2>
+    <h2 id="room-list" class="text-center mb-4 mt-5">DANH SÁCH PHÒNG RESORT</h2>
 
     <?php
-    // ĐƯA HÀM RA NGOÀI VÒNG LẶP
+    // ĐỊNH NGHĨA HÀM GET ROOM IMAGE PATH - THÊM LẠI PHẦN NÀY
     function getRoomImagePath($avatar)
     {
         if (empty($avatar)) {
@@ -211,7 +354,6 @@ $connect->closeConnect($conn);
         }
 
         // Nếu là đường dẫn tương đối trong database
-        // Database: room001/avatar1 → Đường dẫn: assets/images/rooms/room001/avatar1.jpeg
         $basePath = 'assets/images/rooms/';
         $extensions = ['.jpeg', '.jpg', '.png', '.webp'];
 
@@ -230,24 +372,25 @@ $connect->closeConnect($conn);
             Không có phòng nào trong hệ thống
         </div>
     <?php else: ?>
-        <div class="row" id="roomList">
+        <div class="row mb-5 mt-5" id="roomList">
             <?php foreach ($rooms as $room): ?>
-                <div class="col-lg-3 col-md-6 mb-4 room-item"
+                <div class="col-lg-4 col-md-6 mb-4 room-item"
                     data-floor="<?php echo htmlspecialchars($room['Tang']); ?>"
                     data-class="<?php echo htmlspecialchars($room['HangPhong']); ?>"
                     data-status="<?php echo htmlspecialchars($room['TrangThai']); ?>"
-                    data-price="<?php echo $room['TongGia']; ?>">
-                    <div class="card room-card h-100 shadow-sm">
-                        <!-- Ảnh phòng - LẤY TỪ CỘT AVATAR -->
+                    data-price="<?php echo $room['TongGia']; ?>"
+                    data-sokhachtoida="<?php echo $room['SoKhachToiDa']; ?>">
+
+                    <div class="card room-card h-100 border-0 shadow-sm">
+                        <!-- Ảnh phòng -->
                         <div class="room-image position-relative">
                             <?php
                             $roomImage = getRoomImagePath($room['Avatar'] ?? '');
                             ?>
-
                             <img src="<?php echo $roomImage; ?>"
                                 class="card-img-top"
                                 alt="Phòng <?php echo htmlspecialchars($room['SoPhong']); ?>"
-                                style="height: 200px; object-fit: cover;"
+                                style="height: 220px; object-fit: cover; border-radius: 8px 8px 0 0;"
                                 onerror="this.src='assets/images/default-room.jpg'">
 
                             <!-- Badge trạng thái -->
@@ -267,63 +410,92 @@ $connect->closeConnect($conn);
                                     default:
                                         echo 'bg-secondary';
                                 }
-                                ?>">
+                                ?> px-2 py-1">
                                     <?php echo htmlspecialchars($room['TrangThai']); ?>
                                 </span>
                             </div>
 
                             <!-- Badge hạng phòng -->
                             <div class="position-absolute top-0 start-0 m-2">
-                                <span class="badge bg-info">
+                                <span class="badge bg-dark px-2 py-1">
                                     <?php echo htmlspecialchars($room['HangPhong']); ?>
                                 </span>
                             </div>
                         </div>
 
                         <!-- Thông tin phòng -->
-                        <div class="card-body">
-                            <h5 class="card-title text-primary tx-center">
+                        <div class="card-body d-flex flex-column p-3">
+                            <!-- Tên phòng -->
+                            <h5 class="card-title fw-bold text-dark mb-2" style="font-size: 1.1rem;">
                                 <?php echo htmlspecialchars($room['roomName']); ?>
                             </h5>
 
-                            <!-- Thông tin cơ bản -->
-                            <div class="room-info mb-3">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fas fa-layer-group text-muted me-2"></i>
-                                    <span><strong>Tầng:</strong> <?php echo htmlspecialchars($room['Tang']); ?></span>
-                                </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fas fa-clock text-info me-2"></i>
-                                    <span><strong>Hình thức:</strong> <?php echo htmlspecialchars($room['HinhThuc']); ?></span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                    <span><strong>Giá:</strong>
-                                        <span class="text-success fw-bold">
-                                            <?php echo number_format($room['TongGia']); ?> VND
-                                        </span>
+                            <!-- Thông tin cơ bản - ĐƠN GIẢN HÓA -->
+                            <div class="room-info mb-3 flex-grow-1">
+                                <!-- Diện tích và Sức chứa -->
+                                <div class="d-flex justify-content-between text-muted mb-2">
+                                    <span>
+                                        <strong>Diện tích:</strong>
+                                        <?php echo $room['DienTich']; ?> m²
+                                    </span>
+                                    <span>
+                                        <strong>Sức chứa:</strong>
+                                        <?php echo $room['SoKhachToiDa']; ?> người
                                     </span>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Nút đặt phòng -->
-                        <div class="card-footer bg-light">
-                            <?php if ($room['TrangThai'] === 'Trống'): ?>
-                                <button class="btn btn-success w-100" onclick="viewRoomDetail(<?php echo $room['MaPhong']; ?>)">
-                                    <i class="fas fa-eye me-2"></i>Xem Chi Tiết
-                                </button>
-                            <?php else: ?>
-                                <button class="btn btn-secondary w-100" disabled>
-                                    <i class="fas fa-ban me-2"></i>Không Khả Dụng
-                                </button>
-                            <?php endif; ?>
+                                <!-- Tầng và Hướng -->
+                                <div class="d-flex justify-content-between text-muted mb-2">
+                                    <span>
+                                        <strong>Tầng:</strong>
+                                        <?php echo htmlspecialchars($room['Tang']); ?>
+                                    </span>
+                                    <span>
+                                        <strong>Hướng:</strong>
+                                        <?php echo htmlspecialchars($room['HuongNha']); ?>
+                                    </span>
+                                </div>
+
+                                <!-- Hình thức -->
+                                <div class="text-muted mb-3">
+                                    <strong>Hình thức:</strong>
+                                    <?php echo htmlspecialchars($room['HinhThuc']); ?>
+                                </div>
+                            </div>
+
+                            <!-- Giá phòng - NỔI BẬT -->
+                            <div class="price-section border-top pt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted d-block">Giá mỗi đêm</small>
+                                        <div class="h5 fw-bold text-primary mb-0">
+                                            <?php echo number_format($room['TongGia']); ?> VND
+                                        </div>
+                                    </div>
+
+                                    <!-- Nút xem chi tiết -->
+                                    <?php if ($room['TrangThai'] === 'Trống'): ?>
+                                        <button class="btn btn-dark px-3"
+                                            onclick="viewRoomDetail(<?php echo $room['MaPhong']; ?>)">
+                                            Chi tiết
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="btn btn-outline-secondary px-3" disabled>
+                                            Đã đặt
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
-    <?php endif; ?>
+    <?php endif; ?> 
+   
+
+
+
     <!-- Hiển thị khuyến mãi từ CSDL -->
     <div class="row mb-5" id="khuyen-mai"> <!-- THÊM ID Ở ĐÂY -->
         <div class="col-12">
@@ -364,80 +536,264 @@ $connect->closeConnect($conn);
     </div>
 </div>
 <script>
-    function viewRoomDetail(roomId) {
-        window.location.href = '../client/view/room/room-detail.php?id=' + roomId;
+    // Biến toàn cục để lưu số lượng
+    let guestCounts = {
+        adult: 1,
+        room: 1
+    };
+
+    // Biến lưu thông tin tìm kiếm
+    let searchParams = {
+        checkin: '',
+        checkout: '',
+        nights: 1,
+        adults: 1,
+        rooms: 1
+    };
+
+    // Hàm thay đổi số lượng
+    function changeGuestCount(type, change) {
+        let newCount = guestCounts[type] + change;
+
+        // Đặt giới hạn
+        if (type === 'adult') {
+            if (newCount >= 1 && newCount <= 10) {
+                guestCounts.adult = newCount;
+                document.getElementById('adultCount').textContent = newCount;
+            }
+        } else if (type === 'room') {
+            if (newCount >= 1 && newCount <= 5) {
+                guestCounts.room = newCount;
+                document.getElementById('roomCount').textContent = newCount;
+            }
+        }
     }
 
-    function bookRoom(roomId) {
-        alert('Đặt phòng: ' + roomId + '\nTính năng đang phát triển...');
+    // Hàm đóng dropdown
+    function closeGuestDropdown() {
+        const dropdown = bootstrap.Dropdown.getInstance(document.getElementById('guestDropdown'));
+        if (dropdown) {
+            dropdown.hide();
+        }
     }
 
-    // Xử lý bộ lọc
+    // Hàm áp dụng lựa chọn - CÓ ĐÓNG DROPDOWN
+    function applyGuestSelection() {
+        let displayText = `${guestCounts.adult} Adult(s), ${guestCounts.room} Room`;
+        document.getElementById('guestDisplay').textContent = displayText;
+
+        // Cập nhật search params
+        searchParams.adults = guestCounts.adult;
+        searchParams.rooms = guestCounts.room;
+
+        // Đóng dropdown sau khi áp dụng
+        closeGuestDropdown();
+
+        // Lọc phòng
+        filterRooms();
+    }
+    // Hàm tính số đêm
+    function calculateNights(checkin, checkout) {
+        const checkinDate = new Date(checkin);
+        const checkoutDate = new Date(checkout);
+        const timeDiff = checkoutDate - checkinDate;
+        const nights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        return nights > 0 ? nights : 1;
+    }
+
+    // Hàm cập nhật số đêm
+    function updateNightCount() {
+        const checkin = document.getElementById('checkinDate').value;
+        const checkout = document.getElementById('checkoutDate').value;
+
+        if (checkin && checkout) {
+            const nights = calculateNights(checkin, checkout);
+            document.getElementById('nightCount').textContent = nights;
+            searchParams.nights = nights;
+        }
+    }
+
+    // Xử lý form tìm kiếm
     document.addEventListener('DOMContentLoaded', function() {
+        const filterForm = document.getElementById('filterForm');
+        const checkinDate = document.getElementById('checkinDate');
+        const checkoutDate = document.getElementById('checkoutDate');
         const priceRange = document.getElementById('priceRange');
         const priceRangeValue = document.getElementById('priceRangeValue');
-        const filterForm = document.getElementById('filterForm');
-        const roomItems = document.querySelectorAll('.room-item');
+
+        // Đặt ngày mặc định
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        checkinDate.value = today.toISOString().split('T')[0];
+        checkoutDate.value = tomorrow.toISOString().split('T')[0];
+
+        // Cập nhật search params mặc định
+        searchParams.checkin = checkinDate.value;
+        searchParams.checkout = checkoutDate.value;
+        searchParams.nights = calculateNights(checkinDate.value, checkoutDate.value);
+
+        // Cập nhật số đêm ban đầu
+        updateNightCount();
+
+        // Validate ngày
+        checkinDate.addEventListener('change', function() {
+            const checkin = new Date(this.value);
+            const newCheckout = new Date(checkin);
+            newCheckout.setDate(newCheckout.getDate() + 1);
+
+            checkoutDate.min = newCheckout.toISOString().split('T')[0];
+
+            if (new Date(checkoutDate.value) <= checkin) {
+                checkoutDate.value = newCheckout.toISOString().split('T')[0];
+            }
+
+            searchParams.checkin = this.value;
+            updateNightCount();
+            filterRooms();
+        });
+
+        checkoutDate.addEventListener('change', function() {
+            searchParams.checkout = this.value;
+            updateNightCount();
+            filterRooms();
+        });
 
         // Cập nhật hiển thị giá
         priceRange.addEventListener('input', function() {
             const maxPrice = parseInt(this.value);
             priceRangeValue.textContent = `0 - ${maxPrice.toLocaleString()} VND`;
+            filterRooms();
         });
 
-        // Xử lý tìm kiếm và lọc
+        // Xử lý submit form
         filterForm.addEventListener('submit', function(e) {
             e.preventDefault();
             filterRooms();
         });
 
         filterForm.addEventListener('reset', function() {
-            setTimeout(filterRooms, 100);
+            setTimeout(function() {
+                // Reset về mặc định
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+
+                checkinDate.value = today.toISOString().split('T')[0];
+                checkoutDate.value = tomorrow.toISOString().split('T')[0];
+
+                guestCounts = {
+                    adult: 1,
+                    room: 1
+                };
+                document.getElementById('guestDisplay').textContent = '1 Adult(s), 1 Room';
+                document.getElementById('adultCount').textContent = '1';
+                document.getElementById('roomCount').textContent = '1';
+
+                searchParams = {
+                    checkin: checkinDate.value,
+                    checkout: checkoutDate.value,
+                    nights: 1,
+                    adults: 1,
+                    rooms: 1
+                };
+
+                updateNightCount();
+                filterRooms();
+            }, 100);
         });
 
         // Lọc real-time khi thay đổi
         document.getElementById('floorFilter').addEventListener('change', filterRooms);
         document.getElementById('roomClassFilter').addEventListener('change', filterRooms);
-        document.getElementById('statusFilter').addEventListener('change', filterRooms);
-        document.getElementById('priceRange').addEventListener('input', filterRooms);
         document.getElementById('roomNumber').addEventListener('input', filterRooms);
-
-        function filterRooms() {
-            const floorFilter = document.getElementById('floorFilter').value;
-            const classFilter = document.getElementById('roomClassFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            const maxPrice = parseInt(document.getElementById('priceRange').value);
-            const roomNumber = document.getElementById('roomNumber').value.toLowerCase();
-
-            roomItems.forEach(room => {
-                const floor = room.getAttribute('data-floor');
-                const roomClass = room.getAttribute('data-class');
-                const status = room.getAttribute('data-status');
-                const price = parseInt(room.getAttribute('data-price'));
-                const roomNum = room.querySelector('.card-title').textContent.toLowerCase();
-
-                const matchFloor = !floorFilter || floor === floorFilter;
-                const matchClass = !classFilter || roomClass === classFilter;
-                const matchStatus = !statusFilter || status === statusFilter;
-                const matchPrice = price <= maxPrice;
-                const matchRoomNumber = !roomNumber || roomNum.includes(roomNumber);
-
-                if (matchFloor && matchClass && matchStatus && matchPrice && matchRoomNumber) {
-                    room.style.display = 'block';
-                } else {
-                    room.style.display = 'none';
-                }
-            });
-        }
     });
 
-    // Auto-play carousel
+    // Hàm lọc phòng
+    function filterRooms() {
+        const floorFilter = document.getElementById('floorFilter').value;
+        const classFilter = document.getElementById('roomClassFilter').value;
+        const maxPrice = parseInt(document.getElementById('priceRange').value);
+        const roomNumber = document.getElementById('roomNumber').value.toLowerCase();
+
+        const roomItems = document.querySelectorAll('.room-item');
+        const selectedAdults = searchParams.adults;
+
+        let visibleCount = 0;
+
+        roomItems.forEach(room => {
+            const floor = room.getAttribute('data-floor');
+            const roomClass = room.getAttribute('data-class');
+            const status = room.getAttribute('data-status');
+            const price = parseInt(room.getAttribute('data-price'));
+            const roomNum = room.querySelector('.card-title').textContent.toLowerCase();
+            const maxGuests = parseInt(room.getAttribute('data-sokhachtoida') || 2); // Lấy từ attribute
+
+            console.log('Phòng:', roomNum, 'Max guests:', maxGuests, 'Selected adults:', selectedAdults); // Debug
+
+            const matchFloor = !floorFilter || floor === floorFilter;
+            const matchClass = !classFilter || roomClass === classFilter;
+            const matchPrice = price <= maxPrice;
+            const matchRoomNumber = !roomNumber || roomNum.includes(roomNumber);
+            const matchGuests = maxGuests >= selectedAdults; // So sánh: sức chứa >= số người chọn
+            const matchStatus = status === 'Trống'; // Chỉ hiển thị phòng trống
+
+            if (matchFloor && matchClass && matchStatus && matchPrice && matchRoomNumber && matchGuests) {
+                room.style.display = 'block';
+                visibleCount++;
+                console.log('HIỆN:', roomNum); // Debug
+            } else {
+                room.style.display = 'none';
+                console.log('ẨN:', roomNum, 'Lý do:', {
+                    floor: !matchFloor,
+                    class: !matchClass,
+                    status: !matchStatus,
+                    price: !matchPrice,
+                    roomNumber: !matchRoomNumber,
+                    guests: !matchGuests
+                }); // Debug
+            }
+        });
+
+        // Hiển thị thông báo nếu không có phòng nào
+        const roomList = document.getElementById('roomList');
+        let noResults = roomList.querySelector('.no-results-message');
+
+        if (visibleCount === 0) {
+            if (!noResults) {
+                noResults = document.createElement('div');
+                noResults.className = 'col-12 no-results-message';
+                noResults.innerHTML = `
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Không tìm thấy phòng nào phù hợp với tiêu chí tìm kiếm<br>
+                    <small>Số người: ${searchParams.adults} | Số đêm: ${searchParams.nights}</small>
+                </div>
+            `;
+                roomList.appendChild(noResults);
+            }
+        } else if (noResults) {
+            noResults.remove();
+        }
+    }
+
+    // Auto-play carousel và các hàm khác giữ nguyên
     document.addEventListener('DOMContentLoaded', function() {
         const carousel = new bootstrap.Carousel(document.getElementById('resortCarousel'), {
             interval: 3000,
             wrap: true
         });
     });
+
+    function viewRoomDetail(roomId) {
+        const url = `../client/view/room/room-detail.php?id=${roomId}&checkin=${searchParams.checkin}&checkout=${searchParams.checkout}&adults=${searchParams.adults}&nights=${searchParams.nights}`;
+        window.location.href = url;
+    }
+
+    function bookRoom(roomId) {
+        alert('Đặt phòng: ' + roomId + '\nTính năng đang phát triển...');
+    }
 </script>
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

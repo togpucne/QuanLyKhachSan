@@ -40,17 +40,27 @@ while ($row = $thietBiResult->fetch_assoc()) {
     $thietBiList[] = $row['TenThietBi'];
 }
 
-// Xử lý ảnh từ DanhSachPhong - ĐƠN GIẢN SAU KHI UPDATE DATABASE
-$danhSachAnh = json_decode($phong['DanhSachPhong'], true) ?: [$phong['Avatar']];
+// Lấy danh sách dịch vụ khả dụng
+$sqlDichVu = "SELECT * FROM dichvu WHERE TrangThai = 'Khả dụng' ORDER BY LoaiDV, TenDV";
+$resultDichVu = $conn->query($sqlDichVu);
+$dichVuList = [];
+$dichVuTheoLoai = [];
 
-// DEBUG: Kiểm tra dữ liệu ảnh
-echo "<!-- DEBUG: Số ảnh: " . count($danhSachAnh) . " -->";
-foreach ($danhSachAnh as $index => $anh) {
-    echo "<!-- DEBUG Ảnh $index: $anh -->";
-    echo "<!-- DEBUG Đường dẫn $index: " . getRoomImagePath($anh) . " -->";
+if ($resultDichVu && $resultDichVu->num_rows > 0) {
+    while ($row = $resultDichVu->fetch_assoc()) {
+        $dichVuList[] = $row;
+        $loaiDV = $row['LoaiDV'];
+        if (!isset($dichVuTheoLoai[$loaiDV])) {
+            $dichVuTheoLoai[$loaiDV] = [];
+        }
+        $dichVuTheoLoai[$loaiDV][] = $row;
+    }
 }
 
-// Hàm lấy đường dẫn ảnh đúng - THỬ CÁC ĐUÔI ẢNH
+// Xử lý ảnh từ DanhSachPhong
+$danhSachAnh = json_decode($phong['DanhSachPhong'], true) ?: [$phong['Avatar']];
+
+// Hàm lấy đường dẫn ảnh đúng
 function getRoomImagePath($imagePath)
 {
     if (empty($imagePath)) {
@@ -62,19 +72,16 @@ function getRoomImagePath($imagePath)
     }
 
     $basePath = '/ABC-Resort/client/assets/images/rooms/';
-
-    // Thử các đuôi ảnh phổ biến
     $extensions = ['.jpeg', '.jpg', '.png', '.webp', '.gif'];
 
     foreach ($extensions as $ext) {
         $fullPath = $basePath . $imagePath . $ext;
-        // Có thể kiểm tra file tồn tại ở đây nếu cần
-        // Hoặc cứ trả về và để browser tự xử lý
-        return $fullPath; // Ưu tiên .jpeg đầu tiên
+        return $fullPath;
     }
 
-    return $basePath . $imagePath; // Fallback: không đuôi
+    return $basePath . $imagePath;
 }
+
 // Xử lý tiện nghi
 $tienNghi = json_decode($phong['TienNghi'] ?? '[]', true) ?: [];
 
@@ -98,16 +105,77 @@ $connect->closeConnect($conn);
         justify-content: center;
     }
 
-    .carousel-indicators button {
-        background-color: #6c757d;
+    .room-feature-icon {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .carousel-indicators .active {
-        background-color: #0d6efd;
+    .carousel-thumb {
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
-    
+
+    .carousel-thumb:hover {
+        transform: scale(1.05);
+        border-color: #495057 !important;
+    }
+
+    .carousel-thumb.active {
+        border-color: #495057 !important;
+        transform: scale(1.05);
+    }
+
+    .room-info-card {
+        border: 1px solid #e9ecef;
+    }
+
+    .service-card {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .service-card:hover {
+        border-color: #0d6efd;
+    }
+
+    .service-card.selected {
+        border-color: #0d6efd;
+        background-color: #f8f9ff;
+    }
+
+    .service-checkbox {
+        display: none;
+    }
+
+    .price-breakdown {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 15px;
+    }
+
+    .total-price {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+
+    .section-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #0d6efd;
+    }
 </style>
-<!-- Phần giới thiệu resort -->
+
+<!-- Phần giới thiệu resort - GIỮ NGUYÊN -->
 <section class="resort-intro py-5">
     <div class="container">
         <div class="row align-items-center">
@@ -252,158 +320,37 @@ $connect->closeConnect($conn);
     </div>
 </section>
 
-
 <!-- Chi tiết phòng -->
-<section class="room-detail py-5 bg-light">
+<section class="room-detail py-4">
     <div class="container">
         <div class="row">
-            <!-- Bên trái 7 - Hình ảnh -->
-            <div class="col-lg-7 mb-4">
+            <!-- Bên trái - Hình ảnh phòng -->
+            <div class="col-lg-8">
                 <!-- Ảnh chính lớn -->
-                <div class="main-image mb-4">
+                <div class="main-image mb-3">
                     <img id="mainImage" src="<?php echo getRoomImagePath($danhSachAnh[0]); ?>"
-                        class="img-fluid rounded w-100 shadow-sm"
+                        class="img-fluid rounded w-100"
                         alt="<?php echo htmlspecialchars($phong['roomName']); ?>"
-                        style="height: 450px; object-fit: cover;"
+                        style="height: 400px; object-fit: cover;"
                         onerror="this.onerror=null; this.src='/ABC-Resort/client/assets/images/default-room.jpg'">
                 </div>
 
                 <!-- Carousel ảnh nhỏ -->
-                <div class="image-carousel">
-                    <div class="d-flex overflow-auto pb-2" style="gap: 12px;">
+                <div class="image-carousel mb-4">
+                    <div class="d-flex overflow-auto pb-2" style="gap: 10px;">
                         <?php foreach ($danhSachAnh as $index => $anh): ?>
                             <img src="<?php echo getRoomImagePath($anh); ?>"
                                 class="carousel-thumb rounded cursor-pointer <?php echo $index === 0 ? 'active' : ''; ?>"
                                 alt="Ảnh <?php echo $index + 1; ?>"
-                                style="width: 120px; height: 90px; object-fit: cover; border: 2px solid transparent;"
+                                style="width: 100px; height: 75px; object-fit: cover; border: 2px solid transparent;"
                                 onclick="changeMainImage(this.src, this)"
                                 onerror="this.onerror=null; this.src='/ABC-Resort/client/assets/images/default-room.jpg'">
                         <?php endforeach; ?>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bên phải 3 - Thông tin phòng -->
-            <div class="col-lg-5">
-                <div class="room-info-card bg-white rounded shadow-sm p-4">
-                    <h2 class="h3 fw-bold text-dark mb-4"><?php echo htmlspecialchars($phong['roomName']); ?></h2>
-
-                    <!-- Thông tin cơ bản -->
-                    <div class="basic-info mb-4 pb-3 border-bottom">
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="room-feature-icon me-3">
-                                        <i class="fas fa-ruler-combined text-muted"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold"><?php echo $phong['DienTich']; ?> m²</div>
-                                        <small class="text-muted">Diện tích</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="room-feature-icon me-3">
-                                        <i class="fas fa-users text-muted"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold"><?php echo $phong['SoKhachToiDa']; ?> khách</div>
-                                        <small class="text-muted">Sức chứa</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="room-feature-icon me-3">
-                                        <i class="fas fa-compass text-muted"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold"><?php echo htmlspecialchars($phong['HuongNha']); ?></div>
-                                        <small class="text-muted">Hướng</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="room-feature-icon me-3">
-                                        <i class="fas fa-bed text-muted"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold"><?php echo htmlspecialchars($phong['HangPhong']); ?></div>
-                                        <small class="text-muted">Hạng phòng</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tính năng phòng -->
-                    <div class="features-section mb-4 pb-3 border-bottom">
-                        <h5 class="fw-semibold mb-3">Tiện nghi phòng</h5>
-                        <div class="row g-2">
-                            <?php if (!empty($tienNghi)): ?>
-                                <?php foreach ($tienNghi as $tienNghiItem): ?>
-                                    <div class="col-6">
-                                        <div class="d-flex align-items-center text-muted">
-                                            <i class="fas fa-check-circle text-success me-2 small"></i>
-                                            <small><?php echo htmlspecialchars($tienNghiItem); ?></small>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="col-12">
-                                    <small class="text-muted">Đang cập nhật thông tin tiện nghi...</small>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Thiết bị -->
-                    <div class="equipment-section mb-4 pb-3 border-bottom">
-                        <h5 class="fw-semibold mb-3">Thiết bị có sẵn</h5>
-                        <div class="row g-2">
-                            <?php if (!empty($thietBiList)): ?>
-                                <?php foreach ($thietBiList as $thietBi): ?>
-                                    <div class="col-6">
-                                        <div class="d-flex align-items-center text-muted">
-                                            <i class="fas fa-check text-primary me-2 small"></i>
-                                            <small><?php echo htmlspecialchars($thietBi); ?></small>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="col-12">
-                                    <small class="text-muted">Đang cập nhật thiết bị...</small>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Giá và đặt phòng -->
-                    <div class="booking-section pt-3">
-                        <div class="price-section mb-3">
-                            <small class="text-muted d-block mb-1">Giá mỗi đêm</small>
-                            <div class="d-flex align-items-baseline">
-                                <div class="h3 fw-bold text-dark"><?php echo number_format($phong['TongGia']); ?> VND</div>
-                                <small class="text-muted ms-2">/ đêm</small>
-                            </div>
-                        </div>
-                        <button class="btn btn-dark w-100 py-3 fw-semibold" onclick="bookRoom(<?php echo $phong['MaPhong']; ?>)">
-                            Đặt Phòng Ngay
-                        </button>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">Miễn phí hủy phòng trong 24 giờ</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mô tả chi tiết -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="description-card bg-white rounded shadow-sm p-4">
+                <!-- Thông tin chi tiết phòng -->
+                <div class="room-description-card bg-white rounded p-4 mb-4">
                     <h4 class="fw-semibold mb-3">Thông tin chi tiết</h4>
                     <div class="room-description" style="line-height: 1.7;">
                         <?php if (!empty($phong['MoTaChiTiet'])): ?>
@@ -413,16 +360,181 @@ $connect->closeConnect($conn);
                         <?php endif; ?>
                     </div>
                 </div>
+
+                <!-- Tiện nghi & Thiết bị -->
+                <div class="row">
+                    <!-- Tiện nghi phòng -->
+                    <div class="col-md-6 mb-4">
+                        <div class="bg-white rounded p-4 h-100">
+                            <h5 class="fw-semibold mb-3">Tiện nghi phòng</h5>
+                            <div>
+                                <?php if (!empty($tienNghi)): ?>
+                                    <?php foreach ($tienNghi as $tienNghiItem): ?>
+                                        <div class="d-flex align-items-center text-muted mb-2">
+                                            <i class="fas fa-check me-2 text-muted"></i>
+                                            <span><?php echo htmlspecialchars($tienNghiItem); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-muted">
+                                        Đang cập nhật thông tin tiện nghi...
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thiết bị -->
+                    <div class="col-md-6 mb-4">
+                        <div class="bg-white rounded p-4 h-100">
+                            <h5 class="fw-semibold mb-3">Thiết bị có sẵn</h5>
+                            <div>
+                                <?php if (!empty($thietBiList)): ?>
+                                    <?php foreach ($thietBiList as $thietBi): ?>
+                                        <div class="d-flex align-items-center text-muted mb-2">
+                                            <i class="fas fa-check me-2 text-muted"></i>
+                                            <span><?php echo htmlspecialchars($thietBi); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-muted">
+                                        Đang cập nhật thiết bị...
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bên phải - Thông tin đặt phòng -->
+            <div class="col-lg-4">
+                <div class="room-info-card bg-white rounded p-4">
+                    <h3 class="h4 fw-semibold text-dark mb-3"><?php echo htmlspecialchars($phong['roomName']); ?></h3>
+
+                    <!-- Thông tin cơ bản -->
+                    <div class="basic-info mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="room-feature-icon me-2">
+                                        <i class="fas fa-ruler-combined text-muted small"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small"><?php echo $phong['DienTich']; ?> m²</div>
+                                        <small class="text-muted">Diện tích</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="room-feature-icon me-2">
+                                        <i class="fas fa-users text-muted small"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small"><?php echo $phong['SoKhachToiDa']; ?> khách</div>
+                                        <small class="text-muted">Sức chứa</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="room-feature-icon me-2">
+                                        <i class="fas fa-compass text-muted small"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small"><?php echo htmlspecialchars($phong['HuongNha']); ?></div>
+                                        <small class="text-muted">Hướng</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="room-feature-icon me-2">
+                                        <i class="fas fa-bed text-muted small"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small"><?php echo htmlspecialchars($phong['HangPhong']); ?></div>
+                                        <small class="text-muted">Hạng phòng</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dịch vụ bổ sung -->
+                    <div class="services-section mb-3">
+                        <h6 class="fw-semibold mb-2">Dịch vụ bổ sung</h6>
+                        <div class="services-list" style="max-height: 200px; overflow-y: auto;">
+                            <?php if (!empty($dichVuList)): ?>
+                                <?php foreach ($dichVuTheoLoai as $loaiDV => $dichVus): ?>
+                                    <small class="text-muted d-block mt-2 mb-1"><?php echo htmlspecialchars($loaiDV); ?></small>
+                                    <?php foreach ($dichVus as $dichVu): ?>
+                                        <div class="service-card p-2 mb-1" onclick="toggleService(this, <?php echo $dichVu['MaDV']; ?>, <?php echo $dichVu['DonGia']; ?>)">
+                                            <div class="form-check mb-0">
+                                                <input type="checkbox" class="form-check-input service-checkbox"
+                                                    id="service-<?php echo $dichVu['MaDV']; ?>"
+                                                    value="<?php echo $dichVu['MaDV']; ?>"
+                                                    data-price="<?php echo $dichVu['DonGia']; ?>">
+                                                <label class="form-check-label w-100 mb-0" for="service-<?php echo $dichVu['MaDV']; ?>">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <div class="small"><?php echo htmlspecialchars($dichVu['TenDV']); ?></div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <div class="small fw-semibold"><?php echo number_format($dichVu['DonGia']); ?> đ</div>
+                                                        </div>
+                                                    </div>
+                                                    <small class="text-muted"><?php echo htmlspecialchars($dichVu['MoTa']); ?></small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-muted text-center py-2">
+                                    <small>Hiện không có dịch vụ nào khả dụng</small>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Giá và đặt phòng -->
+                    <div class="booking-section">
+                        <div class="price-section mb-3">
+                            <div class="price-breakdown">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">Giá phòng:</small>
+                                    <small class="text-muted" id="roomPrice"><?php echo number_format($phong['TongGia']); ?> đ</small>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">Dịch vụ:</small>
+                                    <small class="text-muted" id="servicesPrice">0 đ</small>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between align-items-baseline">
+                                    <div>
+                                        <small class="text-muted d-block mb-1">Tổng cộng:</small>
+                                        <div class="fw-bold fs-5" id="totalPrice" style="color: #dc3545;"> <?php echo number_format($phong['TongGia']); ?> đ</div>
+                                    </div>
+                                    <small class="text-muted">/ đêm</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-dark w-100 py-2 fw-semibold" onclick="bookRoom(<?php echo $phong['MaPhong']; ?>)">
+                            Đặt Phòng Ngay
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">Miễn phí hủy phòng trong 24 giờ</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <style>
-    .room-detail {
-        background: #f8f9fa;
-    }
-
     .room-feature-icon {
         width: 36px;
         height: 36px;
@@ -449,33 +561,42 @@ $connect->closeConnect($conn);
     }
 
     .room-info-card {
-        position: sticky;
-        top: 100px;
         border: 1px solid #e9ecef;
     }
 
-    .booking-section .btn {
-        background: #212529;
-        border: none;
+    .service-card {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
         transition: all 0.3s ease;
+        cursor: pointer;
     }
 
-    .booking-section .btn:hover {
-        background: #495057;
-        transform: translateY(-1px);
+    .service-card:hover {
+        border-color: #0d6efd;
     }
 
-    .description-card {
-        border: 1px solid #e9ecef;
+    .service-card.selected {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+
+    .service-checkbox {
+        display: none;
+    }
+
+    .price-breakdown {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 15px;
     }
 </style>
 
 <script>
-    function changeMainImage(src, element) {
-        // Đổi ảnh chính
-        document.getElementById('mainImage').src = src;
+    let selectedServices = [];
+    const roomPrice = <?php echo $phong['TongGia']; ?>;
 
-        // Active thumbnail
+    function changeMainImage(src, element) {
+        document.getElementById('mainImage').src = src;
         document.querySelectorAll('.carousel-thumb').forEach(thumb => {
             thumb.classList.remove('active');
             thumb.style.borderColor = 'transparent';
@@ -484,10 +605,51 @@ $connect->closeConnect($conn);
         element.style.borderColor = '#495057';
     }
 
+    function toggleService(card, serviceId, servicePrice) {
+        console.log('Click vào dịch vụ:', serviceId, servicePrice); // Debug
+
+        const checkbox = card.querySelector('.service-checkbox');
+
+        // Đảo trạng thái checked
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+            // Kiểm tra không trùng lặp trước khi thêm
+            const existingIndex = selectedServices.findIndex(service => service.id === serviceId);
+            if (existingIndex === -1) {
+                card.classList.add('selected');
+                selectedServices.push({
+                    id: serviceId,
+                    price: servicePrice,
+                    name: card.querySelector('.small').textContent.trim()
+                });
+                console.log('Đã thêm dịch vụ:', selectedServices); // Debug
+            }
+        } else {
+            card.classList.remove('selected');
+            selectedServices = selectedServices.filter(service => service.id !== serviceId);
+            console.log('Đã xóa dịch vụ:', selectedServices); // Debug
+        }
+
+        updateTotalPrice();
+    }
+
+    function updateTotalPrice() {
+        let servicesTotal = selectedServices.reduce((total, service) => total + service.price, 0);
+        let total = roomPrice + servicesTotal;
+
+        document.getElementById('servicesPrice').textContent = servicesTotal.toLocaleString() + ' đ';
+        document.getElementById('totalPrice').textContent = total.toLocaleString() + ' đ';
+
+        console.log('Tổng dịch vụ:', servicesTotal, 'Tổng cộng:', total); // Debug
+    }
+
     function bookRoom(roomId) {
-        if (confirm('Bạn có chắc muốn đặt phòng này?')) {
-            // Chuyển hướng đến trang đặt phòng
-            alert('Hệ thống đặt phòng đang được hoàn thiện. Vui lòng liên hệ trực tiếp với chúng tôi!');
+        const selectedServiceIds = selectedServices.map(service => service.id);
+
+        if (confirm('Bạn có chắc muốn đặt phòng này?' + (selectedServiceIds.length > 0 ? '\n\nCác dịch vụ đã chọn:\n' + selectedServices.map(s => '- ' + s.name).join('\n') : ''))) {
+            // Chuyển đến trang đặt phòng
+            window.location.href = `/ABC-Resort/client/controller/booking.controller.php?roomId=${roomId}&services=${selectedServiceIds.join(',')}`;
         }
     }
 
@@ -497,6 +659,14 @@ $connect->closeConnect($conn);
         if (firstThumb) {
             firstThumb.style.borderColor = '#495057';
         }
+        updateTotalPrice();
+
+        // Thêm event listener để debug
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('click', function() {
+                console.log('Card được click:', this);
+            });
+        });
     });
 </script>
 

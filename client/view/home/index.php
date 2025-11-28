@@ -87,47 +87,47 @@ $connect->closeConnect($conn);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
-.room-card {
-    transition: all 0.3s ease;
-    border-radius: 8px;
-    overflow: hidden;
-}
+    .room-card {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        overflow: hidden;
+    }
 
-.room-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
-}
+    .room-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    }
 
-.card-img-top {
-    transition: transform 0.3s ease;
-}
+    .card-img-top {
+        transition: transform 0.3s ease;
+    }
 
-.room-card:hover .card-img-top {
-    transform: scale(1.05);
-}
+    .room-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
 
-.badge {
-    font-size: 0.75rem;
-    font-weight: 500;
-}
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
 
-.price-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    margin: 0 -12px -12px -12px;
-    padding: 15px 12px 12px 12px;
-}
+    .price-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        margin: 0 -12px -12px -12px;
+        padding: 15px 12px 12px 12px;
+    }
 
-.btn-dark {
-    background: #2c3e50;
-    border: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
+    .btn-dark {
+        background: #2c3e50;
+        border: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
 
-.btn-dark:hover {
-    background: #34495e;
-    transform: translateY(-1px);
-}
+    .btn-dark:hover {
+        background: #34495e;
+        transform: translateY(-1px);
+    }
 </style>
 <!-- Banner Carousel -->
 <div id="resortCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
@@ -245,7 +245,7 @@ $connect->closeConnect($conn);
                                     <div class="col-12 pt-2">
                                         <button type="button" class="btn btn-primary w-100 mb-2"
                                             onclick="applyGuestSelection()">Áp dụng</button>
-                                        
+
                                     </div>
                                 </div>
                             </div>
@@ -327,7 +327,7 @@ $connect->closeConnect($conn);
         </div>
     </div>
 
-     <!--  Banner Khuyến Mãi  -->
+    <!--  Banner Khuyến Mãi  -->
     <div class="row mb-5 mt-5">
         <div class="">
             <img src="assets/images/banner/banner_khuyenmai.webp" height="250px" width="100%" alt=""
@@ -491,8 +491,8 @@ $connect->closeConnect($conn);
                 </div>
             <?php endforeach; ?>
         </div>
-    <?php endif; ?> 
-   
+    <?php endif; ?>
+
 
 
 
@@ -786,8 +786,14 @@ $connect->closeConnect($conn);
         });
     });
 
+    // Trong file view/home/index.php
     function viewRoomDetail(roomId) {
-        const url = `../client/view/room/room-detail.php?id=${roomId}&checkin=${searchParams.checkin}&checkout=${searchParams.checkout}&adults=${searchParams.adults}&nights=${searchParams.nights}`;
+        const checkin = document.getElementById('checkinDate').value;
+        const checkout = document.getElementById('checkoutDate').value;
+        const adults = searchParams.adults;
+        const nights = searchParams.nights;
+
+        const url = `../client/view/room/room-detail.php?id=${roomId}&checkin=${checkin}&checkout=${checkout}&adults=${adults}&nights=${nights}`;
         window.location.href = url;
     }
 

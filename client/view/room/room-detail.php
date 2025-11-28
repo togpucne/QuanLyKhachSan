@@ -5,6 +5,20 @@ include_once __DIR__ . '/../../model/connectDB.php';
 // Lấy MaPhong từ URL
 $maPhong = $_GET['id'] ?? 0;
 
+// Lấy thông tin ngày và số người từ URL
+$checkin = $_GET['checkin'] ?? date('Y-m-d');
+$checkout = $_GET['checkout'] ?? date('Y-m-d', strtotime('+1 day'));
+$adults = $_GET['adults'] ?? 1;
+$nights = $_GET['nights'] ?? 1;
+
+// Tính số đêm nếu không có từ URL
+if (!isset($_GET['nights']) && $checkin && $checkout) {
+    $checkinDate = new DateTime($checkin);
+    $checkoutDate = new DateTime($checkout);
+    $interval = $checkinDate->diff($checkoutDate);
+    $nights = $interval->days ?: 1;
+}
+
 if (!$maPhong) {
     header('Location: index.php');
     exit;
@@ -502,12 +516,25 @@ $connect->closeConnect($conn);
                     <!-- Giá và đặt phòng -->
                     <div class="booking-section">
                         <div class="price-section mb-3">
-                            <div class="price-breakdown">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <small class="text-muted">Giá phòng:</small>
-                                    <small class="text-muted" id="roomPrice"><?php echo number_format($phong['TongGia']); ?> đ</small>
+                            <!-- Hiển thị thông tin đặt phòng -->
+                            <div class="booking-info mb-3 p-3 bg-light rounded">
+                                <small class="text-muted d-block mb-2"><strong>Thông tin đặt phòng</strong></small>
+                                <div class="d-flex justify-content-between">
+                                    <small><strong>Ngày đến:</strong><br><?php echo date('d/m/Y', strtotime($checkin)); ?></small>
+                                    <small><strong>Ngày đi:</strong><br><?php echo date('d/m/Y', strtotime($checkout)); ?></small>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1">
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small><strong>Số đêm:</strong> <?php echo $nights; ?></small>
+                                    <small><strong>Số người:</strong> <?php echo $adults; ?></small>
+                                </div>
+                            </div>
+
+                            <div class="price-breakdown">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <small class="text-muted">Giá <?php echo $nights; ?> đêm:</small>
+                                    <small class="text-muted" id="roomPriceTotal"><?php echo number_format($phong['TongGia'] * $nights); ?> đ</small>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
                                     <small class="text-muted">Dịch vụ:</small>
                                     <small class="text-muted" id="servicesPrice">0 đ</small>
                                 </div>
@@ -515,9 +542,9 @@ $connect->closeConnect($conn);
                                 <div class="d-flex justify-content-between align-items-baseline">
                                     <div>
                                         <small class="text-muted d-block mb-1">Tổng cộng:</small>
-                                        <div class="fw-bold fs-5" id="totalPrice" style="color: #dc3545;"> <?php echo number_format($phong['TongGia']); ?> đ</div>
+                                        <div class="fw-bold fs-5" id="totalPrice" style="color: #dc3545;"><?php echo number_format($phong['TongGia'] * $nights); ?> đ</div>
                                     </div>
-                                    <small class="text-muted">/ đêm</small>
+                                    <small class="text-muted">/ <?php echo $nights; ?> đêm</small>
                                 </div>
                             </div>
                         </div>
@@ -593,7 +620,8 @@ $connect->closeConnect($conn);
 
 <script>
     let selectedServices = [];
-    const roomPrice = <?php echo $phong['TongGia']; ?>;
+    const roomPricePerNight = <?php echo $phong['TongGia']; ?>;
+    const nights = <?php echo $nights; ?>;
 
     function changeMainImage(src, element) {
         document.getElementById('mainImage').src = src;
@@ -606,15 +634,10 @@ $connect->closeConnect($conn);
     }
 
     function toggleService(card, serviceId, servicePrice) {
-        console.log('Click vào dịch vụ:', serviceId, servicePrice); // Debug
-
         const checkbox = card.querySelector('.service-checkbox');
-
-        // Đảo trạng thái checked
         checkbox.checked = !checkbox.checked;
 
         if (checkbox.checked) {
-            // Kiểm tra không trùng lặp trước khi thêm
             const existingIndex = selectedServices.findIndex(service => service.id === serviceId);
             if (existingIndex === -1) {
                 card.classList.add('selected');
@@ -623,12 +646,10 @@ $connect->closeConnect($conn);
                     price: servicePrice,
                     name: card.querySelector('.small').textContent.trim()
                 });
-                console.log('Đã thêm dịch vụ:', selectedServices); // Debug
             }
         } else {
             card.classList.remove('selected');
             selectedServices = selectedServices.filter(service => service.id !== serviceId);
-            console.log('Đã xóa dịch vụ:', selectedServices); // Debug
         }
 
         updateTotalPrice();
@@ -636,20 +657,31 @@ $connect->closeConnect($conn);
 
     function updateTotalPrice() {
         let servicesTotal = selectedServices.reduce((total, service) => total + service.price, 0);
-        let total = roomPrice + servicesTotal;
+        let roomTotal = roomPricePerNight * nights;
+        let total = roomTotal + servicesTotal;
 
+        document.getElementById('roomPriceTotal').textContent = roomTotal.toLocaleString() + ' đ';
         document.getElementById('servicesPrice').textContent = servicesTotal.toLocaleString() + ' đ';
         document.getElementById('totalPrice').textContent = total.toLocaleString() + ' đ';
-
-        console.log('Tổng dịch vụ:', servicesTotal, 'Tổng cộng:', total); // Debug
     }
 
     function bookRoom(roomId) {
         const selectedServiceIds = selectedServices.map(service => service.id);
 
+        const queryParams = new URLSearchParams({
+            roomId: roomId,
+            checkin: '<?php echo $checkin; ?>',
+            checkout: '<?php echo $checkout; ?>',
+            adults: '<?php echo $adults; ?>',
+            nights: '<?php echo $nights; ?>'
+        });
+
+        if (selectedServiceIds.length > 0) {
+            queryParams.append('services', selectedServiceIds.join(','));
+        }
+
         if (confirm('Bạn có chắc muốn đặt phòng này?' + (selectedServiceIds.length > 0 ? '\n\nCác dịch vụ đã chọn:\n' + selectedServices.map(s => '- ' + s.name).join('\n') : ''))) {
-            // Chuyển đến trang đặt phòng
-            window.location.href = `/ABC-Resort/client/controller/booking.controller.php?roomId=${roomId}&services=${selectedServiceIds.join(',')}`;
+            window.location.href = `/ABC-Resort/client/controller/booking.controller.php?${queryParams.toString()}`;
         }
     }
 
@@ -660,13 +692,6 @@ $connect->closeConnect($conn);
             firstThumb.style.borderColor = '#495057';
         }
         updateTotalPrice();
-
-        // Thêm event listener để debug
-        document.querySelectorAll('.service-card').forEach(card => {
-            card.addEventListener('click', function() {
-                console.log('Card được click:', this);
-            });
-        });
     });
 </script>
 

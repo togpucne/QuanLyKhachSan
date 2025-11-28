@@ -310,8 +310,8 @@ $connect->closeConnect($conn);
                         <!-- Nút đặt phòng -->
                         <div class="card-footer bg-light">
                             <?php if ($room['TrangThai'] === 'Trống'): ?>
-                                <button class="btn btn-success w-100" onclick="bookRoom(<?php echo $room['MaPhong']; ?>)">
-                                    <i class="fas fa-calendar-plus me-2"></i>Đặt Phòng Ngay
+                                <button class="btn btn-success w-100" onclick="viewRoomDetail(<?php echo $room['MaPhong']; ?>)">
+                                    <i class="fas fa-eye me-2"></i>Xem Chi Tiết
                                 </button>
                             <?php else: ?>
                                 <button class="btn btn-secondary w-100" disabled>
@@ -364,6 +364,10 @@ $connect->closeConnect($conn);
     </div>
 </div>
 <script>
+    function viewRoomDetail(roomId) {
+        window.location.href = '../client/view/room/room-detail.php?id=' + roomId;
+    }
+
     function bookRoom(roomId) {
         alert('Đặt phòng: ' + roomId + '\nTính năng đang phát triển...');
     }

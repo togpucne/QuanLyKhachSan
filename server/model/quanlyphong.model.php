@@ -387,6 +387,166 @@ class QuanLyPhongModel
         }
     }
 
+    // LẤY CHI TIẾT PHÒNG THEO MÃ
+    public function getChiTietPhong($maPhong)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            $sql = "SELECT p.*, lp.HangPhong, lp.HinhThuc, lp.DonGia 
+                FROM Phong p 
+                JOIN LoaiPhong lp ON p.MaLoaiPhong = lp.MaLoaiPhong 
+                WHERE p.MaPhong = ?";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $maPhong);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $phong = $result->fetch_assoc();
+
+                // Parse JSON danh sách ảnh và tiện nghi
+                if (!empty($phong['DanhSachPhong'])) {
+                    $phong['DanhSachPhong'] = json_decode($phong['DanhSachPhong'], true);
+                } else {
+                    $phong['DanhSachPhong'] = [];
+                }
+
+                if (!empty($phong['TienNghi'])) {
+                    $phong['TienNghi'] = json_decode($phong['TienNghi'], true);
+                } else {
+                    $phong['TienNghi'] = [];
+                }
+
+                $this->db->closeConnect($conn);
+                return $phong;
+            } else {
+                $this->db->closeConnect($conn);
+                return null;
+            }
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            error_log("Lỗi getChiTietPhong: " . $e->getMessage());
+            return null;
+        }
+    }
+    // CẬP NHẬT PHÒNG
+    public function capNhatPhong($maPhong, $data, $avatarFile = null, $imageFiles = null)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            // Lấy thông tin phòng hiện tại
+            $phongHienTai = $this->getChiTietPhong($maPhong);
+            if (!$phongHienTai) {
+                throw new Exception('Không tìm thấy phòng');
+            }
+
+            $soPhong = $phongHienTai['SoPhong'];
+
+            // Upload avatar mới nếu có
+            $avatarPath = $phongHienTai['Avatar'];
+            if ($avatarFile && $avatarFile['error'] === UPLOAD_ERR_OK) {
+                $uploadResult = $this->uploadImageToRoom($avatarFile, $soPhong, true);
+                if ($uploadResult['success']) {
+                    $avatarPath = $uploadResult['file_path'];
+                }
+                // Nếu upload avatar thất bại, vẫn giữ avatar cũ, không throw exception
+            }
+
+            // Upload nhiều ảnh chi tiết mới nếu có
+            $danhSachAnh = $phongHienTai['DanhSachPhong'] ?? [];
+            if ($imageFiles && !empty($imageFiles['name'][0])) {
+                $uploadedImages = $this->uploadMultipleImagesToRoom($imageFiles, $soPhong);
+                if (!empty($uploadedImages)) {
+                    // Thêm ảnh mới vào danh sách hiện tại
+                    $danhSachAnh = array_merge($danhSachAnh, $uploadedImages);
+                }
+            }
+
+            // Đảm bảo avatar có trong danh sách ảnh
+            if (!empty($avatarPath) && !in_array($avatarPath, $danhSachAnh)) {
+                // Tìm và xóa avatar cũ khỏi danh sách nếu có
+                $danhSachAnh = array_filter($danhSachAnh, function ($img) use ($phongHienTai) {
+                    return $img !== $phongHienTai['Avatar'];
+                });
+                // Thêm avatar mới vào đầu danh sách
+                array_unshift($danhSachAnh, $avatarPath);
+            }
+
+            // Lấy đơn giá từ loại phòng để tính tổng giá
+            $maLoaiPhong = isset($data['MaLoaiPhong']) ? intval($data['MaLoaiPhong']) : $phongHienTai['MaLoaiPhong'];
+            $donGiaLoaiPhong = $this->getDonGiaLoaiPhong($maLoaiPhong, $conn);
+
+            // Chuẩn bị dữ liệu
+            $tang = isset($data['Tang']) ? intval($data['Tang']) : $phongHienTai['Tang'];
+            $trangThai = isset($data['TrangThai']) ? $data['TrangThai'] : $phongHienTai['TrangThai'];
+            $roomName = isset($data['roomName']) ? $data['roomName'] : $phongHienTai['roomName'];
+            $giaPhong = isset($data['GiaPhong']) ? floatval($data['GiaPhong']) : $phongHienTai['GiaPhong'];
+            $dienTich = isset($data['DienTich']) ? floatval($data['DienTich']) : $phongHienTai['DienTich'];
+            $soKhachToiDa = isset($data['SoKhachToiDa']) ? intval($data['SoKhachToiDa']) : $phongHienTai['SoKhachToiDa'];
+            $huongNha = isset($data['HuongNha']) ? $data['HuongNha'] : $phongHienTai['HuongNha'];
+            $moTaChiTiet = isset($data['MoTaChiTiet']) ? $data['MoTaChiTiet'] : $phongHienTai['MoTaChiTiet'];
+            $tienNghi = isset($data['TienNghi']) ? $data['TienNghi'] : (is_array($phongHienTai['TienNghi']) ? json_encode($phongHienTai['TienNghi']) : $phongHienTai['TienNghi']);
+
+            // Tính tổng giá mới
+            $tongGia = $giaPhong + $donGiaLoaiPhong;
+
+            // Cập nhật database
+            $sql = "UPDATE Phong SET 
+                Tang = ?, MaLoaiPhong = ?, TrangThai = ?, Avatar = ?, 
+                DanhSachPhong = ?, roomName = ?, GiaPhong = ?, TongGia = ?, 
+                DienTich = ?, SoKhachToiDa = ?, HuongNha = ?, MoTaChiTiet = ?, TienNghi = ? 
+                WHERE MaPhong = ?";
+
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception('Lỗi prepare SQL: ' . $conn->error);
+            }
+
+            $danhSachAnhJson = !empty($danhSachAnh) ? json_encode($danhSachAnh, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '[]';
+
+            $stmt->bind_param(
+                "iissssddiisssi",
+                $tang,
+                $maLoaiPhong,
+                $trangThai,
+                $avatarPath,
+                $danhSachAnhJson,
+                $roomName,
+                $giaPhong,
+                $tongGia,
+                $dienTich,
+                $soKhachToiDa,
+                $huongNha,
+                $moTaChiTiet,
+                $tienNghi,
+                $maPhong
+            );
+
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception('Lỗi cập nhật phòng: ' . $stmt->error);
+            }
+
+            $stmt->close();
+            $this->db->closeConnect($conn);
+
+            return [
+                'success' => true,
+                'soPhong' => $soPhong,
+                'message' => 'Cập nhật phòng thành công!'
+            ];
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            error_log("Lỗi capNhatPhong: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
     // HÀM LẤY ĐƠN GIÁ LOẠI PHÒNG
     private function getDonGiaLoaiPhong($maLoaiPhong, $conn)
     {

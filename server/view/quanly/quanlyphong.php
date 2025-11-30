@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
 // XỬ LÝ XÓA PHÒNG
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'xoa') {
     $maPhong = $_POST['ma_phong'] ?? 0;
-    
+
     if ($maPhong) {
         $result = $model->xoaPhong($maPhong);
         if ($result['success']) {
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
 // XÓA NHIỀU PHÒNG
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'xoa_nhieu') {
     $maPhongs = $_POST['ma_phongs'] ?? [];
-    
+
     if (!empty($maPhongs)) {
         $result = $model->xoaNhieuPhong($maPhongs);
         if ($result['success']) {
@@ -179,7 +179,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                 </h6>
                 <?php if (!empty($danhSachPhong)): ?>
                     <div class="d-flex gap-2">
-                       
+
                         <button type="button" class="btn btn-sm btn-danger" id="xoaNhieuPhong" disabled>
                             Xóa đã chọn
                         </button>
@@ -221,7 +221,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                 <?php foreach ($danhSachPhong as $phong): ?>
                                     <tr class="border-bottom">
                                         <td class="ps-4 py-3">
-                                            <input type="checkbox" class="form-check-input checkPhong" 
+                                            <input type="checkbox" class="form-check-input checkPhong"
                                                 name="ma_phongs[]" value="<?php echo $phong['MaPhong']; ?>">
                                         </td>
                                         <td class="py-3 text-muted"><?php echo $stt++; ?></td>
@@ -252,12 +252,12 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                         </td>
                                         <td class="text-center py-3">
                                             <div class="d-flex justify-content-center gap-2">
-                                                <button type="button" class="btn btn-sm btn-outline-primary border-1 px-3" 
-                                                        onclick="suaPhong(<?php echo $phong['MaPhong']; ?>)">
+                                                <button type="button" class="btn btn-sm btn-outline-primary border-1 px-3"
+                                                    onclick="suaPhong(<?php echo $phong['MaPhong']; ?>)">
                                                     Sửa
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger border-1 px-3" 
-                                                        onclick="xoaPhong(<?php echo $phong['MaPhong']; ?>, '<?php echo htmlspecialchars($phong['SoPhong']); ?>')">
+                                                <button type="button" class="btn btn-sm btn-outline-danger border-1 px-3"
+                                                    onclick="xoaPhong(<?php echo $phong['MaPhong']; ?>, '<?php echo htmlspecialchars($phong['SoPhong']); ?>')">
                                                     Xóa
                                                 </button>
                                             </div>
@@ -286,7 +286,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                     <div class="alert alert-info border-0 bg-light mb-4">
                         <small class="text-muted">Mã phòng sẽ được tự động tạo (P101, P102, ...)</small>
                     </div>
-                    
+
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Tầng <span class="text-danger">*</span></label>
@@ -310,13 +310,13 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Giá Phòng (VND) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control border-1" name="gia_phong" required
                                 min="0" step="1000" placeholder="500000" value="0" id="giaPhong">
                         </div>
-                        
+
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Tổng Tiền (VND)</label>
                             <input type="text" class="form-control border-1 bg-light" id="tongGia" readonly value="0 đ">
@@ -354,7 +354,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                 <option value="Hướng Sân Vườn">Hướng Sân Vườn</option>
                             </select>
                         </div>
-                        
+
                         <div class="col-12">
                             <label class="form-label text-gray-900">Tên Phòng <span class="text-danger">*</span></label>
                             <input type="text" class="form-control border-1" name="room_name" required
@@ -373,14 +373,20 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                             <div class="border border-1 rounded p-3 bg-light">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <?php 
+                                        <?php
                                         $tienNghiList = [
-                                            'Điều hòa', 'TV màn hình phẳng', 'Minibar', 'Ban công',
-                                            'Bồn tắm', 'Vòi sen', 'Wifi miễn phí', 'Bếp nhỏ'
+                                            'Điều hòa',
+                                            'TV màn hình phẳng',
+                                            'Minibar',
+                                            'Ban công',
+                                            'Bồn tắm',
+                                            'Vòi sen',
+                                            'Wifi miễn phí',
+                                            'Bếp nhỏ'
                                         ];
                                         foreach ($tienNghiList as $index => $tienNghi): ?>
                                             <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" name="tien_nghi[]" 
+                                                <input class="form-check-input" type="checkbox" name="tien_nghi[]"
                                                     value="<?php echo $tienNghi; ?>" id="tienNghi<?php echo $index + 1; ?>">
                                                 <label class="form-check-label text-gray-900" for="tienNghi<?php echo $index + 1; ?>">
                                                     <?php echo $tienNghi; ?>
@@ -389,18 +395,18 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
-                                
+
                                 <div class="mt-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="tienNghiKhacCheck">
                                         <label class="form-check-label text-gray-900" for="tienNghiKhacCheck">Tiện nghi khác</label>
                                     </div>
-                                    <textarea class="form-control border-1 mt-2" id="tienNghiKhac" name="tien_nghi_khac" rows="2" 
+                                    <textarea class="form-control border-1 mt-2" id="tienNghiKhac" name="tien_nghi_khac" rows="2"
                                         placeholder="Mỗi tiện nghi một dòng" style="display: none;"></textarea>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Upload ảnh -->
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Ảnh Đại Diện <span class="text-danger">*</span></label>
@@ -423,117 +429,170 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
         </div>
     </div>
 </div>
+<!-- Modal Sửa Phòng -->
+<div class="modal fade" id="suaPhongModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-gray-900">Sửa Thông Tin Phòng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="quanlyphong.php?action=sua" enctype="multipart/form-data" id="formSuaPhong">
+                <input type="hidden" name="ma_phong" id="suaMaPhong">
+                <div class="modal-body pt-0">
+                    <div class="alert alert-info border-0 bg-light mb-4">
+                        <small class="text-muted" id="suaSoPhongInfo">Số phòng: </small>
+                    </div>
 
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Tầng <span class="text-danger">*</span></label>
+                            <select class="form-control border-1" name="tang" required id="suaTang">
+                                <option value="">Chọn tầng</option>
+                                <option value="1">Tầng 1</option>
+                                <option value="2">Tầng 2</option>
+                                <option value="3">Tầng 3</option>
+                                <option value="4">Tầng 4</option>
+                                <option value="5">Tầng 5</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Loại Phòng <span class="text-danger">*</span></label>
+                            <select class="form-control border-1" name="ma_loai_phong" required id="suaMaLoaiPhong">
+                                <option value="">Chọn loại phòng</option>
+                                <?php foreach ($dsLoaiPhong as $lp): ?>
+                                    <option value="<?php echo $lp['MaLoaiPhong']; ?>" data-dongia="<?php echo $lp['DonGia']; ?>">
+                                        <?php echo htmlspecialchars($lp['HangPhong'] . ' - ' . $lp['HinhThuc']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Giá Phòng (VND) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control border-1" name="gia_phong" required
+                                min="0" step="1000" placeholder="500000" id="suaGiaPhong">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Tổng Tiền (VND)</label>
+                            <input type="text" class="form-control border-1 bg-light" id="suaTongGia" readonly value="0 đ">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Trạng Thái <span class="text-danger">*</span></label>
+                            <select class="form-control border-1" name="trang_thai" required id="suaTrangThai">
+                                <option value="Trống">Trống</option>
+                                <option value="Đang sử dụng">Đang sử dụng</option>
+                                <option value="Bảo trì">Bảo trì</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Diện tích (m²) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control border-1" name="dien_tich" required
+                                min="0" step="0.1" placeholder="25.5" id="suaDienTich">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Số khách tối đa <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control border-1" name="so_khach_toi_da" required
+                                min="1" max="10" placeholder="2" id="suaSoKhachToiDa">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Hướng nhà <span class="text-danger">*</span></label>
+                            <select class="form-control border-1" name="huong_nha" required id="suaHuongNha">
+                                <option value="">Chọn hướng nhà</option>
+                                <option value="Hướng Biển">Hướng Biển</option>
+                                <option value="Hướng Núi">Hướng Núi</option>
+                                <option value="Hướng Thành Phố">Hướng Thành Phố</option>
+                                <option value="Hướng Hồ Bơi">Hướng Hồ Bơi</option>
+                                <option value="Hướng Sân Vườn">Hướng Sân Vườn</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-gray-900">Tên Phòng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-1" name="room_name" required
+                                placeholder="Phòng Deluxe View Biển" id="suaRoomName">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-gray-900">Mô tả chi tiết <span class="text-danger">*</span></label>
+                            <textarea class="form-control border-1" name="mo_ta_chi_tiet" rows="3" required
+                                placeholder="Mô tả về phòng..." id="suaMoTaChiTiet"></textarea>
+                        </div>
+
+                        <!-- Tiện nghi -->
+                        <div class="col-12">
+                            <label class="form-label text-gray-900">Tiện nghi</label>
+                            <div class="border border-1 rounded p-3 bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <?php
+                                        $tienNghiList = [
+                                            'Điều hòa',
+                                            'TV màn hình phẳng',
+                                            'Minibar',
+                                            'Ban công',
+                                            'Bồn tắm',
+                                            'Vòi sen',
+                                            'Wifi miễn phí',
+                                            'Bếp nhỏ'
+                                        ];
+                                        foreach ($tienNghiList as $index => $tienNghi): ?>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input sua-tien-nghi" type="checkbox" name="tien_nghi[]"
+                                                    value="<?php echo $tienNghi; ?>" id="suaTienNghi<?php echo $index + 1; ?>">
+                                                <label class="form-check-label text-gray-900" for="suaTienNghi<?php echo $index + 1; ?>">
+                                                    <?php echo $tienNghi; ?>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="suaTienNghiKhacCheck">
+                                        <label class="form-check-label text-gray-900" for="suaTienNghiKhacCheck">Tiện nghi khác</label>
+                                    </div>
+                                    <textarea class="form-control border-1 mt-2" id="suaTienNghiKhac" name="tien_nghi_khac" rows="2"
+                                        placeholder="Mỗi tiện nghi một dòng" style="display: none;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload ảnh -->
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Ảnh Đại Diện</label>
+                            <input type="file" class="form-control border-1" name="avatar" accept="image/*" id="suaAvatarUpload">
+                            <div class="mt-2" id="suaAvatarPreview"></div>
+                            <div class="mt-2" id="currentAvatar"></div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-gray-900">Thêm Ảnh Chi Tiết</label>
+                            <input type="file" class="form-control border-1" name="danh_sach_anh[]" multiple accept="image/*" id="suaMultipleUpload">
+                            <div class="mt-2" id="suaMultiplePreview"></div>
+                            <div class="mt-2" id="currentImages"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-4">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary px-4">Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Form Xóa Ẩn -->
 <form id="formXoaPhong" method="POST" action="quanlyphong.php?action=xoa" style="display: none;">
     <input type="hidden" name="ma_phong" id="maPhongXoa">
 </form>
 
-<script>
-// Chọn tất cả
-document.getElementById('checkAll').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.checkPhong');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-    });
-    updateXoaNhieuButton();
-});
+<script src="../../assets//js//quanlyphong.js"></script>
 
-// Cập nhật nút xóa nhiều
-function updateXoaNhieuButton() {
-    const checkedCount = document.querySelectorAll('.checkPhong:checked').length;
-    const btn = document.getElementById('xoaNhieuPhong');
-    btn.disabled = checkedCount === 0;
-    btn.textContent = `Xóa (${checkedCount})`;
-}
-
-// Xóa nhiều phòng
-document.getElementById('xoaNhieuPhong').addEventListener('click', function() {
-    const checkedCount = document.querySelectorAll('.checkPhong:checked').length;
-    if (checkedCount > 0 && confirm(`Bạn có chắc muốn xóa ${checkedCount} phòng đã chọn?`)) {
-        document.getElementById('formXoaNhieu').submit();
-    }
-});
-
-// Xóa từng phòng
-function xoaPhong(maPhong, soPhong) {
-    if (confirm(`Bạn có chắc muốn xóa phòng ${soPhong}?`)) {
-        document.getElementById('maPhongXoa').value = maPhong;
-        document.getElementById('formXoaPhong').submit();
-    }
-}
-
-// Sửa phòng
-function suaPhong(maPhong) {
-    alert('Chức năng sửa phòng sẽ được triển khai sau!');
-}
-
-// Tính tổng giá
-document.getElementById('selectLoaiPhong').addEventListener('change', calculateTongGia);
-document.getElementById('giaPhong').addEventListener('input', calculateTongGia);
-
-function calculateTongGia() {
-    const selectLoaiPhong = document.getElementById('selectLoaiPhong');
-    const giaPhong = parseFloat(document.getElementById('giaPhong').value) || 0;
-    const selectedOption = selectLoaiPhong.options[selectLoaiPhong.selectedIndex];
-    const donGiaLoaiPhong = parseFloat(selectedOption.getAttribute('data-dongia')) || 0;
-    
-    const tongGia = giaPhong + donGiaLoaiPhong;
-    document.getElementById('tongGia').value = tongGia.toLocaleString('vi-VN') + ' đ';
-}
-
-// Tiện nghi khác
-document.getElementById('tienNghiKhacCheck').addEventListener('change', function() {
-    const textarea = document.getElementById('tienNghiKhac');
-    textarea.style.display = this.checked ? 'block' : 'none';
-});
-
-// Preview ảnh
-document.getElementById('avatarUpload').addEventListener('change', function(e) {
-    const preview = document.getElementById('avatarPreview');
-    preview.innerHTML = '';
-    
-    if (this.files && this.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.style.maxWidth = '120px';
-            img.style.maxHeight = '120px';
-            img.className = 'img-thumbnail mt-2 border';
-            preview.appendChild(img);
-        }
-        reader.readAsDataURL(this.files[0]);
-    }
-});
-
-// Xử lý form submit
-document.getElementById('formThemPhong').addEventListener('submit', function(e) {
-    const selectedTienNghi = Array.from(document.querySelectorAll('input[name="tien_nghi[]"]:checked'))
-        .map(checkbox => checkbox.value);
-    
-    const tienNghiKhac = document.getElementById('tienNghiKhac').value;
-    if (tienNghiKhac) {
-        const lines = tienNghiKhac.split('\n')
-            .map(line => line.trim())
-            .filter(line => line !== '');
-        selectedTienNghi.push(...lines);
-    }
-    
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.name = 'tien_nghi_json';
-    hiddenInput.value = JSON.stringify(selectedTienNghi);
-    this.appendChild(hiddenInput);
-});
-
-// Cập nhật trạng thái checkbox khi click
-document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.checkPhong');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateXoaNhieuButton);
-    });
-});
-</script>
-
-<?php include_once '../layouts/footer.php'; ?>  
+<?php include_once '../layouts/footer.php'; ?>

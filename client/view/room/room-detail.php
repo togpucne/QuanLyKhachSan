@@ -681,7 +681,8 @@ $connect->closeConnect($conn);
         }
 
         if (confirm('Bạn có chắc muốn đặt phòng này?' + (selectedServiceIds.length > 0 ? '\n\nCác dịch vụ đã chọn:\n' + selectedServices.map(s => '- ' + s.name).join('\n') : ''))) {
-            window.location.href = `/ABC-Resort/client/controller/booking.controller.php?${queryParams.toString()}`;
+            // CHUYỂN ĐẾN TRANG THANH TOÁN
+            window.location.href = `/ABC-Resort/client/controller/payment.controller.php?${queryParams.toString()}`;
         }
     }
 

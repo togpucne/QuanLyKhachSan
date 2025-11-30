@@ -54,15 +54,16 @@ class UserController
             $fullname = trim($_POST['fullname'] ?? '');
             $cmnd = trim($_POST['cmnd'] ?? '');
             $email = trim($_POST['email'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
             $password = $_POST['password'] ?? '';
             $confirm_password = $_POST['confirm_password'] ?? '';
 
             // VALIDATE DỮ LIỆU
-            $errors = $this->validateRegisterData($fullname, $cmnd, $email, $password, $confirm_password);
+            $errors = $this->validateRegisterData($fullname, $cmnd, $email, $phone, $password, $confirm_password);
 
             if (empty($errors)) {
                 // SỬA: DÙNG HỌ TÊN LÀM TÊN ĐĂNG NHẬP
-                $username = $fullname; // Thay vì tạo từ email
+                $username = $fullname;
 
                 $hashedPassword = md5($password);
 
@@ -70,16 +71,19 @@ class UserController
                     'username' => $username,
                     'password' => $hashedPassword,
                     'email' => $email,
-                    'cmnd' => $cmnd
+                    'cmnd' => $cmnd,
+                    'fullname' => $fullname,
+                    'phone' => $phone
                 ];
 
                 if ($this->userModel->createUser($userData)) {
                     $_SESSION['register_success'] = "🎉 Đăng ký thành công! Tài khoản đã được tạo. Bạn có thể đăng nhập ngay.";
-                    // THÊM SESSION CHO ALERT
                     $_SESSION['show_alert'] = "success";
                     $_SESSION['alert_message'] = "🎉 Đăng ký thành công!";
                     header("Location: user.controller.php?action=login");
                     exit();
+                } else {
+                    $errors['general'] = "❌ Có lỗi xảy ra khi đăng ký. Vui lòng thử lại!";
                 }
             }
 
@@ -87,7 +91,8 @@ class UserController
             $oldInput = [
                 'fullname' => $fullname,
                 'cmnd' => $cmnd,
-                'email' => $email
+                'email' => $email,
+                'phone' => $phone
             ];
 
             require_once __DIR__ . '/../view/auth/register.php';
@@ -97,12 +102,13 @@ class UserController
         }
     }
 
+
     // VALIDATE DỮ LIỆU ĐĂNG KÝ - ĐẦY ĐỦ TEST CASE
-    private function validateRegisterData($fullname, $cmnd, $email, $password, $confirm_password)
+    private function validateRegisterData($fullname, $cmnd, $email, $phone, $password, $confirm_password)
     {
         $errors = [];
 
-        // TEST CASE 1 & 2: KIỂM TRA THÔNG TIN BẮT BUỘC
+        // VALIDATE HỌ TÊN
         if (empty($fullname)) {
             $errors['fullname'] = "⛔ Họ tên không được để trống";
         } elseif (strlen($fullname) < 2) {
@@ -111,7 +117,7 @@ class UserController
             $errors['fullname'] = "⛔ Họ tên không được chứa số";
         }
 
-        // TEST CASE 1 & 2: CMND BẮT BUỘC
+        // VALIDATE CMND
         if (empty($cmnd)) {
             $errors['cmnd'] = "⛔ CMND không được để trống";
         } elseif (!preg_match('/^\d{9,12}$/', $cmnd)) {
@@ -120,7 +126,7 @@ class UserController
             $errors['cmnd'] = "⛔ CMND đã được đăng ký trong hệ thống";
         }
 
-        // TEST CASE 1 & 2: EMAIL BẮT BUỘC
+        // VALIDATE EMAIL
         if (empty($email)) {
             $errors['email'] = "⛔ Email không được để trống";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -129,17 +135,26 @@ class UserController
             $errors['email'] = "⛔ Email đã được đăng ký trong hệ thống";
         }
 
-        // TEST CASE 1 & 2: PASSWORD BẮT BUỘC
+        // VALIDATE SỐ ĐIỆN THOẠI
+        if (empty($phone)) {
+            $errors['phone'] = "⛔ Số điện thoại không được để trống";
+        } elseif (!preg_match('/^(03|05|07|08|09)[0-9]{8}$/', $phone)) {
+            $errors['phone'] = "⛔ Số điện thoại không hợp lệ (phải bắt đầu bằng 03,05,07,08,09 và có 10 số)";
+        } elseif ($this->userModel->checkPhoneExists($phone)) {
+            $errors['phone'] = "⛔ Số điện thoại đã được đăng ký trong hệ thống";
+        }
+
+        // VALIDATE PASSWORD
         if (empty($password)) {
             $errors['password'] = "⛔ Mật khẩu không được để trống";
         } elseif (strlen($password) < 6) {
             $errors['password'] = "⛔ Mật khẩu phải có ít nhất 6 ký tự";
         }
 
-        // TEST CASE 4: KIỂM TRA MẬT KHẨU TRÙNG KHỚP
+        // VALIDATE CONFIRM PASSWORD - SỬA LẠI PHẦN NÀY
         if (empty($confirm_password)) {
             $errors['confirm_password'] = "⛔ Vui lòng nhập lại mật khẩu";
-        } elseif ($password !== $confirm_password) {
+        } elseif (trim($password) !== trim($confirm_password)) {
             $errors['confirm_password'] = "⛔ Mật khẩu nhập lại không trùng khớp";
         }
 

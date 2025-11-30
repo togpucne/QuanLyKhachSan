@@ -1,5 +1,4 @@
 <?php
-// SỬA ĐƯỜNG DẪN
 require_once __DIR__ . '/connectDB.php';
 class UserModel {
     private $conn;
@@ -26,31 +25,74 @@ class UserModel {
         return $result->num_rows > 0;
     }
     
-    // Kiểm tra username đã tồn tại chưa
-    public function checkUsernameExists($username) {
-        $stmt = $this->conn->prepare("SELECT id FROM tai_khoan WHERE TenDangNhap = ?");
-        $stmt->bind_param("s", $username);
+    // KIỂM TRA SỐ ĐIỆN THOẠI ĐÃ TỒN TẠI CHƯA
+    public function checkPhoneExists($phone) {
+        $stmt = $this->conn->prepare("SELECT MaKH FROM KhachHang WHERE SoDienThoai = ?");
+        $stmt->bind_param("s", $phone);
         $stmt->execute();
         $result = $stmt->get_result();
         return $result->num_rows > 0;
     }
     
-    // Tạo tài khoản mới
+    // Tạo tài khoản mới - LƯU VÀO CẢ 2 BẢNG
     public function createUser($userData) {
-        $stmt = $this->conn->prepare(
-            "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND) 
-             VALUES (?, ?, 'khachhang', 1, ?, ?)"
-        );
+        // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+        $this->conn->begin_transaction();
         
-        $stmt->bind_param(
-            "ssss", 
-            $userData['username'],
-            $userData['password'],
-            $userData['email'],
-            $userData['cmnd']
-        );
-        
-        return $stmt->execute();
+        try {
+            // 1. TẠO TÀI KHOẢN TRONG BẢNG tai_khoan
+            $stmtAccount = $this->conn->prepare(
+                "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND) 
+                 VALUES (?, ?, 'khachhang', 1, ?, ?)"
+            );
+            
+            $stmtAccount->bind_param(
+                "ssss", 
+                $userData['username'],
+                $userData['password'],
+                $userData['email'],
+                $userData['cmnd']
+            );
+            
+            if (!$stmtAccount->execute()) {
+                throw new Exception("Lỗi khi tạo tài khoản: " . $stmtAccount->error);
+            }
+            
+            $accountId = $this->conn->insert_id;
+            $stmtAccount->close();
+            
+            // 2. TẠO KHÁCH HÀNG TRONG BẢNG KhachHang
+            $customerId = "KH" . str_pad($accountId, 4, '0', STR_PAD_LEFT);
+            
+            $stmtCustomer = $this->conn->prepare(
+                "INSERT INTO KhachHang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai, MaTaiKhoan) 
+                 VALUES (?, ?, ?, NULL, 'Không ở', ?)"
+            );
+            
+            $stmtCustomer->bind_param(
+                "sssi", 
+                $customerId,
+                $userData['fullname'],
+                $userData['phone'],
+                $accountId
+            );
+            
+            if (!$stmtCustomer->execute()) {
+                throw new Exception("Lỗi khi tạo khách hàng: " . $stmtCustomer->error);
+            }
+            
+            $stmtCustomer->close();
+            
+            // Commit transaction nếu cả 2 đều thành công
+            $this->conn->commit();
+            return true;
+            
+        } catch (Exception $e) {
+            // Rollback nếu có lỗi
+            $this->conn->rollback();
+            error_log("Error in createUser: " . $e->getMessage());
+            return false;
+        }
     }
     
     // Đăng nhập

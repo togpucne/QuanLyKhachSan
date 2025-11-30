@@ -6,13 +6,53 @@ if (session_status() === PHP_SESSION_NONE) {
 // TẠO BASE URL
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
-$project_path = '/ABC-RESORT';
+$project_path = '/ABC-Resort';
 $base_url = $protocol . '://' . $host . $project_path;
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userRole = $_SESSION['vaitro'] ?? '';
 $userName = $_SESSION['user_name'] ?? '';
+
+// LẤY THÔNG TIN KHÁCH HÀNG NẾU ĐÃ ĐĂNG NHẬP
+$customerInfo = [];
+if ($isLoggedIn) {
+    $customerInfo = getCustomerInfo($_SESSION['user_id']);
+}
+
+function getCustomerInfo($userId)
+{
+    require_once __DIR__ . '/../../model/connectDB.php';
+
+    try {
+        $connect = new Connect();
+        $conn = $connect->openConnect();
+
+        // SỬA: THÊM TenDangNhap VÀO SELECT
+        $sql = "SELECT kh.*, tk.Email, tk.CMND, tk.TenDangNhap, tk.created_at 
+                FROM KhachHang kh 
+                JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id 
+                WHERE tk.id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $data = [];
+        if ($result->num_rows > 0) {
+            $data = $result->fetch_assoc();
+        }
+
+        $stmt->close();
+        $connect->closeConnect($conn);
+        return $data;
+    } catch (Exception $e) {
+        error_log("Database error: " . $e->getMessage());
+        return [];
+    }
+}
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -47,7 +87,33 @@ $userName = $_SESSION['user_name'] ?? '';
             scroll-margin-top: 100px;
             /* Điều chỉnh khoảng cách với header */
         }
+
+        .dropdown-header {
+            padding: 0.5rem 1rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .dropdown-item-text small {
+            font-size: 0.8rem;
+        }
+
+        /* Làm đẹp dropdown menu */
+        .dropdown-menu {
+            min-width: 250px;
+            border: 1px solid rgba(0, 0, 0, .15);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
     </style>
+
 </head>
 
 <body>
@@ -117,25 +183,47 @@ $userName = $_SESSION['user_name'] ?? '';
                         </a>
                         <ul class="dropdown-menu">
                             <?php if ($isLoggedIn): ?>
-                                <!-- Đã đăng nhập - THÊM THÔNG TIN USER -->
-                                <li><span class="dropdown-item-text small text-muted">
-                                        <i class="fas fa-user-tag me-2"></i><?php echo htmlspecialchars($userRole); ?>
-                                    </span></li>
+                                <!-- Đã đăng nhập - HIỂN THỊ THÔNG TIN USER -->
+                                <li>
+                                    <div class="dropdown-header">
+                                        <div class="fw-bold"><?php echo htmlspecialchars($customerInfo['HoTen'] ?? $userName); ?></div>
+                                        <small class="text-muted"><?php echo htmlspecialchars($userRole); ?></small>
+                                    </div>
+                                </li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item" href="#">
-                                        <i class="fas fa-suitcase me-2"></i>Đặt chỗ của tôi
+
+                                <!-- THÔNG TIN CÁ NHÂN -->
+                                <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/view/customer/profile.php">
+                                        <i class="fas fa-id-card me-2"></i>Thông tin cá nhân
                                     </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                        <i class="fas fa-user-edit me-2"></i>Thông tin tài khoản
+
+                                <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/view/booking/history.php">
+                                        <i class="fas fa-history me-2"></i>Lịch sử đặt phòng
                                     </a></li>
+
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
+
+                                <!-- THÔNG TIN NHANH -->
+                                <?php if (!empty($customerInfo)): ?>
+                                    <li>
+                                        <div class="dropdown-item-text small">
+                                            <div><i class="fas fa-phone me-2"></i><?php echo htmlspecialchars($customerInfo['SoDienThoai'] ?? 'Chưa cập nhật'); ?></div>
+                                            <div><i class="fas fa-envelope me-2"></i><?php echo htmlspecialchars($customerInfo['Email'] ?? $_SESSION['email'] ?? ''); ?></div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                <?php endif; ?>
+
                                 <li><a class="dropdown-item text-danger" href="<?php echo $base_url; ?>/client/controller/user.controller.php?action=logout">
                                         <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
                                     </a></li>
+
                             <?php else: ?>
                                 <!-- Chưa đăng nhập -->
                                 <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/controller/user.controller.php?action=login">

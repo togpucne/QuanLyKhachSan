@@ -36,6 +36,9 @@ class UserController
             case 'logout':
                 $this->handleLogout();
                 break;
+            case 'changePassword':
+                $this->changePassword();
+                break;
             default:
                 $this->showLoginForm();
                 break;
@@ -47,7 +50,52 @@ class UserController
     {
         require_once __DIR__ . '/../view/auth/register.php';
     }
+    private function changePassword()
+    {
+        // THÊM BASE_URL VÀO ĐÂY
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        $host = $_SERVER['HTTP_HOST'];
+        $project_path = '/ABC-Resort';
+        $base_url = $protocol . '://' . $host . $project_path;
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $current_password = $_POST['current_password'] ?? '';
+            $new_password = $_POST['new_password'] ?? '';
+            $confirm_password = $_POST['confirm_password'] ?? '';
+
+            $errors = [];
+
+            if (empty($current_password)) {
+                $errors['current_password'] = "Vui lòng nhập mật khẩu hiện tại";
+            }
+
+            if (empty($new_password)) {
+                $errors['new_password'] = "Vui lòng nhập mật khẩu mới";
+            } elseif (strlen($new_password) < 6) {
+                $errors['new_password'] = "Mật khẩu mới phải có ít nhất 6 ký tự";
+            }
+
+            if ($new_password !== $confirm_password) {
+                $errors['confirm_password'] = "Mật khẩu nhập lại không khớp";
+            }
+
+            if (empty($errors)) {
+                // Kiểm tra mật khẩu hiện tại và cập nhật
+                if ($this->userModel->changePassword($_SESSION['user_id'], $current_password, $new_password)) {
+                    $_SESSION['success_message'] = "Đổi mật khẩu thành công!";
+                    header("Location: " . $base_url . "/client/view/customer/profile.php");
+                    exit();
+                } else {
+                    $errors['general'] = "Mật khẩu hiện tại không đúng";
+                }
+            }
+
+            // Nếu có lỗi, quay lại profile với thông báo lỗi
+            $_SESSION['password_errors'] = $errors;
+            header("Location: " . $base_url . "/client/view/customer/profile.php");
+            exit();
+        }
+    }
     private function processRegister()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

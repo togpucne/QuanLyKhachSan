@@ -385,7 +385,7 @@ $role = $_SESSION['vaitro'];
 
                         ],
                         'buongphong' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
                             ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],        
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 

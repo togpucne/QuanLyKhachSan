@@ -109,7 +109,7 @@ sort($tangList);
                                     <option value="Trống">Trống</option>
                                     <option value="Đang sử dụng">Đang sử dụng</option>
                                     <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                                    <option value="Bảo trì">Bảo trì</option>
+
                                 </select>
                             </div>
                         </div>

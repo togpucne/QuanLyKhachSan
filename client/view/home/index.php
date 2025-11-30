@@ -9,7 +9,8 @@ $conn = $connect->openConnect();
 // LẤY DANH SÁCH PHÒNG TỪ DATABASE - THÊM PHẦN NÀY
 $sqlRooms = "SELECT p.*, lp.HangPhong, lp.HinhThuc 
              FROM Phong p 
-             LEFT JOIN LoaiPhong lp ON p.MaLoaiPhong = lp.MaLoaiPhong";
+             LEFT JOIN LoaiPhong lp ON p.MaLoaiPhong = lp.MaLoaiPhong 
+             where p.TrangThai = 'Trống'";
 $resultRooms = mysqli_query($conn, $sqlRooms);
 
 $rooms = [];

@@ -386,10 +386,7 @@ $role = $_SESSION['vaitro'];
                         ],
                         'buongphong' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],
-                            ['icon' => 'fas fa-broom', 'text' => 'Vệ sinh phòng', 'link' => 'vesinhphong.php'],
-                            ['icon' => 'fas fa-tools', 'text' => 'Bảo trì phòng', 'link' => 'baotriphong.php'],
-                            ['icon' => 'fas fa-clipboard-list', 'text' => 'Kiểm kê trang thiết bị', 'link' => 'kiemke.php'],
+                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],        
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ],

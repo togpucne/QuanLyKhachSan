@@ -1,5 +1,5 @@
 <?php
-require_once '../model/quanlyphong.model.php';
+require_once '../model/buongphongQLPhong.model.php';
 
 class PhongController {
     private $phongModel;
@@ -13,7 +13,7 @@ class PhongController {
         $dsPhong = $this->phongModel->getDanhSachPhong();
         
         // TRUYỀN BIẾN SANG VIEW
-        $this->loadView('../view/quanlyphong.php', ['dsPhong' => $dsPhong]);
+        $this->loadView('../view/buongphong/quanlyphong.php', ['dsPhong' => $dsPhong]);
     }
     
     public function capNhatTrangThai() {
@@ -23,12 +23,23 @@ class PhongController {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $maPhong = $_POST['maPhong'] ?? '';
             $trangThai = $_POST['trangThai'] ?? '';
+            $ghiChuKyThuat = $_POST['ghiChuKyThuat'] ?? ''; // THÊM DÒNG NÀY
+            $lyDo = $_POST['lyDo'] ?? ''; // THÊM DÒNG NÀY
             
-            if ($this->phongModel->capNhatTrangThai($maPhong, $trangThai)) {
-                echo json_encode(['success' => true, 'message' => 'Cập nhật trạng thái thành công!']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Cập nhật thất bại!']);
-            }
+            // DEBUG: KIỂM TRA DỮ LIỆU NHẬN ĐƯỢC
+            error_log("=== CONTROLLER DEBUG ===");
+            error_log("maPhong: " . $maPhong);
+            error_log("trangThai: " . $trangThai);
+            error_log("ghiChuKyThuat: " . $ghiChuKyThuat);
+            error_log("lyDo: " . $lyDo);
+            
+            // Lấy mã nhân viên từ session (tạm thời dùng 1)
+            $maNhanVien = 1; // TODO: Lấy từ session sau
+            
+            // SỬA: THÊM 2 THAM SỐ CUỐI
+            $result = $this->phongModel->capNhatTrangThai($maPhong, $trangThai, $maNhanVien, $lyDo, $ghiChuKyThuat);
+            
+            echo json_encode($result);
         } else {
             echo json_encode(['success' => false, 'message' => 'Phương thức không hợp lệ!']);
         }
@@ -37,42 +48,16 @@ class PhongController {
         exit;
     }
     
+    // Tạm thời comment các hàm chưa dùng
+    /*
     public function ghiNhanSuCo() {
-        header('Content-Type: application/json');
-        
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $maPhong = $_POST['maPhong'] ?? '';
-            $moTaSuCo = $_POST['moTaSuCo'] ?? '';
-            $chiPhi = $_POST['chiPhi'] ?? '';
-            
-            if ($this->phongModel->ghiNhanSuCo($maPhong, $moTaSuCo, $chiPhi)) {
-                echo json_encode(['success' => true, 'message' => 'Ghi nhận sự cố thành công!']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Ghi nhận thất bại!']);
-            }
-        }
-        
-        exit;
+        // Sẽ làm sau
     }
     
     public function ghiNhanChiPhi() {
-        header('Content-Type: application/json');
-        
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $maPhong = $_POST['maPhong'] ?? '';
-            $loaiChiPhi = $_POST['loaiChiPhi'] ?? '';
-            $soTien = $_POST['soTien'] ?? '';
-            $ghiChu = $_POST['ghiChu'] ?? '';
-            
-            if ($this->phongModel->ghiNhanChiPhi($maPhong, $loaiChiPhi, $soTien, $ghiChu)) {
-                echo json_encode(['success' => true, 'message' => 'Ghi nhận chi phí thành công!']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Ghi nhận thất bại!']);
-            }
-        }
-        
-        exit;
+        // Sẽ làm sau
     }
+    */
     
     private function loadView($viewPath, $data = []) {
         extract($data);
@@ -86,11 +71,15 @@ $action = $_POST['action'] ?? $_GET['action'] ?? 'index';
 
 if ($action == 'capNhatTrangThai') {
     $controller->capNhatTrangThai();
-} elseif ($action == 'ghiNhanSuCo') {
+} 
+/*
+elseif ($action == 'ghiNhanSuCo') {
     $controller->ghiNhanSuCo();
 } elseif ($action == 'ghiNhanChiPhi') {
     $controller->ghiNhanChiPhi();
-} else {
+} 
+*/
+else {
     $controller->index();
 }
 ?>

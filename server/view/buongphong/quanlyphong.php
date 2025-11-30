@@ -124,7 +124,8 @@ sort($tangList);
                 </div>
             </div>
 
-            <!-- Bảng danh sách phòng -->
+
+
             <!-- Bảng danh sách phòng -->
             <div class="card">
                 <div class="card-header">
@@ -139,11 +140,13 @@ sort($tangList);
                                 <tr>
                                     <th>Mã phòng</th>
                                     <th>Số phòng</th>
+                                    <th>Tên phòng</th>
                                     <th>Tầng</th>
                                     <th>Hạng phòng</th>
-                                    <th>Đơn giá</th>
+                                    <th>Diện tích</th>
+                                    <th>Số khách</th>
                                     <th>Trạng thái</th>
-                                    <th width="180px" class="text-center">Hành động</th>
+                                    <th width="150px" class="text-center">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -154,9 +157,25 @@ sort($tangList);
                                             <td>
                                                 <strong><?php echo $phong['SoPhong']; ?></strong>
                                             </td>
+                                            <td>
+                                                <?php echo !empty($phong['roomName']) ? $phong['roomName'] : 'Chưa đặt tên'; ?>
+                                            </td>
                                             <td>Tầng <?php echo $phong['Tang']; ?></td>
                                             <td><?php echo $phong['HangPhong']; ?></td>
-                                            <td><?php echo number_format($phong['DonGia']); ?> VNĐ</td>
+                                            <td>
+                                                <?php if ($phong['DienTich'] > 0): ?>
+                                                    <?php echo $phong['DienTich']; ?> m²
+                                                <?php else: ?>
+                                                    -
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if ($phong['SoKhachToiDa'] > 0): ?>
+                                                    <?php echo $phong['SoKhachToiDa']; ?> người
+                                                <?php else: ?>
+                                                    -
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
                                                 <span class="badge 
                                         <?php
@@ -167,10 +186,7 @@ sort($tangList);
                                             case 'Đang sử dụng':
                                                 echo 'bg-primary';
                                                 break;
-                                            case 'Đang dọn dẹp':
-                                                echo 'bg-warning';
-                                                break;
-                                            case 'Bảo trì':
+                                            case 'Đang bảo trì':
                                                 echo 'bg-danger';
                                                 break;
                                             default:
@@ -210,7 +226,7 @@ sort($tangList);
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted">Không có dữ liệu phòng</td>
+                                        <td colspan="9" class="text-center text-muted">Không có dữ liệu phòng</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -315,9 +331,19 @@ sort($tangList);
                         <select class="form-select" name="trangThaiMoi" required>
                             <option value="Trống">Trống</option>
                             <option value="Đang sử dụng">Đang sử dụng</option>
-                            <option value="Đang dọn dẹp">Đang dọn dẹp</option>
-                            <option value="Bảo trì">Bảo trì</option>
+                            <option value="Đang bảo trì">Đang bảo trì</option>
                         </select>
+                    </div>
+                    <!-- THÊM TRƯỜNG GHI CHÚ KỸ THUẬT -->
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú kỹ thuật:</label>
+                        <textarea class="form-control" name="ghiChuKyThuat" rows="3"
+                            placeholder="Nhập ghi chú về tình trạng phòng (nếu có)..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lý do thay đổi:</label>
+                        <input type="text" class="form-control" name="lyDo"
+                            placeholder="Lý do thay đổi trạng thái...">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -371,8 +397,7 @@ sort($tangList);
             }
         });
 
-        // Hàm lọc phòng
-        // Hàm lọc phòng - FIX LỖI LỌC TRẠNG THÁI
+        // Hàm lọc phòng - CẬP NHẬT CHO BẢNG MỚI
         function filterRooms() {
             const keyword = $('#searchKeyword').val().toLowerCase();
             const hangPhong = $('#filterHangPhong').val();
@@ -384,17 +409,15 @@ sort($tangList);
             $('tbody tr').each(function() {
                 const $row = $(this);
                 const soPhong = $row.find('td:eq(1)').text().toLowerCase();
-                const hang = $row.find('td:eq(3)').text();
-                const tangText = $row.find('td:eq(2)').text();
-                const trangthai = $row.find('td:eq(5) .badge').text().trim(); // ĐÃ CÓ .trim()
+                const tenPhong = $row.find('td:eq(2)').text().toLowerCase();
+                const hang = $row.find('td:eq(4)').text();
+                const tangText = $row.find('td:eq(3)').text();
+                const trangthai = $row.find('td:eq(7) .badge').text().trim();
 
                 let showRow = true;
 
-                // DEBUG: Hiển thị giá trị để kiểm tra
-                console.log('Trạng thái từ filter:', trangThai, 'Trạng thái từ bảng:', trangthai, 'So sánh:', trangthai === trangThai);
-
-                // Lọc theo keyword
-                if (keyword && !soPhong.includes(keyword) && !trangthai.toLowerCase().includes(keyword)) {
+                // Lọc theo keyword (tìm trong số phòng và tên phòng)
+                if (keyword && !soPhong.includes(keyword) && !tenPhong.includes(keyword)) {
                     showRow = false;
                 }
 
@@ -411,9 +434,8 @@ sort($tangList);
                     }
                 }
 
-                // Lọc theo trạng thái - FIX CHI TIẾT
+                // Lọc theo trạng thái
                 if (trangThai) {
-                    // So sánh chính xác, loại bỏ mọi khoảng trắng
                     const trangThaiFromTable = trangthai.replace(/\s+/g, ' ').trim();
                     const trangThaiFromFilter = trangThai.replace(/\s+/g, ' ').trim();
 
@@ -436,181 +458,80 @@ sort($tangList);
             // Hiển thị thông báo nếu không có kết quả
             if (visibleCount === 0) {
                 if ($('#noResults').length === 0) {
-                    $('tbody').append('<tr id="noResults"><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-search me-2"></i>Không tìm thấy phòng nào phù hợp</td></tr>');
+                    $('tbody').append('<tr id="noResults"><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-search me-2"></i>Không tìm thấy phòng nào phù hợp</td></tr>');
                 }
             } else {
                 $('#noResults').remove();
             }
         }
 
-
         // Xử lý submit form CẬP NHẬT TRẠNG THÁI
         $('#formTrangThai').submit(function(e) {
             e.preventDefault();
 
-            try {
-                const formData = $(this).serializeArray();
-                const trangThaiMoi = formData.find(f => f.name === 'trangThaiMoi').value;
-                const roomInfo = $('#roomInfoTrangThai').text();
-                const maPhongMatch = roomInfo.match(/Mã:\s*(\d+)/);
-                const maPhong = maPhongMatch ? maPhongMatch[1] : '';
-
-                console.log("=== BẮT ĐẦU CẬP NHẬT ===");
-                console.log("MaPhong:", maPhong);
-                console.log("TrangThai:", trangThaiMoi);
-                console.log("RoomInfo:", roomInfo);
-
-                if (!maPhong) {
-                    alert('❌ Không thể lấy mã phòng!');
-                    return;
-                }
-
-                // HIỂN THỊ LOADING
-                const submitBtn = $(this).find('button[type="submit"]');
-                const originalText = submitBtn.html();
-                submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
-                submitBtn.prop('disabled', true);
-
-                // Gửi request đến server
-                $.ajax({
-                    url: '../controller/phongController.php',
-                    type: 'POST',
-                    data: {
-                        action: 'capNhatTrangThai',
-                        maPhong: maPhong,
-                        trangThai: trangThaiMoi
-                    },
-                    success: function(response) {
-                        console.log("=== RESPONSE THÀNH CÔNG ===");
-                        console.log("Raw Response:", response);
-
-                        // KHÔI PHỤC BUTTON
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-
-                        let result;
-                        try {
-                            // PARSE JSON
-                            if (typeof response === 'string') {
-                                result = JSON.parse(response);
-                            } else {
-                                result = response;
-                            }
-
-                            console.log("Parsed Result:", result);
-
-                            if (result.success) {
-                                console.log("✅ Cập nhật THÀNH CÔNG");
-
-                                // ĐÓNG MODAL
-                                $('#modalTrangThai').modal('hide');
-
-                                // HIỂN THỊ THÔNG BÁO THÀNH CÔNG
-                                alert('✅ ' + result.message);
-
-                                // RELOAD TRANG SAU 1.5 GIÂY
-                                setTimeout(function() {
-                                    console.log("🔄 Đang reload trang...");
-                                    location.reload();
-                                }, 500);
-
-                            } else {
-                                console.log("❌ Cập nhật THẤT BẠI:", result.message);
-                                alert('❌ ' + result.message);
-                            }
-
-                        } catch (parseError) {
-                            console.error("=== LỖI PARSE JSON ===");
-                            console.error("Error:", parseError);
-                            console.log("Response that failed:", response);
-                            alert('⚠️ Lỗi xử lý dữ liệu từ server. Kiểm tra console!');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("=== LỖI AJAX ===");
-                        console.error("Status:", status);
-                        console.error("Error:", error);
-                        console.log("Response Text:", xhr.responseText);
-
-                        // KHÔI PHỤC BUTTON
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-
-                        alert('❌ Lỗi kết nối server: ' + error);
-                    },
-                    complete: function() {
-                        console.log("=== AJAX COMPLETE ===");
-                        // ĐẢM BẢO BUTTON LUÔN ĐƯỢC KHÔI PHỤC
-                        submitBtn.html(originalText);
-                        submitBtn.prop('disabled', false);
-                    }
-                });
-
-            } catch (error) {
-                console.error("=== LỖI TRONG SỰ KIỆN SUBMIT ===");
-                console.error("Error:", error);
-                alert('❌ Lỗi xử lý form: ' + error.message);
-            }
-        });
-
-        // Xử lý submit form CẬP NHẬT TRẠNG THÁI - FIX LỖI JSON
-        $('#formTrangThai').submit(function(e) {
-            e.preventDefault();
             const formData = $(this).serializeArray();
             const trangThaiMoi = formData.find(f => f.name === 'trangThaiMoi').value;
-            const roomInfo = $('#roomInfoTrangThai').text();
-            const maPhong = $('#roomInfoTrangThai').text().match(/Mã: (\d+)/)[1];
+            const ghiChuKyThuat = formData.find(f => f.name === 'ghiChuKyThuat')?.value || '';
+            const lyDo = formData.find(f => f.name === 'lyDo')?.value || '';
 
-            console.log("Gửi request:", {
+            const roomInfo = $('#roomInfoTrangThai').text();
+            const maPhongMatch = roomInfo.match(/Mã:\s*(\d+)/);
+            const maPhong = maPhongMatch ? maPhongMatch[1] : '';
+
+            console.log("Gửi request cập nhật:", {
                 maPhong,
-                trangThaiMoi
-            }); // DEBUG
+                trangThaiMoi,
+                ghiChuKyThuat,
+                lyDo
+            });
+
+            // Hiển thị loading
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
+            submitBtn.prop('disabled', true);
 
             // Gửi request đến server
             $.ajax({
-                url: '../controller/phongController.php',
+                url: '../../controller/buongphongQLPhong.controller.php', // ĐƯỜNG DẪN ĐÚNG
                 type: 'POST',
                 data: {
                     action: 'capNhatTrangThai',
                     maPhong: maPhong,
-                    trangThai: trangThaiMoi
+                    trangThai: trangThaiMoi,
+                    ghiChuKyThuat: ghiChuKyThuat,
+                    lyDo: lyDo
                 },
                 success: function(response) {
-                    console.log("Nhận response:", response); // DEBUG
+                    console.log("Nhận response:", response);
 
-                    // KIỂM TRA NẾU RESPONSE ĐÃ LÀ OBJECT
-                    if (typeof response === 'object') {
-                        // Response đã là object (tự động parse)
-                        if (response.success) {
+                    // Khôi phục button
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+
+                    try {
+                        const result = typeof response === 'object' ? response : JSON.parse(response);
+
+                        if (result.success) {
                             $('#modalTrangThai').modal('hide');
-                            location.reload();
+                            alert('✅ ' + result.message);
+                            setTimeout(() => location.reload(), 1000);
                         } else {
-                            alert('Lỗi: ' + response.message);
+                            alert('❌ ' + result.message);
                         }
-                    } else {
-                        // Response là string, cần parse
-                        try {
-                            const result = JSON.parse(response);
-                            if (result.success) {
-                                $('#modalTrangThai').modal('hide');
-                                location.reload();
-                            } else {
-                                alert('Lỗi: ' + result.message);
-                            }
-                        } catch (e) {
-                            console.error("Lỗi parse JSON:", e);
-                            console.error("Response raw:", response);
-                            alert('Lỗi: Dữ liệu từ server không hợp lệ. Kiểm tra console!');
-                        }
+                    } catch (e) {
+                        console.error("Lỗi parse JSON:", e);
+                        alert('❌ Lỗi xử lý dữ liệu từ server');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error("Lỗi AJAX:", error);
-                    alert('Lỗi kết nối server: ' + error);
+                    console.log("Response text:", xhr.responseText);
+                    submitBtn.html(originalText);
+                    submitBtn.prop('disabled', false);
+                    alert('❌ Lỗi kết nối server: ' + error);
                 }
             });
-
-            $(this)[0].reset();
         });
         // Xử lý submit form GHI NHẬN CHI PHÍ
         $('#formChiPhi').submit(function(e) {

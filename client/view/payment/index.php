@@ -7,40 +7,6 @@ if (isset($_SESSION['user_id'])) {
     $customerInfo = getCustomerInfo($_SESSION['user_id']);
 }
 
-function getCustomerInfo($userId)
-{
-    // Sử dụng require_once để tránh include nhiều lần
-    require_once __DIR__ . '/../../model/connectDB.php';
-
-    try {
-        // Tạo instance của Connect class
-        $connect = new Connect();
-        $conn = $connect->openConnect();
-
-        $sql = "SELECT kh.*, tk.Email, tk.CMND 
-                FROM KhachHang kh 
-                JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id 
-                WHERE tk.id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $data = [];
-        if ($result->num_rows > 0) {
-            $data = $result->fetch_assoc();
-        }
-
-        // Đóng kết nối
-        $stmt->close();
-        $connect->closeConnect($conn);
-
-        return $data;
-    } catch (Exception $e) {
-        error_log("Database error: " . $e->getMessage());
-        return [];
-    }
-}
 ?>
 <style>
     .payment-container {

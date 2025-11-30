@@ -7,15 +7,16 @@ if (isset($_SESSION['user_id'])) {
     $customerInfo = getCustomerInfo($_SESSION['user_id']);
 }
 
-function getCustomerInfo($userId) {
+function getCustomerInfo($userId)
+{
     // Sử dụng require_once để tránh include nhiều lần
     require_once __DIR__ . '/../../model/connectDB.php';
-    
+
     try {
         // Tạo instance của Connect class
         $connect = new Connect();
         $conn = $connect->openConnect();
-        
+
         $sql = "SELECT kh.*, tk.Email, tk.CMND 
                 FROM KhachHang kh 
                 JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id 
@@ -24,18 +25,17 @@ function getCustomerInfo($userId) {
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $data = [];
         if ($result->num_rows > 0) {
             $data = $result->fetch_assoc();
         }
-        
+
         // Đóng kết nối
         $stmt->close();
         $connect->closeConnect($conn);
-        
+
         return $data;
-        
     } catch (Exception $e) {
         error_log("Database error: " . $e->getMessage());
         return [];
@@ -118,6 +118,18 @@ function getCustomerInfo($userId) {
         padding: 15px;
         border-radius: 6px;
         border: 1px solid #dee2e6;
+    }
+
+    .sticky-summary {
+        position: sticky;
+        top: 100px;
+        /* Điều chỉnh khoảng cách từ top */
+        z-index: 10;
+        /* Đảm bảo nó nằm trên các phần tử khác */
+        max-height: calc(100vh - 120px);
+        /* Giới hạn chiều cao */
+        overflow-y: auto;
+        /* Cho phép cuộn nếu nội dung quá dài */
     }
 </style>
 
@@ -230,7 +242,7 @@ function getCustomerInfo($userId) {
                                 Thẻ tín dụng/Ghi nợ
                             </label>
                             <div class="mt-2">
-                                <img src="/ABC-Resort/client/assets/images/payment/visa-mastercard.png" alt="Visa Mastercard" height="30" class="me-2">
+                                <img src="/ABC-Resort/client/assets/images/payments/visa_mastercard.jpg" alt="Visa Mastercard" height="30" class="me-2">
                                 <small class="text-muted">Thanh toán an toàn với thẻ Visa, Mastercard</small>
                             </div>
                         </div>
@@ -243,6 +255,7 @@ function getCustomerInfo($userId) {
                                 Chuyển khoản ngân hàng
                             </label>
                             <div class="mt-2">
+                                <img src="/ABC-Resort/client/assets/images/payments/bank.jpg" alt="Banking" height="30" class="me-2">
                                 <small class="text-muted">Chuyển khoản qua Internet Banking, Mobile Banking</small>
                             </div>
                         </div>
@@ -255,6 +268,7 @@ function getCustomerInfo($userId) {
                                 Thanh toán tại resort
                             </label>
                             <div class="mt-2">
+                                <img src="/ABC-Resort/client/assets/images/payments/cash.jpg" alt="Cash" height="30" class="me-2">
                                 <small class="text-muted">Thanh toán bằng tiền mặt khi nhận phòng</small>
                             </div>
                         </div>
@@ -265,7 +279,7 @@ function getCustomerInfo($userId) {
 
         <!-- Right Column - Tóm tắt đơn hàng -->
         <div class="col-lg-4">
-            <div class="sticky-top" style="top: 20px;">
+            <div class="sticky-summary"> <!-- Đổi class từ sticky-top thành sticky-summary -->
                 <!-- Thông tin khách sạn -->
                 <div class="room-info mb-3">
                     <h5 class="fw-bold mb-2">Tỏa Sáng Resort Nha Trang</h5>

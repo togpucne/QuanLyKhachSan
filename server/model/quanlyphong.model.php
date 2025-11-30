@@ -109,15 +109,14 @@ class QuanLyPhongModel
         }
     }
 
-    // TẠO THƯ MỤC PHÒNG - FIXED (THÊM KIỂM TRA VÀ DEBUG)
+    // TẠO THƯ MỤC PHÒNG - FIXED
     private function taoThuMucPhong($soPhong)
     {
         /** @var string $soPhong */
         $folder_name = 'room' . substr($soPhong, 1); // P101 -> room101
-        $base_dir = __DIR__ . "/../../assets/images/rooms/";
+        $base_dir = __DIR__ . "/../../client/assets/images/rooms/";
         $target_dir = $base_dir . $folder_name . "/";
 
-        // DEBUG
         error_log("=== TẠO THƯ MỤC PHÒNG ===");
         error_log("Số phòng: " . $soPhong);
         error_log("Đường dẫn: " . $target_dir);
@@ -148,10 +147,9 @@ class QuanLyPhongModel
 
         return $folder_name;
     }
-    // UPLOAD ẢNH - FIXED (GỌI taoThuMucPhong)
+    // UPLOAD ẢNH - FIXED (KHÔNG LƯU ĐUÔI FILE)
     private function uploadImageToRoom($file, $soPhong, $is_avatar = false)
     {
-        /** @var string $soPhong */
         /** @var array $file */
         /** @var bool $is_avatar */
 
@@ -159,12 +157,20 @@ class QuanLyPhongModel
             return ['success' => false, 'error' => 'File không tồn tại'];
         }
 
-        // QUAN TRỌNG: GỌI METHOD taoThuMucPhong để tạo folder
-        $folder_name = $this->taoThuMucPhong($soPhong);
-        $base_dir = __DIR__ . "/../../assets/images/rooms/";
+        // Tạo folder
+        $folder_name = 'room' . substr($soPhong, 1); // P101 -> room101
+        $base_dir = __DIR__ . "/../../client/assets/images/rooms/";
         $target_dir = $base_dir . $folder_name . "/";
 
-        error_log("Upload ảnh vào: " . $target_dir);
+        error_log("Tạo folder: " . $target_dir);
+
+        // Tạo thư mục nếu chưa tồn tại
+        if (!file_exists($target_dir)) {
+            if (!mkdir($target_dir, 0777, true)) {
+                return ['success' => false, 'error' => 'Không thể tạo thư mục: ' . $target_dir];
+            }
+            error_log("✅ Đã tạo thư mục: " . $target_dir);
+        }
 
         // Kiểm tra ảnh
         $check = getimagesize($file["tmp_name"]);
@@ -176,36 +182,36 @@ class QuanLyPhongModel
             return ['success' => false, 'error' => 'File quá lớn (tối đa 5MB)'];
         }
 
+        // Kiểm tra định dạng file
         $file_extension = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
         $allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"];
+
         if (!in_array($file_extension, $allowed_extensions)) {
-            return ['success' => false, 'error' => 'Chỉ chấp nhận file ảnh'];
+            return ['success' => false, 'error' => 'Chỉ chấp nhận file ảnh JPG, JPEG, PNG, GIF, WEBP'];
         }
 
-        // Tạo tên file ĐÚNG FORMAT - KHÔNG CÓ ĐUÔI FILE
+        // Tạo tên file - KHÔNG CÓ ĐUÔI
         if ($is_avatar) {
-            $file_name = "avatar1"; // Chỉ lưu "avatar1" không có đuôi
+            $file_name = "avatar1";
         } else {
-            // Tạo tên chitiet1, chitiet2... 
+            // Đếm số file chitiet hiện có
             $existing_files = glob($target_dir . "chitiet*");
             $next_number = count($existing_files) + 1;
             $file_name = "chitiet" . $next_number;
         }
 
-        // Upload file có đuôi
-        $target_file = $target_dir . $file_name . "." . $file_extension;
+        // Đường dẫn đích LUÔN LÀ .jpeg (trên filesystem)
+        $target_file = $target_dir . $file_name . ".jpeg";
 
-        error_log("Lưu file: " . $target_file);
-
+        // Upload file
         if (move_uploaded_file($file["tmp_name"], $target_file)) {
-            error_log("✅ Upload thành công: " . $file_name);
-            // CHỈ LƯU TÊN KHÔNG ĐUÔI: "room101/avatar1", "room101/chitiet1"
+            error_log("✅ Đã upload ảnh: " . $target_file);
+            // QUAN TRỌNG: Chỉ lưu folder_name/file_name (KHÔNG CÓ ĐUÔI)
             return [
                 'success' => true,
                 'file_path' => $folder_name . "/" . $file_name
             ];
         } else {
-            error_log("❌ Upload thất bại");
             return ['success' => false, 'error' => 'Lỗi khi upload file'];
         }
     }
@@ -243,8 +249,29 @@ class QuanLyPhongModel
 
         return $uploaded_files;
     }
+    // Hàm format tiện nghi - THÊM VÀO MODEL
+    public function formatTienNghi($tienNghiChinh, $tienNghiThem)
+    {
+        $tienNghiArray = [];
 
-    // THÊM PHÒNG MỚI - FIXED INTELEPHENSE
+        if (!empty($tienNghiChinh)) {
+            $tienNghiArray[] = $tienNghiChinh;
+        }
+
+        if (!empty($tienNghiThem)) {
+            $lines = explode("\n", $tienNghiThem);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (!empty($line)) {
+                    $tienNghiArray[] = $line;
+                }
+            }
+        }
+
+        return !empty($tienNghiArray) ? json_encode($tienNghiArray, JSON_UNESCAPED_UNICODE) : '[]';
+    }
+
+    // THÊM PHÒNG MỚI - FIXED (TÍNH TONG GIA VÀ SỬA JSON)
     public function themPhongMoi($data, $avatarFile = null, $imageFiles = null)
     {
         /** @var array $data */
@@ -258,22 +285,23 @@ class QuanLyPhongModel
             $soPhong = $this->taoMaPhongTuDong();
             /** @var string $soPhong */
 
-            // Upload avatar - LUÔN TẠO AVATAR
+            // TẠO FOLDER TRƯỚC
+            $folder_name = $this->taoThuMucPhong($soPhong);
+
+            // Upload avatar - BẮT BUỘC
             $avatarPath = '';
             if ($avatarFile && $avatarFile['error'] === UPLOAD_ERR_OK) {
                 $uploadResult = $this->uploadImageToRoom($avatarFile, $soPhong, true);
                 if ($uploadResult['success']) {
                     $avatarPath = $uploadResult['file_path'];
+                } else {
+                    throw new Exception('Lỗi upload avatar: ' . $uploadResult['error']);
                 }
+            } else {
+                throw new Exception('Ảnh đại diện là bắt buộc');
             }
 
-            // Nếu không upload avatar, vẫn tạo avatar mặc định - FIXED INTELEPHENSE
-            if (empty($avatarPath)) {
-                /** @var string $soPhong */
-                $avatarPath = 'room' . substr($soPhong, 1) . '/avatar1';
-            }
-
-            // Upload nhiều ảnh
+            // Upload nhiều ảnh chi tiết
             $danhSachAnh = [];
             if ($imageFiles && !empty($imageFiles['name'][0])) {
                 $uploadedImages = $this->uploadMultipleImagesToRoom($imageFiles, $soPhong);
@@ -282,39 +310,56 @@ class QuanLyPhongModel
                 }
             }
 
-            // Thêm avatar vào đầu danh sách ảnh nếu có
-            if (!empty($avatarPath) && !in_array($avatarPath, $danhSachAnh)) {
-                array_unshift($danhSachAnh, $avatarPath);
-            }
+            // Thêm avatar vào ĐẦU danh sách ảnh
+            array_unshift($danhSachAnh, $avatarPath);
+
+            // LẤY ĐƠN GIÁ TỪ LOẠI PHÒNG ĐỂ TÍNH TỔNG GIÁ
+            $maLoaiPhong = isset($data['MaLoaiPhong']) ? intval($data['MaLoaiPhong']) : 1;
+            $donGiaLoaiPhong = $this->getDonGiaLoaiPhong($maLoaiPhong, $conn);
 
             // Chuẩn bị dữ liệu
             $tang = isset($data['Tang']) ? intval($data['Tang']) : 1;
-            $maLoaiPhong = isset($data['MaLoaiPhong']) ? intval($data['MaLoaiPhong']) : 1;
             $trangThai = isset($data['TrangThai']) ? $data['TrangThai'] : 'Trống';
             $roomName = isset($data['roomName']) ? $data['roomName'] : 'Phòng ' . $soPhong;
             $giaPhong = isset($data['GiaPhong']) ? floatval($data['GiaPhong']) : 0.00;
+            $dienTich = isset($data['DienTich']) ? floatval($data['DienTich']) : 0.00;
+            $soKhachToiDa = isset($data['SoKhachToiDa']) ? intval($data['SoKhachToiDa']) : 2;
+            $huongNha = isset($data['HuongNha']) ? $data['HuongNha'] : '';
+            $moTaChiTiet = isset($data['MoTaChiTiet']) ? $data['MoTaChiTiet'] : '';
+            $tienNghi = isset($data['TienNghi']) ? $data['TienNghi'] : '[]';
 
-            // Thêm vào database - ĐÚNG FORMAT JSON
-            $sql = "INSERT INTO Phong (SoPhong, Tang, MaLoaiPhong, TrangThai, Avatar, DanhSachPhong, roomName, GiaPhong) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // TÍNH TỔNG GIÁ = Giá phòng + Đơn giá loại phòng
+            $tongGia = $giaPhong + $donGiaLoaiPhong;
+
+            // Thêm vào database
+            $sql = "INSERT INTO Phong (SoPhong, Tang, MaLoaiPhong, TrangThai, Avatar, DanhSachPhong, roomName, GiaPhong, TongGia, DienTich, SoKhachToiDa, HuongNha, MoTaChiTiet, TienNghi) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             $stmt = $conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception('Lỗi prepare SQL: ' . $conn->error);
             }
 
-            $danhSachAnhJson = !empty($danhSachAnh) ? json_encode($danhSachAnh, JSON_PRETTY_PRINT) : '[]';
+            // QUAN TRỌNG: JSON_UNESCAPED_SLASHES để không có \/
+            $danhSachAnhJson = !empty($danhSachAnh) ? json_encode($danhSachAnh, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '[]';
 
+            // SỬA LẠI bind_param cho đúng 14 tham số
             $stmt->bind_param(
-                "siissssd",
-                $soPhong,
-                $tang,
-                $maLoaiPhong,
-                $trangThai,
-                $avatarPath,
-                $danhSachAnhJson,
-                $roomName,
-                $giaPhong
+                "siissssddiisss", // 14 ký tự cho 14 tham số
+                $soPhong,           // s
+                $tang,              // i
+                $maLoaiPhong,       // i
+                $trangThai,         // s
+                $avatarPath,        // s
+                $danhSachAnhJson,   // s
+                $roomName,          // s
+                $giaPhong,          // d (decimal)
+                $tongGia,           // d (decimal)
+                $dienTich,          // d (decimal)
+                $soKhachToiDa,      // i
+                $huongNha,          // s
+                $moTaChiTiet,       // s
+                $tienNghi           // s (JSON string)
             );
 
             $result = $stmt->execute();
@@ -330,6 +375,7 @@ class QuanLyPhongModel
                 'success' => true,
                 'maPhong' => $maPhong,
                 'soPhong' => $soPhong,
+                'tongGia' => $tongGia,
                 'message' => 'Thêm phòng thành công!'
             ];
         } catch (Exception $e) {
@@ -338,6 +384,203 @@ class QuanLyPhongModel
                 'success' => false,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    // HÀM LẤY ĐƠN GIÁ LOẠI PHÒNG
+    private function getDonGiaLoaiPhong($maLoaiPhong, $conn)
+    {
+        $sql = "SELECT DonGia FROM LoaiPhong WHERE MaLoaiPhong = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $maLoaiPhong);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            return floatval($row['DonGia']);
+        }
+
+        return 0.00; // Mặc định nếu không tìm thấy
+    }
+    // XÓA PHÒNG
+    public function xoaPhong($maPhong)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            // Lấy thông tin phòng để xóa folder ảnh
+            $sqlSelect = "SELECT SoPhong FROM Phong WHERE MaPhong = ?";
+            $stmtSelect = $conn->prepare($sqlSelect);
+            $stmtSelect->bind_param("i", $maPhong);
+            $stmtSelect->execute();
+            $result = $stmtSelect->get_result();
+
+            if ($result->num_rows > 0) {
+                $phong = $result->fetch_assoc();
+                $soPhong = $phong['SoPhong'];
+
+                // BẮT ĐẦU TRANSACTION
+                $conn->begin_transaction();
+
+                try {
+                    // 1. XÓA DỮ LIỆU TRONG BẢNG CON TRƯỚC
+                    $this->xoaDuLieuLienQuan($maPhong, $conn);
+
+                    // 2. XÓA PHÒNG TRONG BẢNG CHA
+                    $sqlDelete = "DELETE FROM Phong WHERE MaPhong = ?";
+                    $stmtDelete = $conn->prepare($sqlDelete);
+                    $stmtDelete->bind_param("i", $maPhong);
+                    $resultDelete = $stmtDelete->execute();
+
+                    if ($resultDelete) {
+                        // COMMIT TRANSACTION NẾU THÀNH CÔNG
+                        $conn->commit();
+                        // Xóa folder ảnh
+                        $this->xoaThuMucPhong($soPhong);
+
+                        return [
+                            'success' => true,
+                            'message' => 'Xóa phòng thành công'
+                        ];
+                    } else {
+                        $conn->rollback();
+                        return [
+                            'success' => false,
+                            'error' => 'Lỗi khi xóa phòng'
+                        ];
+                    }
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    throw $e;
+                }
+            } else {
+                $this->db->closeConnect($conn);
+                return [
+                    'success' => false,
+                    'error' => 'Không tìm thấy phòng'
+                ];
+            }
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    // XÓA NHIỀU PHÒNG
+    public function xoaNhieuPhong($maPhongs)
+    {
+        $conn = $this->db->openConnect();
+        $soLuong = 0;
+        $errors = [];
+
+        try {
+            // Lấy thông tin các phòng để xóa folder ảnh
+            $placeholders = str_repeat('?,', count($maPhongs) - 1) . '?';
+            $sqlSelect = "SELECT MaPhong, SoPhong FROM Phong WHERE MaPhong IN ($placeholders)";
+            $stmtSelect = $conn->prepare($sqlSelect);
+            $stmtSelect->bind_param(str_repeat('i', count($maPhongs)), ...$maPhongs);
+            $stmtSelect->execute();
+            $result = $stmtSelect->get_result();
+
+            $danhSachPhong = [];
+            while ($row = $result->fetch_assoc()) {
+                $danhSachPhong[] = $row;
+            }
+
+            // BẮT ĐẦU TRANSACTION
+            $conn->begin_transaction();
+
+            try {
+                foreach ($danhSachPhong as $phong) {
+                    // 1. XÓA DỮ LIỆU TRONG BẢNG CON TRƯỚC
+                    $this->xoaDuLieuLienQuan($phong['MaPhong'], $conn);
+
+                    // 2. XÓA PHÒNG TRONG BẢNG CHA
+                    $sqlDelete = "DELETE FROM Phong WHERE MaPhong = ?";
+                    $stmtDelete = $conn->prepare($sqlDelete);
+                    $stmtDelete->bind_param("i", $phong['MaPhong']);
+
+                    if ($stmtDelete->execute()) {
+                        $soLuong++;
+                        // Xóa folder ảnh
+                        $this->xoaThuMucPhong($phong['SoPhong']);
+                    } else {
+                        $errors[] = "Lỗi khi xóa phòng " . $phong['SoPhong'];
+                    }
+                }
+
+                // COMMIT TRANSACTION NẾU THÀNH CÔNG
+                $conn->commit();
+
+                return [
+                    'success' => $soLuong > 0,
+                    'so_luong' => $soLuong,
+                    'errors' => $errors,
+                    'message' => $soLuong > 0 ? "Đã xóa {$soLuong} phòng thành công" : "Không thể xóa phòng"
+                ];
+            } catch (Exception $e) {
+                $conn->rollback();
+                throw $e;
+            }
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    // XÓA DỮ LIỆU LIÊN QUAN TRONG CÁC BẢNG CON
+    private function xoaDuLieuLienQuan($maPhong, $conn)
+    {
+        // DANH SÁCH CÁC BẢNG CÓ FOREIGN KEY ĐẾN PHONG
+        $cacBangCon = [
+            'phong_capnhat_trangthai',
+            'thietbi', // nếu có bảng thiết bị
+            // Thêm các bảng khác có foreign key đến phong ở đây
+        ];
+
+        foreach ($cacBangCon as $bang) {
+            try {
+                $sql = "DELETE FROM $bang WHERE MaPhong = ?";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("i", $maPhong);
+                $stmt->execute();
+                error_log("✅ Đã xóa dữ liệu từ bảng: $bang - MaPhong: $maPhong");
+            } catch (Exception $e) {
+                error_log("⚠️ Không thể xóa từ bảng $bang: " . $e->getMessage());
+                // Tiếp tục xử lý các bảng khác, không dừng lại
+            }
+        }
+    }
+
+    // XÓA THƯ MỤC PHÒNG
+    private function xoaThuMucPhong($soPhong)
+    {
+        try {
+            $folder_name = 'room' . substr($soPhong, 1); // P101 -> room101
+            $base_dir = __DIR__ . "/../../client/assets/images/rooms/";
+            $target_dir = $base_dir . $folder_name . "/";
+
+            if (file_exists($target_dir)) {
+                // Xóa tất cả file trong thư mục
+                $files = glob($target_dir . '*');
+                foreach ($files as $file) {
+                    if (is_file($file)) {
+                        unlink($file);
+                    }
+                }
+                // Xóa thư mục
+                rmdir($target_dir);
+                error_log("✅ Đã xóa thư mục: " . $target_dir);
+            }
+        } catch (Exception $e) {
+            error_log("❌ Lỗi khi xóa thư mục: " . $e->getMessage());
         }
     }
 }

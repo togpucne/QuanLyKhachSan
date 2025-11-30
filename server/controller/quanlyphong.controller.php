@@ -24,7 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
         'MaLoaiPhong' => $_POST['ma_loai_phong'],
         'TrangThai' => $_POST['trang_thai'],
         'roomName' => $_POST['room_name'],
-        'GiaPhong' => $_POST['gia_phong']
+        'GiaPhong' => $_POST['gia_phong'],
+        'DienTich' => $_POST['dien_tich'],
+        'SoKhachToiDa' => $_POST['so_khach_toi_da'],
+        'HuongNha' => $_POST['huong_nha'],
+        'MoTaChiTiet' => $_POST['mo_ta_chi_tiet'],
+        'TienNghi' => $_POST['tien_nghi_json'] // Nhận JSON từ hidden input
     ];
 
     // Lấy file upload
@@ -42,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     header('Location: quanlyphong.php');
     exit();
 }
-
 // LẤY THAM SỐ BỘ LỌC - ĐẶT MẶC ĐỊNH
 $keyword = $_GET['keyword'] ?? '';
 $tang = $_GET['tang'] ?? '';
@@ -57,4 +61,3 @@ $danhSachPhong = $danhSachPhong ?? [];
 
 // HIỂN TH� VIEW
 include 'quanlyphong.view.php';
-?>

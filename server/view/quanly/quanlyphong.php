@@ -77,7 +77,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     header('Location: quanlyphong.php');
     exit();
 }
+// XỬ LÝ LẤY THÔNG TIN PHÒNG ĐỂ SỬA (THÊM VÀO)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'lay_thong_tin') {
+    $maPhong = $_GET['ma_phong'] ?? 0;
 
+    // ĐẢM BẢO KHÔNG CÓ OUTPUT NÀO TRƯỚC JSON
+    if (ob_get_length()) ob_clean();
+
+    if ($maPhong) {
+        $phong = $model->getChiTietPhong($maPhong);
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($phong) {
+            echo json_encode($phong, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } else {
+            echo json_encode(['error' => 'Không tìm thấy phòng'], JSON_UNESCAPED_UNICODE);
+        }
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Mã phòng không hợp lệ'], JSON_UNESCAPED_UNICODE);
+    }
+    exit(); // QUAN TRỌNG: Dừng lại, không render HTML
+}
+// XỬ LÝ CẬP NHẬT PHÒNG (THÊM VÀO)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'sua') {
+    $maPhong = $_POST['ma_phong'] ?? 0;
+
+    if ($maPhong) {
+        $data = [
+            'Tang' => $_POST['tang'],
+            'MaLoaiPhong' => $_POST['ma_loai_phong'],
+            'TrangThai' => $_POST['trang_thai'],
+            'roomName' => $_POST['room_name'],
+            'GiaPhong' => $_POST['gia_phong'],
+            'DienTich' => $_POST['dien_tich'],
+            'SoKhachToiDa' => $_POST['so_khach_toi_da'],
+            'HuongNha' => $_POST['huong_nha'],
+            'MoTaChiTiet' => $_POST['mo_ta_chi_tiet'],
+            'TienNghi' => $_POST['tien_nghi_json']
+        ];
+
+        $avatarFile = isset($_FILES['avatar']) ? $_FILES['avatar'] : null;
+        $imageFiles = isset($_FILES['danh_sach_anh']) ? $_FILES['danh_sach_anh'] : null;
+
+        $result = $model->capNhatPhong($maPhong, $data, $avatarFile, $imageFiles);
+
+        if ($result['success']) {
+            $_SESSION['success'] = "Cập nhật phòng thành công!";
+        } else {
+            $_SESSION['error'] = "Lỗi khi cập nhật phòng: " . $result['error'];
+        }
+    } else {
+        $_SESSION['error'] = "Mã phòng không hợp lệ!";
+    }
+    header('Location: quanlyphong.php');
+    exit();
+}
+// XỬ LÝ XÓA ẢNH CHI TIẾT (THÊM VÀO - TÙY CHỌN)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'xoa_anh') {
+    $maPhong = $_POST['ma_phong'] ?? 0;
+    $imgPath = $_POST['img_path'] ?? '';
+
+    if ($maPhong && $imgPath) {
+        // Thêm hàm này vào model trước
+        $result = $model->xoaAnhChiTiet($maPhong, $imgPath);
+        header('Content-Type: application/json');
+        echo json_encode($result);
+        exit();
+    }
+}
 // LẤY THAM SỐ BỘ LỌC
 $keyword = $_GET['keyword'] ?? '';
 $tang = $_GET['tang'] ?? '';
@@ -141,7 +210,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                             <option value="">Tất cả</option>
                             <option value="Trống" <?php echo $trangThai === 'Trống' ? 'selected' : ''; ?>>Trống</option>
                             <option value="Đang sử dụng" <?php echo $trangThai === 'Đang sử dụng' ? 'selected' : ''; ?>>Đang sử dụng</option>
-                            <option value="Bảo trì" <?php echo $trangThai === 'Bảo trì' ? 'selected' : ''; ?>>Bảo trì</option>
+                            <option value="Đang bảo trì" <?php echo $trangThai === 'Đang bảo trì' ? 'selected' : ''; ?>>Bảo trì</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -244,8 +313,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                                                 <span class="badge bg-success bg-opacity-10 text-success border-0">Trống</span>
                                             <?php elseif ($phong['TrangThai'] === 'Đang sử dụng'): ?>
                                                 <span class="badge bg-warning bg-opacity-10 text-warning border-0">Đang sử dụng</span>
-                                            <?php elseif ($phong['TrangThai'] === 'Bảo trì'): ?>
-                                                <span class="badge bg-danger bg-opacity-10 text-danger border-0">Bảo trì</span>
+                                            <?php elseif ($phong['TrangThai'] === 'Đang bảo trì'): ?> <span class="badge bg-danger bg-opacity-10 text-danger border-0">Bảo trì</span>
                                             <?php else: ?>
                                                 <span class="badge bg-secondary"><?php echo $phong['TrangThai']; ?></span>
                                             <?php endif; ?>
@@ -327,7 +395,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                             <select class="form-control border-1" name="trang_thai" required>
                                 <option value="Trống">Trống</option>
                                 <option value="Đang sử dụng">Đang sử dụng</option>
-                                <option value="Bảo trì">Bảo trì</option>
+                                <option value="Đang bảo trì">Bảo trì</option>
                             </select>
                         </div>
 
@@ -484,7 +552,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                             <select class="form-control border-1" name="trang_thai" required id="suaTrangThai">
                                 <option value="Trống">Trống</option>
                                 <option value="Đang sử dụng">Đang sử dụng</option>
-                                <option value="Bảo trì">Bảo trì</option>
+                                <option value="Đang bảo trì">Bảo trì</option>
                             </select>
                         </div>
 
@@ -593,6 +661,6 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
     <input type="hidden" name="ma_phong" id="maPhongXoa">
 </form>
 
-<script src="../../assets//js//quanlyphong.js"></script>
+<script src="../../assets/js/quanlyphong.js"></script>
 
 <?php include_once '../layouts/footer.php'; ?>

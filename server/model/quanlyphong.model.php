@@ -743,4 +743,65 @@ class QuanLyPhongModel
             error_log("❌ Lỗi khi xóa thư mục: " . $e->getMessage());
         }
     }
+        // THÊM HÀM XÓA ẢNH CHI TIẾT VÀO ĐÂY
+    public function xoaAnhChiTiet($maPhong, $imgPath)
+    {
+        $conn = $this->db->openConnect();
+        
+        try {
+            // Lấy thông tin phòng
+            $sql = "SELECT SoPhong, Avatar, DanhSachPhong FROM Phong WHERE MaPhong = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $maPhong);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 0) {
+                return ['success' => false, 'error' => 'Không tìm thấy phòng'];
+            }
+            
+            $phong = $result->fetch_assoc();
+            $danhSachAnh = json_decode($phong['DanhSachPhong'], true) ?? [];
+            
+            // Kiểm tra xem ảnh có tồn tại không
+            $key = array_search($imgPath, $danhSachAnh);
+            if ($key === false) {
+                return ['success' => false, 'error' => 'Không tìm thấy ảnh'];
+            }
+            
+            // Kiểm tra có phải là avatar không
+            if ($phong['Avatar'] === $imgPath) {
+                return ['success' => false, 'error' => 'Không thể xóa ảnh đại diện. Hãy đổi ảnh đại diện trước.'];
+            }
+            
+            // Xóa ảnh khỏi mảng
+            unset($danhSachAnh[$key]);
+            $danhSachAnh = array_values($danhSachAnh); // Reset index
+            
+            // Cập nhật database
+            $sqlUpdate = "UPDATE Phong SET DanhSachPhong = ? WHERE MaPhong = ?";
+            $stmtUpdate = $conn->prepare($sqlUpdate);
+            $danhSachAnhJson = json_encode($danhSachAnh, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $stmtUpdate->bind_param("si", $danhSachAnhJson, $maPhong);
+            
+            if ($stmtUpdate->execute()) {
+                // Xóa file vật lý
+                $filePath = __DIR__ . "/../../client/assets/images/rooms/" . $imgPath . ".jpeg";
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                
+                $this->db->closeConnect($conn);
+                return ['success' => true, 'message' => 'Đã xóa ảnh thành công'];
+            } else {
+                $this->db->closeConnect($conn);
+                return ['success' => false, 'error' => 'Lỗi khi cập nhật database'];
+            }
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            error_log("Lỗi xoaAnhChiTiet: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
 }

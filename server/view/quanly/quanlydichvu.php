@@ -15,7 +15,7 @@ if ($action === 'themDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $donViTinh = $_POST['donViTinh'] ?? 'Lần';
     $moTa = $_POST['moTa'] ?? '';
     $loaiDV = $_POST['loaiDV'] ?? '';
-    
+
     if ($dichVuModel->themDichVu($tenDV, $donGia, $donViTinh, $moTa, $loaiDV)) {
         echo "<script>alert('Thêm dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
     } else {
@@ -32,7 +32,7 @@ if ($action === 'capNhatDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $moTa = $_POST['moTa'] ?? '';
     $loaiDV = $_POST['loaiDV'] ?? '';
     $trangThai = $_POST['trangThai'] ?? 'Khả dụng';
-    
+
     if ($dichVuModel->capNhatDichVu($maDV, $tenDV, $donGia, $donViTinh, $moTa, $loaiDV, $trangThai)) {
         echo "<script>alert('Cập nhật dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
     } else {
@@ -43,7 +43,7 @@ if ($action === 'capNhatDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // XÓA DỊCH VỤ
 if ($action === 'xoaDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $maDV = $_POST['maDV'] ?? '';
-    
+
     if ($dichVuModel->xoaDichVu($maDV)) {
         echo "<script>alert('Xóa dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
     } else {
@@ -87,8 +87,8 @@ $loaiDichVu = $loaiDichVu ?? [];
                         <div class="col-md-6">
                             <form id="formSearch" method="POST" class="d-flex">
                                 <input type="hidden" name="action" value="timKiem">
-                                <input type="text" class="form-control" name="keyword" id="searchKeyword" 
-                                       placeholder="Tìm kiếm dịch vụ..." value="<?php echo $_POST['keyword'] ?? ''; ?>">
+                                <input type="text" class="form-control" name="keyword" id="searchKeyword"
+                                    placeholder="Tìm kiếm dịch vụ..." value="<?php echo $_POST['keyword'] ?? ''; ?>">
                                 <button type="submit" class="btn btn-outline-secondary ms-2">
                                     <i class="fas fa-search"></i>
                                 </button>
@@ -145,21 +145,21 @@ $loaiDichVu = $loaiDichVu ?? [];
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <button type="button" class="btn btn-outline-primary btn-edit" 
-                                                            data-madv="<?php echo $dv['MaDV']; ?>"
-                                                            data-tendv="<?php echo $dv['TenDV']; ?>"
-                                                            data-dongia="<?php echo $dv['DonGia']; ?>"
-                                                            data-donvitinh="<?php echo $dv['DonViTinh']; ?>"
-                                                            data-mota="<?php echo $dv['MoTa']; ?>"
-                                                            data-loaidv="<?php echo $dv['LoaiDV']; ?>"
-                                                            data-trangthai="<?php echo $dv['TrangThai']; ?>"
-                                                            title="Sửa dịch vụ">
+                                                    <button type="button" class="btn btn-outline-primary btn-edit"
+                                                        data-madv="<?php echo $dv['MaDV']; ?>"
+                                                        data-tendv="<?php echo $dv['TenDV']; ?>"
+                                                        data-dongia="<?php echo $dv['DonGia']; ?>"
+                                                        data-donvitinh="<?php echo $dv['DonViTinh']; ?>"
+                                                        data-mota="<?php echo $dv['MoTa']; ?>"
+                                                        data-loaidv="<?php echo $dv['LoaiDV']; ?>"
+                                                        data-trangthai="<?php echo $dv['TrangThai']; ?>"
+                                                        title="Sửa dịch vụ">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button type="button" class="btn btn-outline-danger btn-delete" 
-                                                            data-madv="<?php echo $dv['MaDV']; ?>"
-                                                            data-tendv="<?php echo $dv['TenDV']; ?>"
-                                                            title="Xóa dịch vụ">
+                                                    <button type="button" class="btn btn-outline-danger btn-delete"
+                                                        data-madv="<?php echo $dv['MaDV']; ?>"
+                                                        data-tendv="<?php echo $dv['TenDV']; ?>"
+                                                        title="Xóa dịch vụ">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -170,8 +170,8 @@ $loaiDichVu = $loaiDichVu ?? [];
                                     <tr>
                                         <td colspan="7" class="text-center text-muted py-4">
                                             <i class="fas fa-box-open fa-2x mb-3"></i><br>
-                                            <?php echo (isset($_POST['keyword']) && !empty($_POST['keyword'])) ? 
-                                                'Không tìm thấy dịch vụ phù hợp' : 
+                                            <?php echo (isset($_POST['keyword']) && !empty($_POST['keyword'])) ?
+                                                'Không tìm thấy dịch vụ phù hợp' :
                                                 'Chưa có dịch vụ nào trong hệ thống'; ?>
                                         </td>
                                     </tr>
@@ -211,6 +211,7 @@ $loaiDichVu = $loaiDichVu ?? [];
                                     <?php foreach ($loaiDichVu as $loai): ?>
                                         <option value="<?php echo htmlspecialchars($loai); ?>"><?php echo htmlspecialchars($loai); ?></option>
                                     <?php endforeach; ?>
+                                    <option value="Buffert">Buffert</option>
                                     <option value="Khác">Khác</option>
                                 </select>
                             </div>
@@ -227,13 +228,7 @@ $loaiDichVu = $loaiDichVu ?? [];
                             <div class="mb-3">
                                 <label class="form-label">Đơn vị tính</label>
                                 <select class="form-select" name="donViTinh">
-                                    <option value="Lần">Lần</option>
-                                    <option value="Giờ">Giờ</option>
                                     <option value="Ngày">Ngày</option>
-                                    <option value="Người">Người</option>
-                                    <option value="Phần">Phần</option>
-                                    <option value="Kg">Kg</option>
-                                    <option value="Lượt">Lượt</option>
                                 </select>
                             </div>
                         </div>
@@ -288,6 +283,7 @@ $loaiDichVu = $loaiDichVu ?? [];
                                     <?php foreach ($loaiDichVu as $loai): ?>
                                         <option value="<?php echo htmlspecialchars($loai); ?>"><?php echo htmlspecialchars($loai); ?></option>
                                     <?php endforeach; ?>
+                                    <option value="Buffert">Buffert</option>
                                     <option value="Khác">Khác</option>
                                 </select>
                             </div>
@@ -304,13 +300,7 @@ $loaiDichVu = $loaiDichVu ?? [];
                             <div class="mb-3">
                                 <label class="form-label">Đơn vị tính</label>
                                 <select class="form-select" name="donViTinh" id="editDonViTinh">
-                                    <option value="Lần">Lần</option>
-                                    <option value="Giờ">Giờ</option>
                                     <option value="Ngày">Ngày</option>
-                                    <option value="Người">Người</option>
-                                    <option value="Phần">Phần</option>
-                                    <option value="Kg">Kg</option>
-                                    <option value="Lượt">Lượt</option>
                                 </select>
                             </div>
                         </div>
@@ -365,54 +355,54 @@ $loaiDichVu = $loaiDichVu ?? [];
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Sửa dịch vụ - mở modal
-    $('.btn-edit').click(function() {
-        const maDV = $(this).data('madv');
-        const tenDV = $(this).data('tendv');
-        const donGia = $(this).data('dongia');
-        const donViTinh = $(this).data('donvitinh');
-        const moTa = $(this).data('mota');
-        const loaiDV = $(this).data('loaidv');
-        const trangThai = $(this).data('trangthai');
+    $(document).ready(function() {
+        // Sửa dịch vụ - mở modal
+        $('.btn-edit').click(function() {
+            const maDV = $(this).data('madv');
+            const tenDV = $(this).data('tendv');
+            const donGia = $(this).data('dongia');
+            const donViTinh = $(this).data('donvitinh');
+            const moTa = $(this).data('mota');
+            const loaiDV = $(this).data('loaidv');
+            const trangThai = $(this).data('trangthai');
 
-        $('#editMaDV').val(maDV);
-        $('#editTenDV').val(tenDV);
-        $('#editDonGia').val(donGia);
-        $('#editDonViTinh').val(donViTinh);
-        $('#editMoTa').val(moTa);
-        $('#editLoaiDV').val(loaiDV);
-        $('#editTrangThai').val(trangThai);
+            $('#editMaDV').val(maDV);
+            $('#editTenDV').val(tenDV);
+            $('#editDonGia').val(donGia);
+            $('#editDonViTinh').val(donViTinh);
+            $('#editMoTa').val(moTa);
+            $('#editLoaiDV').val(loaiDV);
+            $('#editTrangThai').val(trangThai);
 
-        $('#modalSuaDichVu').modal('show');
+            $('#modalSuaDichVu').modal('show');
+        });
+
+        // Xóa dịch vụ - mở modal xác nhận
+        $('.btn-delete').click(function() {
+            const maDV = $(this).data('madv');
+            const tenDV = $(this).data('tendv');
+
+            $('#deleteMaDV').val(maDV);
+            $('#tenDichVuXoa').text(tenDV);
+            $('#modalXoaDichVu').modal('show');
+        });
+
+        // Tìm kiếm với Enter
+        $('#searchKeyword').on('keypress', function(e) {
+            if (e.which === 13) {
+                $('#formSearch').submit();
+            }
+        });
+
+        // Reset form khi modal đóng
+        $('#modalThemDichVu').on('hidden.bs.modal', function() {
+            $(this).find('form')[0].reset();
+        });
+
+        $('#modalSuaDichVu').on('hidden.bs.modal', function() {
+            $(this).find('form')[0].reset();
+        });
     });
-
-    // Xóa dịch vụ - mở modal xác nhận
-    $('.btn-delete').click(function() {
-        const maDV = $(this).data('madv');
-        const tenDV = $(this).data('tendv');
-
-        $('#deleteMaDV').val(maDV);
-        $('#tenDichVuXoa').text(tenDV);
-        $('#modalXoaDichVu').modal('show');
-    });
-
-    // Tìm kiếm với Enter
-    $('#searchKeyword').on('keypress', function(e) {
-        if (e.which === 13) {
-            $('#formSearch').submit();
-        }
-    });
-
-    // Reset form khi modal đóng
-    $('#modalThemDichVu').on('hidden.bs.modal', function() {
-        $(this).find('form')[0].reset();
-    });
-
-    $('#modalSuaDichVu').on('hidden.bs.modal', function() {
-        $(this).find('form')[0].reset();
-    });
-});
 </script>
 
 <?php include '../layouts/footer.php'; ?>

@@ -698,6 +698,169 @@ include_once '../layouts/header.php';
   setTimeout(() => {
     handleTrangThaiChange();
   }, 100);
+  // Kiểm tra ngày nghỉ hợp lệ
+  function kiemTraNgayNghi() {
+    const ngayVaoLam = document.querySelector('input[name="ngay_vao_lam"]').value;
+    const ngayNghiViec = document.querySelector('input[name="ngay_nghi_viec"]').value;
+
+    if (ngayNghiViec && ngayVaoLam) {
+      const ngayVL = new Date(ngayVaoLam);
+      const ngayNV = new Date(ngayNghiViec);
+
+      if (ngayNV < ngayVL) {
+        alert('❌ Ngày nghỉ việc phải sau ngày vào làm!');
+        document.querySelector('input[name="ngay_nghi_viec"]').value = '';
+        return false;
+      }
+
+      // Kiểm tra nếu đã qua ngày nghỉ
+      const today = new Date();
+      if (ngayNV <= today) {
+        const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã qua hoặc là hôm nay.\nBạn có muốn tự động cập nhật trạng thái thành "Đã nghỉ" không?');
+        if (confirmUpdate) {
+          document.querySelector('select[name="trang_thai"]').value = 'Đã nghỉ';
+        }
+      }
+    }
+    return true;
+  }
+
+  // Gắn sự kiện cho form
+  document.addEventListener('DOMContentLoaded', function() {
+    // Form thêm nhân viên
+    const formThem = document.getElementById('formThemNhanVien');
+    if (formThem) {
+      const ngayNghiInput = formThem.querySelector('input[name="ngay_nghi_viec"]');
+      if (ngayNghiInput) {
+        ngayNghiInput.addEventListener('change', kiemTraNgayNghi);
+      }
+    }
+
+    // Form sửa nhân viên (xử lý động)
+    document.addEventListener('change', function(e) {
+      if (e.target.name === 'ngay_nghi_viec' && e.target.closest('#suaFormContent')) {
+        kiemTraNgayNghi();
+      }
+    });
+
+    // Form submit validation
+    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
+      if (!kiemTraNgayNghi()) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
+
+    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
+      const ngayNghiInput = document.querySelector('#suaFormContent input[name="ngay_nghi_viec"]');
+      if (ngayNghiInput && !kiemTraNgayNghi()) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
+  });
+  // Kiểm tra ngày nghỉ hợp lệ và thông báo
+  function kiemTraNgayNghiVaThongBao() {
+    const ngayVaoLam = document.querySelector('input[name="ngay_vao_lam"]').value;
+    const ngayNghiViecInput = document.querySelector('input[name="ngay_nghi_viec"]');
+    const trangThaiSelect = document.querySelector('select[name="trang_thai"]');
+
+    if (!ngayNghiViecInput || !ngayVaoLam) return true;
+
+    const ngayNghiViec = ngayNghiViecInput.value;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (ngayNghiViec) {
+      const ngayVL = new Date(ngayVaoLam);
+      const ngayNV = new Date(ngayNghiViec);
+
+      // Kiểm tra hợp lệ
+      if (ngayNV < ngayVL) {
+        alert('❌ Ngày nghỉ việc phải sau ngày vào làm!');
+        ngayNghiViecInput.value = '';
+        return false;
+      }
+
+      // Kiểm tra các trường hợp
+      if (ngayNV <= today) {
+        // Đã qua hoặc đến ngày nghỉ
+        if (trangThaiSelect && trangThaiSelect.value === 'Đang làm') {
+          const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã qua hoặc là hôm nay.\nBạn có muốn tự động cập nhật trạng thái thành "Đã nghỉ" không?');
+          if (confirmUpdate) {
+            trangThaiSelect.value = 'Đã nghỉ';
+          }
+        }
+      } else {
+        // Ngày nghỉ trong tương lai
+        if (trangThaiSelect && trangThaiSelect.value === 'Đã nghỉ') {
+          const confirmUpdate = confirm('⚠️ Ngày nghỉ việc là trong tương laí.\nBạn có muốn tự động cập nhật trạng thái thành "Đang làm" không?');
+          if (confirmUpdate) {
+            trangThaiSelect.value = 'Đang làm';
+          }
+        }
+      }
+    } else {
+      // Clear ngày nghỉ
+      if (trangThaiSelect && trangThaiSelect.value === 'Đã nghỉ') {
+        const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã được xóa.\nBạn có muốn tự động cập nhật trạng thái thành "Đang làm" không?');
+        if (confirmUpdate) {
+          trangThaiSelect.value = 'Đang làm';
+        }
+      }
+    }
+    return true;
+  }
+
+  // Gắn sự kiện cho form
+  document.addEventListener('DOMContentLoaded', function() {
+    // Form thêm nhân viên
+    const formThem = document.getElementById('formThemNhanVien');
+    if (formThem) {
+      const ngayNghiInput = formThem.querySelector('input[name="ngay_nghi_viec"]');
+      const trangThaiSelect = formThem.querySelector('select[name="trang_thai"]');
+
+      if (ngayNghiInput) {
+        ngayNghiInput.addEventListener('change', kiemTraNgayNghiVaThongBao);
+      }
+      if (trangThaiSelect) {
+        trangThaiSelect.addEventListener('change', function() {
+          // Nếu chuyển từ "Đã nghỉ" sang "Đang làm", kiểm tra ngày nghỉ
+          if (this.value === 'Đang làm') {
+            kiemTraNgayNghiVaThongBao();
+          }
+        });
+      }
+    }
+
+    // Form sửa nhân viên (xử lý động)
+    document.addEventListener('change', function(e) {
+      if ((e.target.name === 'ngay_nghi_viec' || e.target.name === 'trang_thai') &&
+        e.target.closest('#suaFormContent')) {
+        kiemTraNgayNghiVaThongBao();
+      }
+    });
+
+    // Form submit validation
+    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
+      if (!kiemTraNgayNghiVaThongBao()) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
+
+    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
+      const ngayNghiInput = document.querySelector('#suaFormContent input[name="ngay_nghi_viec"]');
+      if (ngayNghiInput && !kiemTraNgayNghiVaThongBao()) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    });
+  });
 </script>
 
 <?php include_once '../layouts/footer.php'; ?>

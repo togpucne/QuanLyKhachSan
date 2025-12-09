@@ -226,7 +226,111 @@ class QuanLyNhanVienModel
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
+    // KIỂM TRA VÀ CẬP NHẬT TỰ ĐỘNG KHI NHÂN VIÊN ĐẾN NGÀY NGHỈ
+    public function kiemTraVaCapNhatTrangThai()
+    {
+        $conn = $this->db->openConnect();
+        $conn->begin_transaction();
 
+        try {
+            $today = date('Y-m-d');
+
+            // 1. Tìm các nhân viên cần kiểm tra
+            $sql = "SELECT nv.MaNhanVien, nv.MaTaiKhoan, nv.HoTen, nv.NgayNghiViec, nv.TrangThai
+                FROM nhanvien nv
+                WHERE nv.NgayNghiViec != '0000-00-00'
+                AND nv.NgayNghiViec != ''
+                AND nv.NgayNghiViec IS NOT NULL
+                AND nv.MaTaiKhoan IS NOT NULL";
+
+            $result = $conn->query($sql);
+
+            $updated = [];
+            $reactivated = []; // Những người được kích hoạt lại
+            $deactivated = []; // Những người bị khóa
+
+            // 2. Xử lý từng nhân viên
+            while ($row = $result->fetch_assoc()) {
+                $ngayNghiViec = $row['NgayNghiViec'];
+                $trangThaiHienTai = $row['TrangThai'];
+                $trangThaiMoi = $trangThaiHienTai;
+                $action = '';
+
+                // Logic tương tự như hàm suaNhanVien
+                if (strtotime($ngayNghiViec) <= strtotime($today)) {
+                    // Đã đến hoặc qua ngày nghỉ
+                    if ($trangThaiHienTai === 'Đang làm') {
+                        $trangThaiMoi = 'Đã nghỉ';
+                        $action = 'deactivate';
+                    }
+                } else {
+                    // Ngày nghỉ trong tương lai
+                    if ($trangThaiHienTai === 'Đã nghỉ') {
+                        $trangThaiMoi = 'Đang làm';
+                        $action = 'reactivate';
+                    }
+                }
+
+                // Nếu có thay đổi, cập nhật
+                if ($trangThaiMoi !== $trangThaiHienTai) {
+                    // Cập nhật trạng thái nhân viên
+                    $sql_update_nv = "UPDATE nhanvien SET TrangThai = ?, updated_at = NOW() 
+                                 WHERE MaNhanVien = ?";
+                    $stmt_update_nv = $conn->prepare($sql_update_nv);
+                    $stmt_update_nv->bind_param("ss", $trangThaiMoi, $row['MaNhanVien']);
+                    $stmt_update_nv->execute();
+
+                    // Cập nhật trạng thái tài khoản
+                    $trangThaiTaiKhoan = ($trangThaiMoi === 'Đang làm') ? '1' : '0';
+                    $sql_update_tk = "UPDATE tai_khoan SET TrangThai = ?, updated_at = NOW() 
+                                 WHERE id = ?";
+                    $stmt_update_tk = $conn->prepare($sql_update_tk);
+                    $stmt_update_tk->bind_param("si", $trangThaiTaiKhoan, $row['MaTaiKhoan']);
+                    $stmt_update_tk->execute();
+
+                    $item = [
+                        'ma_nhan_vien' => $row['MaNhanVien'],
+                        'ho_ten' => $row['HoTen'],
+                        'ngay_nghi_viec' => $ngayNghiViec,
+                        'trang_thai_cu' => $trangThaiHienTai,
+                        'trang_thai_moi' => $trangThaiMoi,
+                        'action' => $action
+                    ];
+
+                    if ($action === 'deactivate') {
+                        $deactivated[] = $item;
+                    } else {
+                        $reactivated[] = $item;
+                    }
+                }
+            }
+
+            $conn->commit();
+            $this->db->closeConnect($conn);
+
+            return [
+                'success' => true,
+                'deactivated_count' => count($deactivated),
+                'reactivated_count' => count($reactivated),
+                'deactivated' => $deactivated,
+                'reactivated' => $reactivated
+            ];
+        } catch (Exception $e) {
+            $conn->rollback();
+            $this->db->closeConnect($conn);
+            error_log("Lỗi kiểm tra trạng thái: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    // HÀM PHỤ TRỢ: KIỂM TRA NGÀY NGHỈ CÓ HỢP LỆ KHÔNG (phải sau ngày vào làm)
+    public function kiemTraNgayNghiHopLe($ngayVaoLam, $ngayNghiViec)
+    {
+        if (empty($ngayNghiViec) || $ngayNghiViec == '0000-00-00') {
+            return true; // Không có ngày nghỉ thì hợp lệ
+        }
+
+        return strtotime($ngayNghiViec) >= strtotime($ngayVaoLam);
+    }
     // SỬA NHÂN VIÊN - TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN KHI NHÂN VIÊN NGHỈ LÀM
     public function suaNhanVien($maNhanVien, $data)
     {
@@ -234,6 +338,11 @@ class QuanLyNhanVienModel
         $conn->begin_transaction();
 
         try {
+            // 0. KIỂM TRA NGÀY NGHỈ HỢP LỆ (phải sau ngày vào làm)
+            if (!$this->kiemTraNgayNghiHopLe($data['NgayVaoLam'], $data['NgayNghiViec'])) {
+                throw new Exception("Ngày nghỉ việc phải sau ngày vào làm!");
+            }
+
             // 1. Lấy thông tin tài khoản hiện tại
             $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
             $stmt_get_tk = $conn->prepare($sql_get_tk);
@@ -243,18 +352,55 @@ class QuanLyNhanVienModel
             $currentInfo = $result_get_tk->fetch_assoc();
             $maTaiKhoan = $currentInfo['MaTaiKhoan'];
 
-            // 2. CẬP NHẬT THÔNG TIN NHÂN VIÊN
+            // 2. KIỂM TRA VÀ XỬ LÝ LOGIC TỰ ĐỘNG
+            $today = date('Y-m-d');
+            $ngayNghiViec = $data['NgayNghiViec'] ?? null;
+            $ngayNghiViecFormatted = ($ngayNghiViec == '0000-00-00' || empty($ngayNghiViec)) ? null : $ngayNghiViec;
+
+            // LOGIC MỚI: Xử lý 3 trường hợp
+            $autoUpdated = false;
+            $autoMessage = '';
+
+            // Trường hợp 1: Clear ngày nghỉ (để trống hoặc 0000-00-00)
+            if (empty($ngayNghiViec) || $ngayNghiViec == '0000-00-00') {
+                if ($data['TrangThai'] === 'Đã nghỉ') {
+                    // Nếu clear ngày nghỉ mà trạng thái vẫn là "Đã nghỉ", chuyển về "Đang làm"
+                    $data['TrangThai'] = 'Đang làm';
+                    $autoUpdated = true;
+                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ đã được xóa.";
+                }
+            }
+            // Trường hợp 2: Có ngày nghỉ, nhưng là trong tương lai
+            elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) > strtotime($today)) {
+                if ($data['TrangThai'] === 'Đã nghỉ') {
+                    // Nếu gia hạn thêm (ngày nghỉ trong tương lai), chuyển về "Đang làm"
+                    $data['TrangThai'] = 'Đang làm';
+                    $autoUpdated = true;
+                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ được gia hạn đến {$ngayNghiViecFormatted}.";
+                }
+            }
+            // Trường hợp 3: Đã đến hoặc qua ngày nghỉ
+            elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) <= strtotime($today)) {
+                if ($data['TrangThai'] === 'Đang làm') {
+                    // Đã đến ngày nghỉ, tự động chuyển thành "Đã nghỉ"
+                    $data['TrangThai'] = 'Đã nghỉ';
+                    $autoUpdated = true;
+                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đã nghỉ' vì đã đến ngày nghỉ việc: {$ngayNghiViecFormatted}.";
+                }
+            }
+
+            // 3. CẬP NHẬT THÔNG TIN NHÂN VIÊN
             $sql = "UPDATE nhanvien SET 
-                    HoTen = ?, 
-                    DiaChi = ?, 
-                    SDT = ?, 
-                    NgayVaoLam = ?, 
-                    NgayNghiViec = ?, 
-                    PhongBan = ?, 
-                    LuongCoBan = ?, 
-                    TrangThai = ?,
-                    updated_at = NOW()
-                    WHERE MaNhanVien = ?";
+                HoTen = ?, 
+                DiaChi = ?, 
+                SDT = ?, 
+                NgayVaoLam = ?, 
+                NgayNghiViec = ?, 
+                PhongBan = ?, 
+                LuongCoBan = ?, 
+                TrangThai = ?,
+                updated_at = NOW()
+                WHERE MaNhanVien = ?";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param(
@@ -274,14 +420,14 @@ class QuanLyNhanVienModel
                 throw new Exception("Lỗi cập nhật nhân viên: " . $stmt->error);
             }
 
-            // 3. TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN DỰA VÀO TRẠNG THÁI NHÂN VIÊN
+            // 4. TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN DỰA VÀO TRẠNG THÁI NHÂN VIÊN
             if ($maTaiKhoan) {
                 $trangThaiTaiKhoan = ($data['TrangThai'] === 'Đang làm') ? '1' : '0';
 
                 $sql_update_tk = "UPDATE tai_khoan SET 
-                                 TrangThai = ?, 
-                                 updated_at = NOW() 
-                                 WHERE id = ?";
+                             TrangThai = ?, 
+                             updated_at = NOW() 
+                             WHERE id = ?";
                 $stmt_update_tk = $conn->prepare($sql_update_tk);
                 $stmt_update_tk->bind_param("si", $trangThaiTaiKhoan, $maTaiKhoan);
 
@@ -290,7 +436,7 @@ class QuanLyNhanVienModel
                 }
             }
 
-            // 4. NẾU CÓ YÊU CẦU RESET MẬT KHẨU
+            // 5. NẾU CÓ YÊU CẦU RESET MẬT KHẨU
             if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1' && $maTaiKhoan) {
                 $matKhauMoi = $data['mat_khau_moi'] ?? '123456';
                 $matKhauMd5 = md5($matKhauMoi);
@@ -310,9 +456,21 @@ class QuanLyNhanVienModel
             $conn->commit();
             $this->db->closeConnect($conn);
 
-            $result = ['success' => true, 'maTaiKhoan' => $maTaiKhoan];
+            $result = [
+                'success' => true,
+                'maTaiKhoan' => $maTaiKhoan,
+                'trang_thai_nv' => $data['TrangThai'],
+                'trang_thai_tk' => $trangThaiTaiKhoan ?? '1'
+            ];
+
             if (isset($matKhauReset)) {
                 $result['mat_khau_moi'] = $matKhauReset;
+            }
+
+            // Thêm thông báo nếu đã tự động cập nhật
+            if ($autoUpdated) {
+                $result['auto_updated'] = true;
+                $result['message'] = $autoMessage;
             }
 
             return $result;

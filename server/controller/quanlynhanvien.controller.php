@@ -209,53 +209,69 @@ function themPOST($model)
     exit();
 }
 
-function suaPOST($model)
-{
+function suaPOST($model) {
     if (!isset($_POST['ma_nhan_vien'])) {
         $_SESSION['error'] = "Thiếu mã nhân viên";
         header('Location: quanlynhanvien.controller.php');
         exit();
     }
-
+    
     $maNhanVien = $_POST['ma_nhan_vien'];
     $data = [
         'HoTen' => $_POST['ho_ten'],
         'DiaChi' => $_POST['dia_chi'] ?? '',
         'SDT' => $_POST['sdt'],
         'NgayVaoLam' => $_POST['ngay_vao_lam'],
-        'NgayNghiViec' => $_POST['ngay_nghi_viec'] ?? NULL,
+        'NgayNghiViec' => $_POST['ngay_nghi_viec'] ?? '0000-00-00',
         'PhongBan' => $_POST['phong_ban'],
         'LuongCoBan' => $_POST['luong_co_ban'],
         'TrangThai' => $_POST['trang_thai']
     ];
-
+    
     // Kiểm tra nếu có yêu cầu reset mật khẩu
     if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
         $data['reset_mat_khau'] = '1';
         $data['mat_khau_moi'] = $_POST['mat_khau_moi'] ?? '123456';
     }
-
+    
     $result = $model->suaNhanVien($maNhanVien, $data);
-
+    
     if ($result['success']) {
-        $message = "Cập nhật nhân viên thành công!<br>";
-
-        // Hiển thị thông báo về trạng thái tài khoản
-        if ($data['TrangThai'] === 'Đã nghỉ') {
-            $message .= "<small class='text-danger'>Tài khoản đã được cập nhật: <strong>Không hoạt động</strong></small>";
-        } else {
-            $message .= "<small class='text-success'>Tài khoản đã được cập nhật: <strong>Đang hoạt động</strong></small>";
+        $message = "✅ Cập nhật nhân viên thành công!<br>";
+        
+        // Thêm thông báo nếu đã tự động cập nhật
+        if (isset($result['auto_updated']) && $result['auto_updated']) {
+            $message .= "<div class='alert alert-info'>";
+            $message .= "<strong>📢 Thông báo tự động:</strong><br>";
+            $message .= $result['message'] . "<br>";
+            
+            // Hiển thị thông tin chi tiết
+            $message .= "Trạng thái nhân viên đã cập nhật: <strong>{$result['trang_thai_nv']}</strong><br>";
+            
+            if ($result['trang_thai_nv'] === 'Đang làm') {
+                $message .= "🎉 Tài khoản đã được <strong>kích hoạt lại</strong> (Trạng thái: Hoạt động)<br>";
+                $message .= "Nhân viên có thể đăng nhập bình thường.";
+            } else {
+                $message .= "🔒 Tài khoản đã được <strong>khóa</strong> (Trạng thái: Không hoạt động)<br>";
+                $message .= "Nhân viên không thể đăng nhập.";
+            }
+            
+            $message .= "</div><br>";
         }
-
+        
+        $message .= "<strong>Thông tin đã cập nhật:</strong><br>";
+        $message .= "• Trạng thái nhân viên: <strong>{$result['trang_thai_nv']}</strong><br>";
+        $message .= "• Trạng thái tài khoản: <strong>" . ($result['trang_thai_tk'] == '1' ? '✅ Hoạt động' : '❌ Không hoạt động') . "</strong><br>";
+        
         if (isset($result['mat_khau_moi'])) {
-            $message .= "<br>Mật khẩu mới: <strong>" . $result['mat_khau_moi'] . "</strong>";
+            $message .= "• Mật khẩu mới: <strong>{$result['mat_khau_moi']}</strong><br>";
         }
-
+        
         $_SESSION['success'] = $message;
     } else {
-        $_SESSION['error'] = "Lỗi khi cập nhật nhân viên: " . ($result['message'] ?? '');
+        $_SESSION['error'] = "❌ Lỗi khi cập nhật nhân viên: " . ($result['message'] ?? '');
     }
-
+    
     header('Location: quanlynhanvien.controller.php');
     exit();
 }

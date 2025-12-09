@@ -33,7 +33,7 @@ $_SESSION['captcha'] = $captcha;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
         }
 
         .login-header {
@@ -58,13 +58,22 @@ $_SESSION['captcha'] = $captcha;
             text-align: center;
             margin-bottom: 10px;
         }
+
+        .login-note {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h2>Đăng nhập</h2>
+            <h2>Đăng nhập hệ thống</h2>
             <p class="mb-0">Hệ thống quản lý Tỏa Sáng Resort Nha Trang</p>
         </div>
 
@@ -73,6 +82,10 @@ $_SESSION['captcha'] = $captcha;
                 <div class="alert alert-danger"><?php echo $_SESSION['error'];
                                                 unset($_SESSION['error']); ?></div>
             <?php endif; ?>
+
+            <div class="login-note">
+                <strong>📧 Lưu ý:</strong> Vui lòng sử dụng email nhân viên để đăng nhập
+            </div>
 
             <!-- Thêm JavaScript alert cho thông báo đăng xuất -->
             <?php if (isset($_GET['logout']) && $_GET['logout'] === 'success'): ?>
@@ -85,14 +98,17 @@ $_SESSION['captcha'] = $captcha;
 
             <form action="../../controller/login.controller.php?action=processLogin" method="POST">
                 <div class="mb-3">
-                    <label class="form-label">Tên tài khoản</label>
-                    <input type="text" class="form-control" name="username" required
-                        value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                    <label class="form-label">Email nhân viên</label>
+                    <input type="email" class="form-control" name="email" required
+                        value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                        placeholder="Nhập email của bạn">
+                    <div class="form-text">Ví dụ: letan@talkhoan.com</div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Mật khẩu</label>
-                    <input type="password" class="form-control" name="password" required>
+                    <input type="password" class="form-control" name="password" required
+                        placeholder="Nhập mật khẩu">
                 </div>
 
                 <div class="mb-3">
@@ -104,7 +120,7 @@ $_SESSION['captcha'] = $captcha;
                 <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
 
                 <div class="text-center mt-3">
-                    <a href="#" class="text-decoration-none">Quên mật khẩu?</a>
+                    <small class="text-muted">Liên hệ quản trị viên nếu quên mật khẩu</small>
                 </div>
             </form>
         </div>

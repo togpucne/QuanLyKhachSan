@@ -12,41 +12,52 @@ class LoginController
         $this->loginModel = new LoginModel();
     }
 
-    // Xử lý đăng nhập
+    // Xử lý đăng nhập bằng EMAIL
     public function processLogin()
     {
         // Kiểm tra nếu là POST request
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $tenDangNhap = $_POST['username'] ?? '';
+            $email = $_POST['email'] ?? '';
             $matKhau = $_POST['password'] ?? '';
             $captchaInput = $_POST['captcha'] ?? '';
             $captchaSession = $_SESSION['captcha'] ?? '';
 
-            // Kiểm tra captcha
+            // 1. Kiểm tra captcha
             if (empty($captchaInput) || $captchaInput !== $captchaSession) {
                 $_SESSION['error'] = "Mã xác thực không đúng!";
-                header('Location: ../view/login.php');
+                header('Location: ../view/login/login.php');
                 exit();
             }
 
-            // Kiểm tra đăng nhập
-            $result = $this->loginModel->logIn($tenDangNhap, $matKhau);
+            // 2. Kiểm tra email hợp lệ
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $_SESSION['error'] = "Email không hợp lệ!";
+                header('Location: ../view/login/login.php');
+                exit();
+            }
 
-            if ($result && $result->num_rows > 0) {
-                $user = $result->fetch_assoc();
+            // 3. Kiểm tra đăng nhập bằng email
+            $result = $this->loginModel->logInByEmail($email, $matKhau);
 
-                // Lưu thông tin user vào SESSION
+            if ($result['success']) {
+                $user = $result['user'];
+
+                // Lưu thông tin đầy đủ vào SESSION
                 $_SESSION['user'] = [
                     'id' => $user['id'],
                     'username' => $user['TenDangNhap'],
                     'role' => $user['VaiTro'],
                     'email' => $user['Email'],
-                    'cmnd' => $user['CMND']
+                    'cmnd' => $user['CMND'],
+                    'ma_nhan_vien' => $user['MaNhanVien'],
+                    'ho_ten' => $user['HoTen'],
+                    'phong_ban' => $user['PhongBan']
                 ];
 
                 // Lưu thông tin vai trò vào SESSION riêng
                 $_SESSION['vaitro'] = $user['VaiTro'];
                 $_SESSION['username'] = $user['TenDangNhap'];
+                $_SESSION['email'] = $user['Email'];
 
                 // Lưu COOKIE với thời gian 30 ngày
                 $cookie_time = time() + (30 * 24 * 60 * 60); // 30 ngày
@@ -54,18 +65,20 @@ class LoginController
                 setcookie('user_role', $user['VaiTro'], $cookie_time, "/");
                 setcookie('username', $user['TenDangNhap'], $cookie_time, "/");
                 setcookie('user_id', $user['id'], $cookie_time, "/");
+                setcookie('user_email', $user['Email'], $cookie_time, "/");
                 setcookie('is_logged_in', 'true', $cookie_time, "/");
 
+                // Cập nhật thời gian đăng nhập cuối
+                $this->updateLastLogin($user['id']);
+
                 // Debug: kiểm tra session và cookie
-                error_log("Login successful - Role: " . $user['VaiTro']);
-                error_log("Session role: " . $_SESSION['vaitro']);
-                error_log("Cookie set for role: " . $user['VaiTro']);
+                error_log("Login successful - Email: " . $user['Email'] . ", Role: " . $user['VaiTro']);
 
                 // Chuyển hướng đến dashboard
                 header('Location: ../view/home/dashboard.php');
                 exit();
             } else {
-                $_SESSION['error'] = "Tên đăng nhập hoặc mật khẩu không đúng!";
+                $_SESSION['error'] = $result['error'];
                 header('Location: ../view/login/login.php');
                 exit();
             }
@@ -76,6 +89,17 @@ class LoginController
         }
     }
 
+    // Cập nhật thời gian đăng nhập cuối
+    private function updateLastLogin($userId) {
+        $p = new Connect();
+        $conn = $p->openConnect();
+        
+        $sql = "UPDATE tai_khoan SET updated_at = NOW() WHERE id = '$userId'";
+        $conn->query($sql);
+        
+        $p->closeConnect($conn);
+    }
+
     // Đăng xuất
     public function logout()
     {
@@ -84,22 +108,35 @@ class LoginController
         session_destroy();
 
         // Xóa COOKIE
-        setcookie('user_role', '', time() - 3600, "/");
-        setcookie('username', '', time() - 3600, "/");
-        setcookie('user_id', '', time() - 3600, "/");
-        setcookie('is_logged_in', '', time() - 3600, "/");
+        $cookieParams = ['user_role', 'username', 'user_id', 'user_email', 'is_logged_in'];
+        foreach ($cookieParams as $cookie) {
+            setcookie($cookie, '', time() - 3600, "/");
+        }
 
         // Chuyển hướng về trang login
-        header('Location: ../view/login/login.php');
+        header('Location: ../view/login/login.php?logout=success');
         exit();
     }
 
-
-    // Kiểm tra đăng nhập (middleware)
+    // Kiểm tra đăng nhập (middleware) - Updated
     public function checkAuth()
     {
         // Ưu tiên kiểm tra SESSION trước
         if (isset($_SESSION['user']) && isset($_SESSION['vaitro'])) {
+            $user = $_SESSION['user'];
+            
+            // Kiểm tra thêm trạng thái tài khoản và nhân viên
+            $currentUser = $this->loginModel->getUserByEmail($user['email']);
+            
+            if (!$currentUser || 
+                $currentUser['TrangThai'] != 1 || 
+                $currentUser['nhan_vien_trang_thai'] !== 'Đang làm') {
+                
+                $this->logout();
+                header('Location: ../view/login/login.php?error=account_inactive');
+                exit();
+            }
+            
             return [
                 'user' => $_SESSION['user'],
                 'role' => $_SESSION['vaitro']
@@ -108,26 +145,39 @@ class LoginController
 
         // Nếu không có SESSION, kiểm tra COOKIE
         if (isset($_COOKIE['is_logged_in']) && $_COOKIE['is_logged_in'] === 'true') {
-            if (isset($_COOKIE['user_role']) && isset($_COOKIE['username'])) {
+            if (isset($_COOKIE['user_email'])) {
+                // Lấy thông tin user từ email trong cookie
+                $currentUser = $this->loginModel->getUserByEmail($_COOKIE['user_email']);
+                
+                if ($currentUser && 
+                    $currentUser['TrangThai'] == 1 && 
+                    $currentUser['nhan_vien_trang_thai'] === 'Đang làm') {
+                    
+                    // Khôi phục SESSION từ database
+                    $_SESSION['user'] = [
+                        'id' => $currentUser['id'],
+                        'username' => $currentUser['TenDangNhap'],
+                        'role' => $currentUser['VaiTro'],
+                        'email' => $currentUser['Email'],
+                        'cmnd' => $currentUser['CMND'],
+                        'ma_nhan_vien' => $currentUser['MaNhanVien'],
+                        'ho_ten' => $currentUser['HoTen'],
+                        'phong_ban' => $currentUser['PhongBan']
+                    ];
+                    $_SESSION['vaitro'] = $currentUser['VaiTro'];
+                    $_SESSION['username'] = $currentUser['TenDangNhap'];
+                    $_SESSION['email'] = $currentUser['Email'];
 
-                // Khôi phục SESSION từ COOKIE
-                $_SESSION['user'] = [
-                    'id' => $_COOKIE['user_id'] ?? '',
-                    'username' => $_COOKIE['username'],
-                    'role' => $_COOKIE['user_role']
-                ];
-                $_SESSION['vaitro'] = $_COOKIE['user_role'];
-                $_SESSION['username'] = $_COOKIE['username'];
-
-                return [
-                    'user' => $_SESSION['user'],
-                    'role' => $_COOKIE['user_role']
-                ];
+                    return [
+                        'user' => $_SESSION['user'],
+                        'role' => $currentUser['VaiTro']
+                    ];
+                }
             }
         }
 
         // Nếu không đăng nhập, chuyển hướng về login
-        header('Location: ../view/login.php');
+        header('Location: ../view/login/login.php');
         exit();
     }
 }
@@ -140,7 +190,8 @@ if (isset($_GET['action'])) {
     if (method_exists($controller, $action)) {
         $controller->$action();
     } else {
-        header('Location: ../view/login.php');
+        header('Location: ../view/login/login.php');
         exit();
     }
 }
+?>

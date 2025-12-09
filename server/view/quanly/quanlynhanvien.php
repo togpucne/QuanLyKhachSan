@@ -614,7 +614,7 @@ include_once '../layouts/header.php';
       setTimeout(() => {
         const resetCheckbox = document.querySelector('input[name="reset_mat_khau"]');
         const passwordField = document.getElementById('passwordField');
-        
+
         if (resetCheckbox && passwordField) {
           resetCheckbox.addEventListener('change', function() {
             passwordField.style.display = this.checked ? 'block' : 'none';
@@ -663,6 +663,41 @@ include_once '../layouts/header.php';
       }
     });
   });
+  // Trong hàm showSuaNhanVienModal, thêm phần xử lý khi chọn trạng thái
+  function handleTrangThaiChange() {
+    const trangThaiSelect = document.querySelector('#suaFormContent select[name="trang_thai"]');
+    if (trangThaiSelect) {
+      trangThaiSelect.addEventListener('change', function() {
+        if (this.value === 'Đã nghỉ') {
+          // Hiển thị cảnh báo
+          const warningDiv = document.createElement('div');
+          warningDiv.className = 'alert alert-warning mt-2';
+          warningDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lưu ý: Khi chọn trạng thái "Đã nghỉ", tài khoản sẽ tự động bị khóa (không hoạt động)';
+
+          // Kiểm tra xem đã có cảnh báo chưa
+          if (!document.querySelector('#trangThaiWarning')) {
+            warningDiv.id = 'trangThaiWarning';
+            this.parentNode.appendChild(warningDiv);
+          }
+        } else {
+          // Xóa cảnh báo nếu có
+          const warningDiv = document.querySelector('#trangThaiWarning');
+          if (warningDiv) {
+            warningDiv.remove();
+          }
+        }
+      });
+
+      // Kích hoạt sự kiện khi load modal
+      trangThaiSelect.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // Trong hàm showSuaNhanVienModal, sau khi load form xong, gọi hàm xử lý
+  // Thêm dòng này sau phần document.getElementById('suaFormContent').innerHTML = formHTML;
+  setTimeout(() => {
+    handleTrangThaiChange();
+  }, 100);
 </script>
 
 <?php include_once '../layouts/footer.php'; ?>

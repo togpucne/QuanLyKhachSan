@@ -15,15 +15,22 @@ class QuanLyNhanVienModel
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT MaNhanVien FROM NhanVien WHERE MaNhanVien LIKE 'NV%' ORDER BY created_at DESC LIMIT 1";
+        $sql = "SELECT MaNhanVien FROM nhanvien ORDER BY MaNhanVien DESC LIMIT 1";
         $result = $conn->query($sql);
 
         if ($result && $result->num_rows > 0) {
             $row = $result->fetch_assoc();
             $last_maNV = $row['MaNhanVien'];
-            $last_number = intval(substr($last_maNV, 2));
-            $new_number = $last_number + 1;
-            $new_maNV = 'NV' . sprintf('%03d', $new_number);
+
+            // Kiểm tra xem mã có phải dạng NVxxx không
+            if (preg_match('/NV(\d+)/', $last_maNV, $matches)) {
+                $last_number = intval($matches[1]);
+                $new_number = $last_number + 1;
+                $new_maNV = 'NV' . sprintf('%03d', $new_number);
+            } else {
+                // Nếu không phải định dạng NVxxx, tạo mới từ đầu
+                $new_maNV = 'NV001';
+            }
         } else {
             $new_maNV = 'NV001';
         }
@@ -37,8 +44,8 @@ class QuanLyNhanVienModel
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT nv.*, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
-                FROM NhanVien nv 
+        $sql = "SELECT nv.*, tk.id as tai_khoan_id, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
+                FROM nhanvien nv 
                 LEFT JOIN tai_khoan tk ON nv.MaTaiKhoan = tk.id 
                 ORDER BY nv.created_at DESC";
 
@@ -55,17 +62,17 @@ class QuanLyNhanVienModel
         return $data;
     }
 
-    // LẤY TÀI KHOẢN CHƯA GẮN NHÂN VIÊN (SỬA LẠI)
+    // LẤY TÀI KHOẢN CHƯA GẮN NHÂN VIÊN (Tài khoản nhân viên chưa được gán)
     public function getTaiKhoanChuaGanNhanVien()
     {
         $conn = $this->db->openConnect();
 
-        // Sửa: Lấy tất cả tài khoản KHÔNG PHẢI khách hàng và chưa gán
         $sql = "SELECT tk.* 
                 FROM tai_khoan tk 
                 WHERE tk.VaiTro != 'khachhang'
+                AND tk.TrangThai = 1
                 AND tk.id NOT IN (
-                    SELECT MaTaiKhoan FROM NhanVien WHERE MaTaiKhoan IS NOT NULL
+                    SELECT MaTaiKhoan FROM nhanvien WHERE MaTaiKhoan IS NOT NULL
                 )
                 ORDER BY tk.VaiTro, tk.Email";
 
@@ -87,8 +94,8 @@ class QuanLyNhanVienModel
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT nv.*, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
-                FROM NhanVien nv 
+        $sql = "SELECT nv.*, tk.id as tai_khoan_id, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
+                FROM nhanvien nv 
                 LEFT JOIN tai_khoan tk ON nv.MaTaiKhoan = tk.id 
                 WHERE nv.MaNhanVien = ?";
 
@@ -107,8 +114,8 @@ class QuanLyNhanVienModel
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT nv.*, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
-                FROM NhanVien nv 
+        $sql = "SELECT nv.*, tk.id as tai_khoan_id, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
+                FROM nhanvien nv 
                 LEFT JOIN tai_khoan tk ON nv.MaTaiKhoan = tk.id 
                 WHERE nv.MaNhanVien LIKE ? 
                 OR nv.HoTen LIKE ? 
@@ -132,7 +139,7 @@ class QuanLyNhanVienModel
         return $data;
     }
 
-    // THÊM NHÂN VIÊN MỚI (VỚI EMAIL VÀ MẬT KHẨU TỰ NHẬP)
+    // THÊM NHÂN VIÊN MỚI VỚI EMAIL LÀ TÊN ĐĂNG NHẬP
     public function themNhanVien($data)
     {
         $conn = $this->db->openConnect();
@@ -150,18 +157,21 @@ class QuanLyNhanVienModel
                 throw new Exception("Email đã tồn tại trong hệ thống!");
             }
 
-            // 2. TẠO TÀI KHOẢN MỚI
+            // 2. TẠO TÀI KHOẢN MỚI - SỬA LẠI Ở ĐÂY!!!
             $matKhauMd5 = md5($data['mat_khau']);
-            $tenDangNhap = $data['email'];
+            // SỬA: TenDangNhap = Họ tên nhân viên, KHÔNG PHẢI email
+            $tenDangNhap = $data['HoTen']; // <-- SỬA TỪ $data['email'] THÀNH $data['HoTen']
+            $emailDangNhap = $data['email']; // Email vẫn giữ nguyên
             $vaiTro = $this->convertPhongBanToVaiTro($data['PhongBan']);
 
             $sql_tk = "INSERT INTO tai_khoan 
-                      (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at, updated_at) 
-                      VALUES (?, ?, ?, '1', ?, ?, NOW(), NOW())";
+                  (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at, updated_at) 
+                  VALUES (?, ?, ?, '1', ?, ?, NOW(), NOW())";
 
             $stmt_tk = $conn->prepare($sql_tk);
             $cmnd = $data['CMND'] ?? '';
-            $stmt_tk->bind_param("sssss", $tenDangNhap, $matKhauMd5, $vaiTro, $data['email'], $cmnd);
+            // SỬA: Tham số 1 = $tenDangNhap (Họ tên), tham số 4 = $emailDangNhap
+            $stmt_tk->bind_param("sssss", $tenDangNhap, $matKhauMd5, $vaiTro, $emailDangNhap, $cmnd);
 
             if (!$stmt_tk->execute()) {
                 throw new Exception("Lỗi tạo tài khoản: " . $stmt_tk->error);
@@ -173,11 +183,11 @@ class QuanLyNhanVienModel
             $maNhanVien = $this->generateMaNhanVien();
 
             // 4. THÊM NHÂN VIÊN
-            $sql = "INSERT INTO NhanVien (
-                    MaNhanVien, HoTen, DiaChi, SDT, NgayVaoLam, 
-                    NgayNghiViec, PhongBan, LuongCoBan, TrangThai, MaTaiKhoan,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+            $sql = "INSERT INTO nhanvien (
+                MaNhanVien, HoTen, DiaChi, SDT, NgayVaoLam, 
+                NgayNghiViec, PhongBan, LuongCoBan, TrangThai, MaTaiKhoan,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param(
@@ -205,7 +215,9 @@ class QuanLyNhanVienModel
                 'success' => true,
                 'maNhanVien' => $maNhanVien,
                 'email' => $data['email'],
-                'maTaiKhoan' => $maTaiKhoan
+                'mat_khau' => $data['mat_khau'], // Trả về mật khẩu gốc để hiển thị
+                'maTaiKhoan' => $maTaiKhoan,
+                'ten_dang_nhap' => $tenDangNhap // Thêm thông tin TenDangNhap đã lưu
             ];
         } catch (Exception $e) {
             $conn->rollback();
@@ -215,69 +227,24 @@ class QuanLyNhanVienModel
         }
     }
 
-    // TẠO TÀI KHOẢN MỚI CHO NHÂN VIÊN (HÀM MỚI)
-    public function taoTaiKhoanChoNhanVien($data)
-    {
-        $conn = $this->db->openConnect();
-        $conn->begin_transaction();
-
-        try {
-            // Kiểm tra email đã tồn tại chưa
-            $sql_check = "SELECT id FROM tai_khoan WHERE Email = ?";
-            $stmt_check = $conn->prepare($sql_check);
-            $stmt_check->bind_param("s", $data['email']);
-            $stmt_check->execute();
-            $result_check = $stmt_check->get_result();
-
-            if ($result_check->num_rows > 0) {
-                throw new Exception("Email đã tồn tại trong hệ thống!");
-            }
-
-            // Tạo tài khoản mới
-            $matKhauMd5 = md5($data['mat_khau']); // Mã hóa mật khẩu
-            $tenDangNhap = $data['email']; // Dùng email làm tên đăng nhập
-            $vaiTro = strtolower($data['vai_tro']); // Chuyển về chữ thường (kinhdoanh, letan, etc)
-
-            $sql = "INSERT INTO tai_khoan 
-                    (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at, updated_at) 
-                    VALUES (?, ?, ?, '1', ?, ?, NOW(), NOW())";
-
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param(
-                "sssss",
-                $tenDangNhap,
-                $matKhauMd5,
-                $vaiTro,
-                $data['email'],
-                $data['cmnd']
-            );
-
-            if (!$stmt->execute()) {
-                throw new Exception("Lỗi tạo tài khoản: " . $stmt->error);
-            }
-
-            $maTaiKhoan = $stmt->insert_id;
-            $conn->commit();
-
-            $this->db->closeConnect($conn);
-            return ['success' => true, 'maTaiKhoan' => $maTaiKhoan];
-        } catch (Exception $e) {
-            $conn->rollback();
-            $this->db->closeConnect($conn);
-            error_log("Lỗi tạo tài khoản: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    // SỬA NHÂN VIÊN (CÓ THỂ RESET MẬT KHẨU)
+    // SỬA NHÂN VIÊN - TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN KHI NHÂN VIÊN NGHỈ LÀM
     public function suaNhanVien($maNhanVien, $data)
     {
         $conn = $this->db->openConnect();
         $conn->begin_transaction();
 
         try {
-            // 1. CẬP NHẬT THÔNG TIN NHÂN VIÊN
-            $sql = "UPDATE NhanVien SET 
+            // 1. Lấy thông tin tài khoản hiện tại
+            $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
+            $stmt_get_tk = $conn->prepare($sql_get_tk);
+            $stmt_get_tk->bind_param("s", $maNhanVien);
+            $stmt_get_tk->execute();
+            $result_get_tk = $stmt_get_tk->get_result();
+            $currentInfo = $result_get_tk->fetch_assoc();
+            $maTaiKhoan = $currentInfo['MaTaiKhoan'];
+
+            // 2. CẬP NHẬT THÔNG TIN NHÂN VIÊN
+            $sql = "UPDATE nhanvien SET 
                     HoTen = ?, 
                     DiaChi = ?, 
                     SDT = ?, 
@@ -307,14 +274,30 @@ class QuanLyNhanVienModel
                 throw new Exception("Lỗi cập nhật nhân viên: " . $stmt->error);
             }
 
-            // 2. NẾU CÓ YÊU CẦU RESET MẬT KHẨU
-            if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1' && !empty($data['ma_tai_khoan'])) {
-                $matKhauMoi = $data['mat_khau_moi'] ?? '123456'; // Mặc định reset về 123456
+            // 3. TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN DỰA VÀO TRẠNG THÁI NHÂN VIÊN
+            if ($maTaiKhoan) {
+                $trangThaiTaiKhoan = ($data['TrangThai'] === 'Đang làm') ? '1' : '0';
+
+                $sql_update_tk = "UPDATE tai_khoan SET 
+                                 TrangThai = ?, 
+                                 updated_at = NOW() 
+                                 WHERE id = ?";
+                $stmt_update_tk = $conn->prepare($sql_update_tk);
+                $stmt_update_tk->bind_param("si", $trangThaiTaiKhoan, $maTaiKhoan);
+
+                if (!$stmt_update_tk->execute()) {
+                    throw new Exception("Lỗi cập nhật trạng thái tài khoản: " . $stmt_update_tk->error);
+                }
+            }
+
+            // 4. NẾU CÓ YÊU CẦU RESET MẬT KHẨU
+            if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1' && $maTaiKhoan) {
+                $matKhauMoi = $data['mat_khau_moi'] ?? '123456';
                 $matKhauMd5 = md5($matKhauMoi);
 
                 $sql_reset = "UPDATE tai_khoan SET MatKhau = ?, updated_at = NOW() WHERE id = ?";
                 $stmt_reset = $conn->prepare($sql_reset);
-                $stmt_reset->bind_param("si", $matKhauMd5, $data['ma_tai_khoan']);
+                $stmt_reset->bind_param("si", $matKhauMd5, $maTaiKhoan);
 
                 if (!$stmt_reset->execute()) {
                     throw new Exception("Lỗi reset mật khẩu: " . $stmt_reset->error);
@@ -327,7 +310,7 @@ class QuanLyNhanVienModel
             $conn->commit();
             $this->db->closeConnect($conn);
 
-            $result = ['success' => true];
+            $result = ['success' => true, 'maTaiKhoan' => $maTaiKhoan];
             if (isset($matKhauReset)) {
                 $result['mat_khau_moi'] = $matKhauReset;
             }
@@ -340,35 +323,16 @@ class QuanLyNhanVienModel
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
-    // LẤY THÔNG TIN TÀI KHOẢN CỦA NHÂN VIÊN (HÀM MỚI)
-    public function getTaiKhoanNhanVien($maNhanVien)
-    {
-        $conn = $this->db->openConnect();
 
-        $sql = "SELECT tk.id, tk.Email, tk.VaiTro, tk.TrangThai 
-                FROM tai_khoan tk
-                INNER JOIN NhanVien nv ON tk.id = nv.MaTaiKhoan
-                WHERE nv.MaNhanVien = ?";
-
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $maNhanVien);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $taiKhoan = $result->fetch_assoc();
-        $this->db->closeConnect($conn);
-        return $taiKhoan;
-    }
-
-    // XÓA NHÂN VIÊN (CHỈ XÓA NHÂN VIÊN, KHÔNG XÓA TÀI KHOẢN)
+    // XÓA NHÂN VIÊN - XÓA LUÔN TÀI KHOẢN THEO YÊU CẦU
     public function xoaNhanVien($maNhanVien)
     {
         $conn = $this->db->openConnect();
         $conn->begin_transaction();
 
         try {
-            // 1. Lấy mã tài khoản trước khi xóa (nếu cần)
-            $sql_get_tk = "SELECT MaTaiKhoan FROM NhanVien WHERE MaNhanVien = ?";
+            // 1. Lấy mã tài khoản trước khi xóa
+            $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
             $stmt_get_tk = $conn->prepare($sql_get_tk);
             $stmt_get_tk->bind_param("s", $maNhanVien);
             $stmt_get_tk->execute();
@@ -377,7 +341,7 @@ class QuanLyNhanVienModel
             $maTaiKhoan = $row['MaTaiKhoan'] ?? null;
 
             // 2. Xóa nhân viên
-            $sql = "DELETE FROM NhanVien WHERE MaNhanVien = ?";
+            $sql = "DELETE FROM nhanvien WHERE MaNhanVien = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("s", $maNhanVien);
 
@@ -385,69 +349,26 @@ class QuanLyNhanVienModel
                 throw new Exception("Lỗi xóa nhân viên: " . $stmt->error);
             }
 
-            // 3. CẬP NHẬT TÀI KHOẢN: Đổi vai trò thành 'khachhang' hoặc giữ nguyên
+            // 3. XÓA LUÔN TÀI KHOẢN (theo yêu cầu)
             if ($maTaiKhoan) {
-                $sql_update_tk = "UPDATE tai_khoan SET VaiTro = 'khachhang' WHERE id = ?";
-                $stmt_update_tk = $conn->prepare($sql_update_tk);
-                $stmt_update_tk->bind_param("i", $maTaiKhoan);
-                $stmt_update_tk->execute();
+                $sql_delete_tk = "DELETE FROM tai_khoan WHERE id = ?";
+                $stmt_delete_tk = $conn->prepare($sql_delete_tk);
+                $stmt_delete_tk->bind_param("i", $maTaiKhoan);
+
+                if (!$stmt_delete_tk->execute()) {
+                    throw new Exception("Lỗi xóa tài khoản: " . $stmt_delete_tk->error);
+                }
             }
 
             $conn->commit();
             $this->db->closeConnect($conn);
-            return true;
+            return ['success' => true, 'maTaiKhoan' => $maTaiKhoan];
         } catch (Exception $e) {
             $conn->rollback();
             $this->db->closeConnect($conn);
             error_log("Lỗi xóa nhân viên: " . $e->getMessage());
-            return false;
+            return ['success' => false, 'message' => $e->getMessage()];
         }
-    }
-
-    // HÀM PHỤ TRỢ: TẠO EMAIL TỰ ĐỘNG
-    private function generateEmail($hoTen)
-    {
-        $conn = $this->db->openConnect();
-
-        // Tạo email từ tên
-        $tenKhongDau = $this->removeAccents($hoTen);
-        $parts = explode(' ', $tenKhongDau);
-        $ten = strtolower(end($parts)); // Lấy tên
-        $ho = strtolower($parts[0]); // Lấy họ
-
-        $baseEmail = $ten . '.' . $ho . '@company.com';
-        $email = $baseEmail;
-
-        // Kiểm tra email đã tồn tại chưa, nếu có thì thêm số
-        $counter = 1;
-        while (true) {
-            $sql_check = "SELECT id FROM tai_khoan WHERE Email = ?";
-            $stmt_check = $conn->prepare($sql_check);
-            $stmt_check->bind_param("s", $email);
-            $stmt_check->execute();
-            $result_check = $stmt_check->get_result();
-
-            if ($result_check->num_rows == 0) {
-                break;
-            }
-
-            $email = $ten . '.' . $ho . $counter . '@company.com';
-            $counter++;
-        }
-
-        $this->db->closeConnect($conn);
-        return $email;
-    }
-
-    // HÀM PHỤ TRỢ: TẠO MẬT KHẨU NGẪU NHIÊN
-    private function generateRandomPassword($length = 8)
-    {
-        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        $password = '';
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $chars[rand(0, strlen($chars) - 1)];
-        }
-        return $password;
     }
 
     // HÀM PHỤ TRỢ: CHUYỂN PHÒNG BAN THÀNH VAI TRÒ
@@ -464,32 +385,12 @@ class QuanLyNhanVienModel
         return $mapping[$phongBan] ?? strtolower(str_replace(' ', '', $phongBan));
     }
 
-    // HÀM PHỤ TRỢ: XÓA DẤU TIẾNG VIỆT
-    private function removeAccents($str)
-    {
-        $str = preg_replace("/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/", 'a', $str);
-        $str = preg_replace("/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/", 'e', $str);
-        $str = preg_replace("/(ì|í|ị|ỉ|ĩ)/", 'i', $str);
-        $str = preg_replace("/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/", 'o', $str);
-        $str = preg_replace("/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/", 'u', $str);
-        $str = preg_replace("/(ỳ|ý|ỵ|ỷ|ỹ)/", 'y', $str);
-        $str = preg_replace("/(đ)/", 'd', $str);
-        $str = preg_replace("/(À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ)/", 'A', $str);
-        $str = preg_replace("/(È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ)/", 'E', $str);
-        $str = preg_replace("/(Ì|Í|Ị|Ỉ|Ĩ)/", 'I', $str);
-        $str = preg_replace("/(Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ)/", 'O', $str);
-        $str = preg_replace("/(Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ)/", 'U', $str);
-        $str = preg_replace("/(Ỳ|Ý|Ỵ|Ỷ|Ỹ)/", 'Y', $str);
-        $str = preg_replace("/(Đ)/", 'D', $str);
-        return $str;
-    }
-
     // LẤY DANH SÁCH PHÒNG BAN
     public function getDanhSachPhongBan()
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT DISTINCT PhongBan FROM NhanVien WHERE PhongBan IS NOT NULL AND PhongBan != '' ORDER BY PhongBan";
+        $sql = "SELECT DISTINCT PhongBan FROM nhanvien WHERE PhongBan IS NOT NULL AND PhongBan != '' ORDER BY PhongBan";
         $result = $conn->query($sql);
 
         $data = [];
@@ -515,7 +416,7 @@ class QuanLyNhanVienModel
                 COUNT(DISTINCT PhongBan) as soPhongBan,
                 AVG(LuongCoBan) as luongTrungBinh,
                 COUNT(DISTINCT MaTaiKhoan) as coTaiKhoan
-                FROM NhanVien";
+                FROM nhanvien";
 
         $result = $conn->query($sql);
         $thongKe = $result->fetch_assoc();

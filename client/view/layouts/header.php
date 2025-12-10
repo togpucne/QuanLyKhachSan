@@ -138,21 +138,12 @@ function getCustomerInfo($userId)
                     <!-- PHÒNG SỬA VỀ INDEX.PHP KÈM ANCHOR -->
                     <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#room-list">Phòng</a>
 
-                    <!-- Dropdown Khuyến mãi -->
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <!-- Link Khuyến mãi -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
                             <i class="fas fa-gift me-1"></i>Khuyến mãi
                         </a>
-                        <ul class="dropdown-menu">
-                            <!-- SỬA: Dùng href trực tiếp đến #khuyen-mai -->
-                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
-                                    <i class="fas fa-bed me-2"></i>Khuyến mãi Chỗ Ở
-                                </a></li>
-                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
-                                    <i class="fas fa-plane me-2"></i>Khuyến mãi Ưu đãi Hoạt động
-                                </a></li>
-                        </ul>
-                    </div>
+                    </li>
 
                     <!-- Dropdown Hỗ trợ -->
                     <div class="nav-item dropdown">

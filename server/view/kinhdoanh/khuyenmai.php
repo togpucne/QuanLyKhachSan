@@ -3,7 +3,7 @@ $pageTitle = "Quản lý khuyến mãi - ABC Resort";
 
 
 // TỰ LẤY DỮ LIỆU TRONG VIEW ĐỂ ĐẢM BẢO LUÔN CÓ
-require_once '../model/KhuyenMaiModel.php';
+require_once __DIR__ . '/../../model/KhuyenMaiModel.php';
 $khuyenMaiModel = new KhuyenMaiModel();
 $khuyenMais = $khuyenMaiModel->getAllKhuyenMai();
 ?>

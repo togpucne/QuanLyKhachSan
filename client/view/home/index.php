@@ -27,7 +27,12 @@ if ($resultRooms && mysqli_num_rows($resultRooms) > 0) {
 }
 
 // Lấy khuyến mãi từ database ptud
-$sql = "SELECT * FROM KhuyenMai";
+$today = date('Y-m-d');
+$sql = "SELECT * FROM KhuyenMai 
+        WHERE TrangThai = 1 
+        AND NgayBatDau <= '$today' 
+        AND NgayKetThuc >= '$today'
+        ORDER BY created_at DESC";
 $result = mysqli_query($conn, $sql);
 
 $khuyenMaiList = [];
@@ -513,7 +518,6 @@ $connect->closeConnect($conn);
                                     style="height: 200px; object-fit: cover;"
                                     onerror="this.src='assets/images/default-room.jpg'">
                                 <div class="card-body d-flex flex-column">
-                                    <span class="badge bg-primary mb-2"><?php echo $km['LoaiKhuyenMai']; ?></span>
                                     <h5 class="card-title"><?php echo $km['TenKhuyenMai']; ?></h5>
                                     <p class="card-text flex-grow-1"><?php echo $km['MoTa']; ?></p>
                                     <div class="mt-auto">

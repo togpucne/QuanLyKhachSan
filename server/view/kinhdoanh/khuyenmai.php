@@ -110,10 +110,15 @@ require_once __DIR__ . '/../layouts/header.php';
                                         <td><?php echo htmlspecialchars($km['TenKhuyenMai']); ?></td>
                                         <td>
                                             <?php if ($km['HinhAnh']): ?>
-                                                <img src="../../../<?php echo $km['HinhAnh']; ?>"
+                                                <?php
+                                                // Tạo đường dẫn tuyệt đối từ document root
+                                                $imagePath = '/ABC-Resort/client/' . $km['HinhAnh'];
+                                                ?>
+                                                <img src="<?php echo $imagePath; ?>"
                                                     alt="<?php echo htmlspecialchars($km['TenKhuyenMai']); ?>"
                                                     class="img-thumbnail"
-                                                    style="width: 80px; height: 80px; object-fit: cover;">
+                                                    style="width: 80px; height: 80px; object-fit: cover;"
+                                                    onerror="this.src='../../client/assets/images/sales/default_promotion.png'">
                                             <?php else: ?>
                                                 <div class="text-muted">Không có ảnh</div>
                                             <?php endif; ?>

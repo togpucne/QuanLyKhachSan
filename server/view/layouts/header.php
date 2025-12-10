@@ -368,7 +368,7 @@ $role = $_SESSION['vaitro'];
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
                         ],
                         'ketoan' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '../home/dashboard.php'],
                             ['icon' => 'fas fa-money-bill-wave', 'text' => 'Quản lý doanh thu', 'link' => 'quanlydoanhthu.php'],
                             ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn & Thanh toán', 'link' => 'hoadon.php'],
                             ['icon' => 'fas fa-chart-pie', 'text' => 'Báo cáo tài chính', 'link' => 'baocaotaichinh.php'],
@@ -391,9 +391,8 @@ $role = $_SESSION['vaitro'];
 
                         ],
                         'kinhdoanh' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
                             ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => '../kinhdoanh/khuyenmai.php'],
-                            ['icon' => 'fas fa-comments', 'text' => 'Phản hồi khách hàng', 'link' => 'phanhoi.php'],
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ],

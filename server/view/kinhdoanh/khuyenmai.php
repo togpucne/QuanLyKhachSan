@@ -34,11 +34,7 @@ require_once __DIR__ . '/../layouts/header.php';
 
 <div class="row">
     <div class="col-12">
-        <!-- ... phần hiển thị thông tin đăng nhập (tùy chọn) ... -->
-        <div class="alert alert-info mb-3">
-            <i class="fas fa-user me-2"></i>
-            Đăng nhập với vai trò: <strong><?php echo $_SESSION['vaitro']; ?></strong>
-        </div>
+      
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="mb-0">Quản lý khuyến mãi</h4>
@@ -185,15 +181,7 @@ require_once __DIR__ . '/../layouts/header.php';
                             <i class="fas fa-trash me-1"></i>Xóa nhiều
                         </button>
                     </div>
-                    <nav>
-                        <ul class="pagination mb-0">
-                            <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                        </ul>
-                    </nav>
+                    
                 </div>
             </div>
         </form>

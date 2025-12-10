@@ -102,7 +102,7 @@ $_SESSION['captcha'] = $captcha;
                     <input type="email" class="form-control" name="email" required
                         value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
                         placeholder="Nhập email của bạn">
-                    <div class="form-text">Ví dụ: letan@talkhoan.com</div>
+                    <div class="form-text">Ví dụ: letan@gmail.com</div>
                 </div>
 
                 <div class="mb-3">

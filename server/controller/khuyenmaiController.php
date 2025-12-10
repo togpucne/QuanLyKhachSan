@@ -5,6 +5,19 @@ class KhuyenMaiController {
     private $khuyenMaiModel;
 
     public function __construct() {
+        // Kiểm tra đăng nhập
+        if (!isset($_SESSION['user_id']) || !isset($_SESSION['vaitro'])) {
+            header('Location: ../view/login/login.php');
+            exit();
+        }
+        
+        // Kiểm tra vai trò - chỉ cho phép kinhdoanh
+        if ($_SESSION['vaitro'] !== 'kinhdoanh') {
+            $_SESSION['error'] = "Bạn không có quyền truy cập chức năng này!";
+            header('Location: ../view/home/dashboard.php');
+            exit();
+        }
+        
         // Include model
         require_once '../model/KhuyenMaiModel.php';
         $this->khuyenMaiModel = new KhuyenMaiModel();
@@ -16,10 +29,10 @@ class KhuyenMaiController {
         $khuyenMais = $this->khuyenMaiModel->getAllKhuyenMai();
         
         // Include view và truyền dữ liệu
-        require_once '../view/khuyenmai.php';
+        require_once '../view/kinhdoanh/khuyenmai.php';
     }
 
-    // Thêm khuyến mãi mới
+    // Thêm khuyến mãi mới với upload ảnh
     public function add() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tenKM = $_POST['ten_khuyenmai'] ?? '';
@@ -28,11 +41,14 @@ class KhuyenMaiController {
             $ngayKetThuc = $_POST['ngay_ketthuc'] ?? '';
             $moTa = $_POST['mo_ta'] ?? '';
             
-            // CỨNG MÃ NHÂN VIÊN LÀ 3
-            $maNVTao = 3;
+            // Lấy mã nhân viên từ session
+            $maNVTao = $_SESSION['user']['ma_nhan_vien'] ?? 3;
+            
+            // Xử lý upload ảnh
+            $hinhAnh = $this->handleImageUpload();
 
             if (!empty($tenKM) && !empty($mucGiamGia) && !empty($ngayBatDau) && !empty($ngayKetThuc)) {
-                $result = $this->khuyenMaiModel->addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $maNVTao);
+                $result = $this->khuyenMaiModel->addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $maNVTao);
                 
                 if ($result) {
                     $_SESSION['success'] = "Thêm khuyến mãi thành công!";
@@ -43,13 +59,12 @@ class KhuyenMaiController {
                 $_SESSION['error'] = "Vui lòng điền đầy đủ thông tin!";
             }
             
-            // SỬA LẠI: Redirect về VIEW thay vì controller
-            header('Location: ../view/khuyenmai.php');
+            header('Location: ../view/kinhdoanh/khuyenmai.php');
             exit();
         }
     }
 
-    // Sửa khuyến mãi
+    // Sửa khuyến mãi với upload ảnh
     public function edit() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $maKM = $_POST['ma_km'] ?? '';
@@ -59,8 +74,14 @@ class KhuyenMaiController {
             $ngayKetThuc = $_POST['ngay_ketthuc'] ?? '';
             $moTa = $_POST['mo_ta'] ?? '';
 
+            // Xử lý upload ảnh (có thể không có ảnh mới)
+            $hinhAnh = null;
+            if (!empty($_FILES['hinh_anh']['name'])) {
+                $hinhAnh = $this->handleImageUpload();
+            }
+
             if (!empty($maKM) && !empty($tenKM) && !empty($mucGiamGia)) {
-                $result = $this->khuyenMaiModel->updateKhuyenMai($maKM, $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa);
+                $result = $this->khuyenMaiModel->updateKhuyenMai($maKM, $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh);
                 
                 if ($result) {
                     $_SESSION['success'] = "Cập nhật khuyến mãi thành công!";
@@ -71,8 +92,7 @@ class KhuyenMaiController {
                 $_SESSION['error'] = "Thiếu thông tin cần thiết!";
             }
             
-            // SỬA LẠI: Redirect về VIEW
-            header('Location: ../view/khuyenmai.php');
+            header('Location: ../view/kinhdoanh/khuyenmai.php');
             exit();
         }
     }
@@ -92,8 +112,7 @@ class KhuyenMaiController {
             $_SESSION['error'] = "Không tìm thấy khuyến mãi để xóa!";
         }
         
-        // SỬA LẠI: Redirect về VIEW
-        header('Location: ../view/khuyenmai.php');
+        header('Location: ../view/kinhdoanh/khuyenmai.php');
         exit();
     }
 
@@ -117,9 +136,49 @@ class KhuyenMaiController {
             $_SESSION['error'] = "Vui lòng chọn khuyến mãi để xóa!";
         }
         
-        // SỬA LẠI: Redirect về VIEW
-        header('Location: ../view/khuyenmai.php');
+        header('Location: ../view/kinhdoanh/khuyenmai.php');
         exit();
+    }
+
+    // Xử lý upload ảnh
+    private function handleImageUpload() {
+        if (isset($_FILES['hinh_anh']) && $_FILES['hinh_anh']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/ABC-Resort/client/assets/images/sales/';
+            
+            // Tạo thư mục nếu chưa tồn tại
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $fileName = uniqid() . '_' . basename($_FILES['hinh_anh']['name']);
+            $uploadFile = $uploadDir . $fileName;
+            
+            // Kiểm tra loại file
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $fileType = mime_content_type($_FILES['hinh_anh']['tmp_name']);
+            
+            if (!in_array($fileType, $allowedTypes)) {
+                $_SESSION['error'] = "Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP)!";
+                return null;
+            }
+            
+            // Kiểm tra kích thước file (max 5MB)
+            if ($_FILES['hinh_anh']['size'] > 5 * 1024 * 1024) {
+                $_SESSION['error'] = "Kích thước file quá lớn (tối đa 5MB)!";
+                return null;
+            }
+            
+            // Di chuyển file
+            if (move_uploaded_file($_FILES['hinh_anh']['tmp_name'], $uploadFile)) {
+                // Trả về đường dẫn lưu trong database
+                return 'assets/images/sales/' . $fileName;
+            } else {
+                $_SESSION['error'] = "Upload ảnh thất bại!";
+                return null;
+            }
+        }
+        
+        return 'assets/images/sales/default_promotion.png'; // Ảnh mặc định
     }
 }
 

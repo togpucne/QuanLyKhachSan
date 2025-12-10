@@ -58,6 +58,8 @@ class LoginController
                 $_SESSION['vaitro'] = $user['VaiTro'];
                 $_SESSION['username'] = $user['TenDangNhap'];
                 $_SESSION['email'] = $user['Email'];
+                $_SESSION['user_id'] = $user['id']; // THÊM DÒNG NÀY
+
 
                 // Lưu COOKIE với thời gian 30 ngày
                 $cookie_time = time() + (30 * 24 * 60 * 60); // 30 ngày
@@ -90,13 +92,14 @@ class LoginController
     }
 
     // Cập nhật thời gian đăng nhập cuối
-    private function updateLastLogin($userId) {
+    private function updateLastLogin($userId)
+    {
         $p = new Connect();
         $conn = $p->openConnect();
-        
+
         $sql = "UPDATE tai_khoan SET updated_at = NOW() WHERE id = '$userId'";
         $conn->query($sql);
-        
+
         $p->closeConnect($conn);
     }
 
@@ -124,19 +127,21 @@ class LoginController
         // Ưu tiên kiểm tra SESSION trước
         if (isset($_SESSION['user']) && isset($_SESSION['vaitro'])) {
             $user = $_SESSION['user'];
-            
+
             // Kiểm tra thêm trạng thái tài khoản và nhân viên
             $currentUser = $this->loginModel->getUserByEmail($user['email']);
-            
-            if (!$currentUser || 
-                $currentUser['TrangThai'] != 1 || 
-                $currentUser['nhan_vien_trang_thai'] !== 'Đang làm') {
-                
+
+            if (
+                !$currentUser ||
+                $currentUser['TrangThai'] != 1 ||
+                $currentUser['nhan_vien_trang_thai'] !== 'Đang làm'
+            ) {
+
                 $this->logout();
                 header('Location: ../view/login/login.php?error=account_inactive');
                 exit();
             }
-            
+
             return [
                 'user' => $_SESSION['user'],
                 'role' => $_SESSION['vaitro']
@@ -148,11 +153,13 @@ class LoginController
             if (isset($_COOKIE['user_email'])) {
                 // Lấy thông tin user từ email trong cookie
                 $currentUser = $this->loginModel->getUserByEmail($_COOKIE['user_email']);
-                
-                if ($currentUser && 
-                    $currentUser['TrangThai'] == 1 && 
-                    $currentUser['nhan_vien_trang_thai'] === 'Đang làm') {
-                    
+
+                if (
+                    $currentUser &&
+                    $currentUser['TrangThai'] == 1 &&
+                    $currentUser['nhan_vien_trang_thai'] === 'Đang làm'
+                ) {
+
                     // Khôi phục SESSION từ database
                     $_SESSION['user'] = [
                         'id' => $currentUser['id'],
@@ -194,4 +201,3 @@ if (isset($_GET['action'])) {
         exit();
     }
 }
-?>

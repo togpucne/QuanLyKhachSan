@@ -97,24 +97,37 @@ class KhuyenMaiController {
         }
     }
 
-    // Xóa khuyến mãi
     public function delete() {
-        if (isset($_GET['id'])) {
-            $maKM = $_GET['id'];
-            $result = $this->khuyenMaiModel->deleteKhuyenMai($maKM);
+    if (isset($_GET['id'])) {
+        $maKM = $_GET['id'];
+        $result = $this->khuyenMaiModel->deleteKhuyenMai($maKM);
+        
+        // Hiển thị debug nếu có
+        if (isset($_SESSION['debug_output'])) {
+            echo $_SESSION['debug_output'];
+            unset($_SESSION['debug_output']);
             
-            if ($result) {
-                $_SESSION['success'] = "Xóa khuyến mãi thành công!";
-            } else {
-                $_SESSION['error'] = "Xóa khuyến mãi thất bại!";
-            }
-        } else {
-            $_SESSION['error'] = "Không tìm thấy khuyến mãi để xóa!";
+            // Chờ 3 giây rồi redirect
+            echo "<script>
+                setTimeout(function() {
+                    window.location.href = '../view/kinhdoanh/khuyenmai.php';
+                }, 3000);
+            </script>";
+            exit();
         }
         
-        header('Location: ../view/kinhdoanh/khuyenmai.php');
-        exit();
+        if ($result) {
+            $_SESSION['success'] = "Xóa khuyến mãi thành công!";
+        } else {
+            $_SESSION['error'] = "Xóa khuyến mãi thất bại!";
+        }
+    } else {
+        $_SESSION['error'] = "Không tìm thấy khuyến mãi để xóa!";
     }
+    
+    header('Location: ../view/kinhdoanh/khuyenmai.php');
+    exit();
+}
 
     // Xóa nhiều khuyến mãi
     public function deleteMultiple() {

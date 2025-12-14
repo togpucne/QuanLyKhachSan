@@ -148,7 +148,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="row">
             <!-- Left Column - Thông tin thanh toán -->
             <div class="col-lg-8">
@@ -376,13 +376,18 @@
 
                         <div class="d-flex justify-content-between mb-2">
                             <small>Giá phòng (<?php echo $nights; ?> đêm):</small>
-                            <small><?php echo number_format($roomPrice); ?> VND</small>
+                            <small id="roomPriceDisplay"><?php echo number_format($roomPrice); ?> VND</small>
                         </div>
 
                         <?php if ($servicesPrice > 0): ?>
                             <div class="d-flex justify-content-between mb-2">
                                 <small>Dịch vụ bổ sung:</small>
-                                <small><?php echo number_format($servicesPrice); ?> VND</small>
+                                <small id="servicesPriceDisplay"><?php echo number_format($servicesPrice); ?> VND</small>
+                            </div>
+                        <?php else: ?>
+                            <div class="d-flex justify-content-between mb-2">
+                                <small>Dịch vụ bổ sung:</small>
+                                <small id="servicesPriceDisplay">0 VND</small>
                             </div>
                         <?php endif; ?>
 
@@ -394,7 +399,7 @@
 
                         <div class="d-flex justify-content-between mb-2">
                             <small>Thuế và phí (10%):</small>
-                            <small><?php echo number_format($tax); ?> VND</small>
+                            <small id="taxDisplay"><?php echo number_format($tax); ?> VND</small>
                         </div>
 
                         <hr>
@@ -433,221 +438,469 @@
     </div>
 
     <script>
-        // Biến toàn cục
-        let originalTotal = <?php echo $totalAmount; ?>;
+        // Biến toàn cục - LẤY TỪ PHP
+        let originalTotal = <?php echo $totalAmount; ?>; // Tổng đã bao gồm thuế
         let selectedPromotion = null;
 
-        function selectPaymentMethod(method) {
-            document.querySelectorAll('.payment-method').forEach(el => {
-                el.classList.remove('selected');
-            });
-            document.querySelector(`#${method}`).closest('.payment-method').classList.add('selected');
-            document.querySelector(`#${method}`).checked = true;
+        // Hàm helper: Format tiền tệ
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' VND';
         }
 
-        // Tính toán giảm giá
+        // Tính toán giảm giá DỰA TRÊN TỔNG ĐÃ CÓ THUẾ
         function calculateDiscount() {
             if (!selectedPromotion) return 0;
 
             const discountType = selectedPromotion.type;
             const discountValue = parseFloat(selectedPromotion.discount);
-
             let discountAmount = 0;
 
             if (discountType === 'phantram') {
+                // GIẢM THEO PHẦN TRĂM TRÊN TỔNG ĐÃ CÓ THUẾ
                 discountAmount = originalTotal * (discountValue / 100);
             } else if (discountType === 'tientruc') {
+                // GIẢM THEO TIỀN TRỰC TIẾP
                 discountAmount = discountValue;
+            }
+
+            // Đảm bảo không giảm quá tổng tiền
+            if (discountAmount > originalTotal) {
+                discountAmount = originalTotal;
             }
 
             return Math.round(discountAmount);
         }
 
-        // Cập nhật tổng tiền
-        function updateTotal() {
+        // Tính tổng sau giảm
+        function calculateFinalTotal() {
             const discountAmount = calculateDiscount();
-            const finalTotal = originalTotal - discountAmount;
+            return originalTotal - discountAmount;
+        }
 
-            // Cập nhật hiển thị
+        // Cập nhật hiển thị tất cả các dòng giá
+        function updateAllPriceDisplay() {
+            const discountAmount = calculateDiscount();
+            const finalTotal = calculateFinalTotal();
+
+            console.log('Cập nhật giá:', {
+                originalTotal: originalTotal,
+                discountAmount: discountAmount,
+                finalTotal: finalTotal,
+                promotion: selectedPromotion
+            });
+
+            // Tìm các phần tử
+            const discountSection = document.getElementById('discountSection');
+            const discountAmountEl = document.getElementById('discountAmount');
+            const originalTotalEl = document.getElementById('originalTotal');
+            const finalTotalEl = document.getElementById('finalTotal');
+
+            // Cập nhật dòng giảm giá
+            if (discountAmountEl && discountSection) {
+                if (discountAmount > 0) {
+                    discountSection.style.display = 'flex';
+                    discountAmountEl.textContent = '-' + formatCurrency(discountAmount);
+
+                    // Thêm thông tin chi tiết về khuyến mãi
+                    const discountNameEl = document.getElementById('discountName');
+                    if (selectedPromotion && !discountNameEl) {
+                        discountSection.querySelector('small.text-success').innerHTML =
+                            'Khuyến mãi: <span id="discountName" class="ms-1 fw-semibold">' +
+                            getPromotionName(selectedPromotion.id) + '</span>';
+                    }
+                } else {
+                    discountSection.style.display = 'none';
+                }
+            }
+
+            // Cập nhật tổng cộng
+            if (originalTotalEl && finalTotalEl) {
+                if (discountAmount > 0) {
+                    // Hiển thị giá gốc có gạch ngang
+                    originalTotalEl.style.display = 'block';
+                    originalTotalEl.textContent = formatCurrency(originalTotal);
+
+                    // Hiển thị giá sau giảm
+                    finalTotalEl.textContent = formatCurrency(finalTotal);
+                    finalTotalEl.classList.add('text-danger');
+                    finalTotalEl.classList.add('new-price');
+
+                    console.log('Đã cập nhật giá:', {
+                        goc: formatCurrency(originalTotal),
+                        moi: formatCurrency(finalTotal),
+                        giam: formatCurrency(discountAmount)
+                    });
+                } else {
+                    // Ẩn giá gốc
+                    originalTotalEl.style.display = 'none';
+
+                    // Hiển thị giá gốc
+                    finalTotalEl.textContent = formatCurrency(originalTotal);
+                    finalTotalEl.classList.remove('text-danger');
+                    finalTotalEl.classList.remove('new-price');
+                }
+            }
+
+            // Cập nhật giá trong form ẩn
+            updateHiddenFormValues(discountAmount, finalTotal);
+
+            // Hiệu ứng
             if (discountAmount > 0) {
-                // Hiển thị giảm giá
-                document.getElementById('discountSection').style.display = 'flex';
-                document.getElementById('discountAmount').textContent = '-' + discountAmount.toLocaleString('vi-VN') + ' VND';
+                animatePriceChange();
+            }
+        }
 
-                // Hiển thị giá gốc có gạch ngang
-                document.getElementById('originalTotal').style.display = 'block';
-                document.getElementById('originalTotal').textContent = originalTotal.toLocaleString('vi-VN') + ' VND';
+        // Lấy tên khuyến mãi từ danh sách
+        function getPromotionName(promoId) {
+            const promoItems = document.querySelectorAll('.promotion-item');
+            for (const item of promoItems) {
+                const checkbox = item.querySelector('input[name="promotion"]');
+                if (checkbox && checkbox.value == promoId) {
+                    const label = item.querySelector('label strong');
+                    return label ? label.textContent : 'Khuyến mãi';
+                }
+            }
+            return 'Khuyến mãi';
+        }
 
-                // Hiển thị giá sau giảm
-                document.getElementById('finalTotal').textContent = finalTotal.toLocaleString('vi-VN') + ' VND';
-                document.getElementById('finalTotal').classList.add('text-danger');
-            } else {
-                // Ẩn phần giảm giá
-                document.getElementById('discountSection').style.display = 'none';
-                document.getElementById('originalTotal').style.display = 'none';
+        // Cập nhật giá trị ẩn trong form
+        function updateHiddenFormValues(discountAmount, finalTotal) {
+            // Tạo hoặc tìm các input ẩn
+            let totalAmountInput = document.querySelector('input[name="totalAmount"]');
+            let discountAmountInput = document.querySelector('input[name="discountAmount"]');
+            let finalAmountInput = document.querySelector('input[name="finalAmount"]');
 
-                // Hiển thị giá gốc
-                document.getElementById('finalTotal').textContent = originalTotal.toLocaleString('vi-VN') + ' VND';
-                document.getElementById('finalTotal').classList.remove('text-danger');
+            // Nếu chưa có, tạo mới
+            const priceBreakdown = document.querySelector('.price-breakdown');
+            if (priceBreakdown && !totalAmountInput) {
+                priceBreakdown.insertAdjacentHTML('beforeend', `
+                <input type="hidden" name="totalAmount" value="${originalTotal}">
+                <input type="hidden" name="discountAmount" value="${discountAmount}">
+                <input type="hidden" name="finalAmount" value="${finalTotal}">
+            `);
+            } else if (totalAmountInput) {
+                // Cập nhật giá trị nếu đã tồn tại
+                totalAmountInput.value = originalTotal;
+                discountAmountInput.value = discountAmount;
+                finalAmountInput.value = finalTotal;
             }
         }
 
         // Xử lý chọn khuyến mãi
-        function setupPromotionListeners() {
-            document.querySelectorAll('.promotion-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        // Bỏ chọn checkbox khác
-                        document.querySelectorAll('.promotion-checkbox').forEach(cb => {
-                            if (cb !== this) cb.checked = false;
-                        });
+        function handlePromotionSelect() {
+            const selected = document.querySelector('input[name="promotion"]:checked');
 
-                        selectedPromotion = {
-                            id: this.value,
-                            type: this.dataset.type,
-                            discount: this.dataset.discount
-                        };
-                        updateTotal();
-                    } else {
-                        selectedPromotion = null;
-                        updateTotal();
-                    }
+            if (selected) {
+                selectedPromotion = {
+                    id: selected.value,
+                    type: selected.dataset.type,
+                    discount: selected.dataset.discount
+                };
+
+                console.log('Đã chọn khuyến mãi:', selectedPromotion);
+
+                // Thêm class selected cho item
+                document.querySelectorAll('.promotion-item').forEach(item => {
+                    item.classList.remove('selected');
                 });
-            });
+                selected.closest('.promotion-item').classList.add('selected');
+            } else {
+                selectedPromotion = null;
+                console.log('Đã bỏ chọn khuyến mãi');
+            }
+
+            // Cập nhật hiển thị giá
+            updateAllPriceDisplay();
         }
 
         // Bỏ chọn khuyến mãi
-        document.getElementById('btnClearPromotion').addEventListener('click', function() {
-            document.querySelectorAll('.promotion-checkbox').forEach(checkbox => {
+        function clearPromotion() {
+            document.querySelectorAll('input[name="promotion"]').forEach(checkbox => {
                 checkbox.checked = false;
             });
+            document.querySelectorAll('.promotion-item').forEach(item => {
+                item.classList.remove('selected');
+            });
             selectedPromotion = null;
-            updateTotal();
-        });
+            updateAllPriceDisplay();
+        }
 
-        // Xử lý thanh toán với validation
-        function processPayment() {
-            // Validation
-            const requiredFields = [
-                'customerName', 'customerPhone', 'customerEmail',
-                'customerIdNumber', 'guestName'
+        // Hiệu ứng khi giá thay đổi
+        function animatePriceChange() {
+            const finalTotalEl = document.getElementById('finalTotal');
+            if (finalTotalEl) {
+                finalTotalEl.classList.add('price-update');
+                setTimeout(() => {
+                    finalTotalEl.classList.remove('price-update');
+                }, 1000);
+            }
+        }
+
+        // Chọn phương thức thanh toán
+        function selectPaymentMethod(method) {
+            document.querySelectorAll('.payment-method').forEach(el => {
+                el.classList.remove('selected');
+            });
+            const target = document.querySelector(`#${method}`);
+            if (target) {
+                target.closest('.payment-method').classList.add('selected');
+                target.checked = true;
+            }
+        }
+
+        // Validation chi tiết hơn
+        function validateForm() {
+            const requiredFields = [{
+                    name: 'customerName',
+                    label: 'Họ tên liên hệ'
+                },
+                {
+                    name: 'customerPhone',
+                    label: 'Số điện thoại'
+                },
+                {
+                    name: 'customerEmail',
+                    label: 'Email'
+                },
+                {
+                    name: 'guestName',
+                    label: 'Họ tên khách hàng'
+                },
+                {
+                    name: 'customerIdNumber',
+                    label: 'Số CMND/CCCD'
+                }
             ];
 
             for (const field of requiredFields) {
-                const input = document.querySelector(`[name="${field}"]`);
-                if (!input.value.trim()) {
-                    alert(`Vui lòng nhập ${field === 'customerIdNumber' ? 'Số CMND/CCCD' : 
-                        field === 'guestName' ? 'Họ tên khách hàng' : 
-                        field === 'customerPhone' ? 'Số điện thoại' : 
-                        field === 'customerEmail' ? 'Email' : 'Họ tên'}`);
-                    input.focus();
-                    return;
+                const input = document.querySelector(`[name="${field.name}"]`);
+                if (!input || !input.value.trim()) {
+                    alert(`Vui lòng nhập ${field.label}`);
+                    if (input) input.focus();
+                    return false;
                 }
             }
 
             // Kiểm tra email
             const emailInput = document.querySelector('input[name="customerEmail"]');
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(emailInput.value)) {
+            if (emailInput && !emailPattern.test(emailInput.value)) {
                 alert('Email không hợp lệ');
                 emailInput.focus();
-                return;
+                return false;
+            }
+
+            // Kiểm tra CMND/CCCD (9 hoặc 12 số)
+            const idNumberInput = document.querySelector('input[name="customerIdNumber"]');
+            if (idNumberInput && !/^\d{9}$|^\d{12}$/.test(idNumberInput.value.replace(/\s/g, ''))) {
+                alert('Số CMND/CCCD phải có 9 hoặc 12 số');
+                idNumberInput.focus();
+                return false;
             }
 
             // Kiểm tra điều khoản
             if (!document.getElementById('agreeTerms').checked) {
                 alert('Vui lòng đồng ý với điều khoản và điều kiện');
-                return;
+                return false;
             }
 
             // Kiểm tra phương thức thanh toán
             const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
             if (!paymentMethod) {
                 alert('Vui lòng chọn phương thức thanh toán');
-                return;
+                return false;
             }
 
-            // Hiển thị loading
+            return true;
+        }
+
+        // Xử lý thanh toán với validation đầy đủ
+        async function processPayment() {
+            if (!validateForm()) return;
+
             const submitBtn = document.querySelector('button[onclick="processPayment()"]');
+            if (!submitBtn) return;
+
             const originalText = submitBtn.innerHTML;
+            const originalDisabled = submitBtn.disabled;
+
+            // Hiển thị loading
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             submitBtn.disabled = true;
 
-            // Chuẩn bị dữ liệu
-            const formData = new FormData();
-            formData.append('roomId', '<?php echo $roomId; ?>');
-            formData.append('checkin', '<?php echo $checkin; ?>');
-            formData.append('checkout', '<?php echo $checkout; ?>');
-            formData.append('adults', '<?php echo $adults; ?>');
-            formData.append('nights', '<?php echo $nights; ?>');
-            formData.append('services', '<?php echo $services; ?>');
-            formData.append('customerName', document.querySelector('input[name="customerName"]').value);
-            formData.append('customerPhone', document.querySelector('input[name="customerPhone"]').value);
-            formData.append('customerEmail', document.querySelector('input[name="customerEmail"]').value);
-            formData.append('customerIdNumber', document.querySelector('input[name="customerIdNumber"]').value);
-            formData.append('guestName', document.querySelector('input[name="guestName"]').value);
-            formData.append('address', document.querySelector('input[name="address"]').value || '');
-            formData.append('specialRequests', document.querySelector('textarea[name="specialRequests"]').value || '');
-            formData.append('nonSmoking', document.querySelector('input[name="nonSmoking"]').checked ? 1 : 0);
-            formData.append('paymentMethod', paymentMethod.value);
-            formData.append('totalAmount', originalTotal);
-            formData.append('discountAmount', calculateDiscount());
-            formData.append('finalAmount', originalTotal - calculateDiscount());
-            formData.append('promotionId', selectedPromotion ? selectedPromotion.id : '');
+            try {
+                const discountAmount = calculateDiscount();
+                const finalTotal = calculateFinalTotal();
 
-            // Gửi request thanh toán
-            fetch('/ABC-Resort/client/controller/payment.controller.php?action=processPayment', {
+                // Chuẩn bị dữ liệu
+                const formData = new FormData();
+
+                // Thông tin đặt phòng
+                formData.append('roomId', '<?php echo $roomId; ?>');
+                formData.append('checkin', '<?php echo $checkin; ?>');
+                formData.append('checkout', '<?php echo $checkout; ?>');
+                formData.append('adults', '<?php echo $adults; ?>');
+                formData.append('nights', '<?php echo $nights; ?>');
+                formData.append('services', '<?php echo $services; ?>');
+
+                // Thông tin khách hàng
+                formData.append('customerName', document.querySelector('input[name="customerName"]').value);
+                formData.append('customerPhone', document.querySelector('input[name="customerPhone"]').value);
+                formData.append('customerEmail', document.querySelector('input[name="customerEmail"]').value);
+                formData.append('customerIdNumber', document.querySelector('input[name="customerIdNumber"]').value);
+                formData.append('guestName', document.querySelector('input[name="guestName"]').value);
+                formData.append('address', document.querySelector('input[name="address"]').value || '');
+                formData.append('specialRequests', document.querySelector('textarea[name="specialRequests"]').value || '');
+                formData.append('nonSmoking', document.querySelector('input[name="nonSmoking"]').checked ? 1 : 0);
+
+                // Thông tin thanh toán
+                formData.append('paymentMethod', document.querySelector('input[name="paymentMethod"]:checked').value);
+                formData.append('totalAmount', originalTotal);
+                formData.append('discountAmount', discountAmount);
+                formData.append('finalAmount', finalTotal);
+                formData.append('promotionId', selectedPromotion ? selectedPromotion.id : '');
+
+                // Gửi request
+                const response = await fetch('/ABC-Resort/client/controller/payment.controller.php?action=processPayment', {
                     method: 'POST',
                     body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-
-                    if (data.success) {
-                        alert(data.message);
-                        window.location.href = '/ABC-Resort/client/view/payment/payment-success.php?bookingCode=' + data.bookingCode;
-                    } else {
-                        alert(data.message || 'Có lỗi xảy ra khi đặt phòng');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                    alert('Có lỗi xảy ra khi kết nối đến server');
                 });
+
+                const data = await response.json();
+
+                // Khôi phục button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = originalDisabled;
+
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = '/ABC-Resort/client/view/payment/payment-success.php?bookingCode=' + data.bookingCode;
+                } else {
+                    throw new Error(data.message || 'Có lỗi xảy ra khi đặt phòng');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = originalDisabled;
+                alert(error.message || 'Có lỗi xảy ra khi kết nối đến server');
+            }
         }
 
         // Khi trang load
         document.addEventListener('DOMContentLoaded', function() {
-            selectPaymentMethod('creditCard');
-            setupPromotionListeners();
-            updateTotal(); // Cập nhật tổng tiền ban đầu
+            console.log('Trang thanh toán đã load - Tổng tiền:', originalTotal);
 
-            // Tự động điền thông tin
-            document.getElementById('bookForMyself').addEventListener('change', function() {
-                if (this.checked) {
-                    const customerName = document.querySelector('input[name="customerName"]').value;
-                    const address = document.querySelector('input[name="address"]').value;
-                    document.querySelector('input[name="guestName"]').value = customerName;
-                    if (address) {
-                        document.querySelector('input[name="address"]').value = address;
-                    }
-                } else {
-                    document.querySelector('input[name="guestName"]').value = '';
-                }
+            // Khởi tạo phương thức thanh toán mặc định
+            selectPaymentMethod('creditCard');
+
+            // Setup event listeners cho khuyến mãi
+            document.querySelectorAll('.promotion-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handlePromotionSelect);
             });
 
+            // Setup nút bỏ chọn khuyến mãi
+            const clearPromotionBtn = document.getElementById('btnClearPromotion');
+            if (clearPromotionBtn) {
+                clearPromotionBtn.addEventListener('click', clearPromotion);
+            }
+
+            // Tự động điền thông tin
+            const bookForMyselfCheckbox = document.getElementById('bookForMyself');
+            if (bookForMyselfCheckbox) {
+                bookForMyselfCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        const customerName = document.querySelector('input[name="customerName"]').value;
+                        const address = document.querySelector('input[name="address"]').value;
+
+                        if (customerName) {
+                            document.querySelector('input[name="guestName"]').value = customerName;
+                        }
+                        if (address) {
+                            document.querySelector('input[name="address"]').value = address;
+                        }
+                    } else {
+                        document.querySelector('input[name="guestName"]').value = '';
+                    }
+                });
+            }
+
+            // Tự động điền nếu đã đăng nhập
             <?php if (!empty($customerInfo['HoTen'])): ?>
-                document.getElementById('bookForMyself').checked = true;
-                const customerName = document.querySelector('input[name="customerName"]').value;
-                if (customerName) {
-                    document.querySelector('input[name="guestName"]').value = customerName;
+                if (bookForMyselfCheckbox) {
+                    bookForMyselfCheckbox.checked = true;
+                    const customerName = document.querySelector('input[name="customerName"]').value;
+                    if (customerName) {
+                        document.querySelector('input[name="guestName"]').value = customerName;
+                    }
                 }
             <?php endif; ?>
-        });
-    </script>
 
+            // Cập nhật hiển thị giá ban đầu
+            updateAllPriceDisplay();
+        });
+
+        // Thêm CSS động cho hiệu ứng
+        const style = document.createElement('style');
+        style.textContent = `
+        @keyframes priceUpdate {
+            0% { 
+                transform: scale(1);
+                color: #dc3545;
+            }
+            50% { 
+                transform: scale(1.1);
+                color: #198754;
+            }
+            100% { 
+                transform: scale(1);
+                color: #dc3545;
+            }
+        }
+        
+        .price-update {
+            animation: priceUpdate 0.5s ease;
+        }
+        
+        .promotion-item.selected {
+            border-color: #198754 !important;
+            background-color: #f0fff4 !important;
+            position: relative;
+        }
+        
+        .promotion-item.selected::after {
+            content: "✓";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #198754;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        
+        .new-price {
+            color: #dc3545;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        #discountName {
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-left: 5px;
+        }
+    `;
+        document.head.appendChild(style);
+    </script>
     <?php include __DIR__ . '/../layouts/footer.php'; ?>

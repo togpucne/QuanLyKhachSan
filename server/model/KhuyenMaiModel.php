@@ -42,6 +42,38 @@ class KhuyenMaiModel
 
         return $result;
     }
+    // Thêm method này vào class KhuyenMaiModel
+    public function getAllActivePromotions()
+    {
+        $today = date('Y-m-d');
+
+        // Kiểm tra xem các trường mới đã có trong bảng chưa
+        // Nếu chưa, dùng query đơn giản trước
+        $sql = "SELECT MaKM, TenKhuyenMai, MucGiamGia, LoaiGiamGia, 
+                   DK_HoaDonTu, DK_SoDemTu, NgayBatDau, NgayKetThuc, 
+                   MoTa, HinhAnh, TrangThai
+            FROM khuyenmai 
+            WHERE TrangThai = 1 
+            AND NgayBatDau <= ? 
+            AND NgayKetThuc >= ?
+            ORDER BY MucGiamGia DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ss", $today, $today);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $promotions = [];
+        while ($row = $result->fetch_assoc()) {
+            // Đảm bảo các trường có giá trị mặc định nếu NULL
+            $row['LoaiGiamGia'] = $row['LoaiGiamGia'] ?? 'phantram';
+            $row['DK_HoaDonTu'] = $row['DK_HoaDonTu'] ?? null;
+            $row['DK_SoDemTu'] = $row['DK_SoDemTu'] ?? null;
+            $promotions[] = $row;
+        }
+
+        return $promotions;
+    }
     // Trong model/KhuyenMaiModel.php - method addKhuyenMai()
     public function addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $maNVTao, $loaiGiamGia = 'phantram', $dkHoaDonTu = null, $dkSoDemTu = null)
     {

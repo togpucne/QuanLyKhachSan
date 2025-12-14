@@ -203,7 +203,6 @@ $connect->closeConnect($conn);
                     </div>
 
                     <!-- Số người - Dropdown -->
-                    <!-- Số người - Dropdown -->
                     <div class="col-md-3">
                         <label class="form-label fw-semibold text-dark">Số người</label>
                         <div class="dropdown" id="guestDropdownContainer">

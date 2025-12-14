@@ -34,7 +34,7 @@ require_once __DIR__ . '/../layouts/header.php';
 
 <div class="row">
     <div class="col-12">
-      
+
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="mb-0">Quản lý khuyến mãi</h4>
@@ -78,14 +78,13 @@ require_once __DIR__ . '/../layouts/header.php';
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th width="50">
-                                    <input type="checkbox" id="selectAll" class="form-check-input">
-                                </th>
+                                <th width="50"><input type="checkbox" id="selectAll" class="form-check-input"></th>
                                 <th width="60">STT</th>
                                 <th>Mã KM</th>
                                 <th>Tên khuyến mãi</th>
                                 <th>Ảnh</th>
-                                <th>Mức giảm giá</th>
+                                <th>Giảm giá</th>
+                                <th>Điều kiện</th> <!-- THÊM CỘT NÀY -->
                                 <th>Ngày bắt đầu</th>
                                 <th>Ngày kết thúc</th>
                                 <th>Người tạo</th>
@@ -121,6 +120,20 @@ require_once __DIR__ . '/../layouts/header.php';
                                         </td>
                                         <td>
                                             <span class="badge bg-success"><?php echo $km['MucGiamGia']; ?>%</span>
+                                        </td>
+                                        <!-- Trong vòng lặp hiển thị khuyến mãi -->
+                                        <td>
+                                            <?php
+                                            $dkText = '';
+                                            if (!empty($km['DK_HoaDonTu'])) {
+                                                $dkText = 'HĐ từ ' . number_format($km['DK_HoaDonTu'], 0, ',', '.') . ' VND';
+                                            } elseif (!empty($km['DK_SoDemTu'])) {
+                                                $dkText = 'Từ ' . $km['DK_SoDemTu'] . ' đêm';
+                                            } else {
+                                                $dkText = '<span class="text-muted">Không có ĐK</span>';
+                                            }
+                                            echo $dkText;
+                                            ?>
                                         </td>
                                         <td><?php echo date('d/m/Y', strtotime($km['NgayBatDau'])); ?></td>
                                         <td><?php echo date('d/m/Y', strtotime($km['NgayKetThuc'])); ?></td>
@@ -181,7 +194,7 @@ require_once __DIR__ . '/../layouts/header.php';
                             <i class="fas fa-trash me-1"></i>Xóa nhiều
                         </button>
                     </div>
-                    
+
                 </div>
             </div>
         </form>
@@ -192,7 +205,6 @@ require_once __DIR__ . '/../layouts/header.php';
 <div class="modal fade" id="addKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <!-- SỬA THÀNH: khuyenmaiController.php -->
             <form action="../../controller/khuyenmaiController.php?action=add" method="POST" enctype="multipart/form-data">
                 <div class="modal-header">
                     <h5 class="modal-title">Thêm khuyến mãi mới</h5>
@@ -206,9 +218,51 @@ require_once __DIR__ . '/../layouts/header.php';
                                 <input type="text" class="form-control" name="ten_khuyenmai" required>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Mức giảm giá (%) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="muc_giamgia" min="1" max="100" step="0.01" required>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="loai_giamgia" required>
+                                            <option value="phantram">Giảm theo phần trăm (%)</option>
+                                            <option value="tientruc">Giảm trực tiếp tiền (VND)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" name="muc_giamgia" min="1" step="0.01" required>
+                                        <small class="text-muted">Nhập % nếu giảm phần trăm, nhập số tiền nếu giảm trực tiếp</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ĐIỀU KIỆN ÁP DỤNG -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ cần 1 trong 2)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Hóa đơn từ (VND)</label>
+                                                <input type="number" class="form-control" name="dk_hoadon_tu" min="0" step="10000">
+                                                <small class="text-muted">Áp dụng khi hóa đơn ≥ số tiền này</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Số đêm từ</label>
+                                                <input type="number" class="form-control" name="dk_sodem_tu" min="1">
+                                                <small class="text-muted">Áp dụng khi đặt từ số đêm này</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <small><i class="fas fa-info-circle"></i> Để trống cả 2 nếu không có điều kiện</small>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
@@ -254,11 +308,10 @@ require_once __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 </div>
-<!-- Modal Sửa khuyến mãi (CHỈ GIỮ 1 CÁI) -->
+<!-- Modal Sửa khuyến mãi -->
 <div class="modal fade" id="editKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <!-- SỬA THÀNH: ../../controller/khuyenmaiController.php -->
             <form action="../../controller/khuyenmaiController.php?action=edit" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="ma_km" id="edit_ma_km">
                 <div class="modal-header">
@@ -273,9 +326,51 @@ require_once __DIR__ . '/../layouts/header.php';
                                 <input type="text" class="form-control" name="ten_khuyenmai" id="edit_ten_khuyenmai" required>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Mức giảm giá (%) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="muc_giamgia" id="edit_muc_giamgia" min="1" max="100" step="0.01" required>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="loai_giamgia" id="edit_loai_giamgia" required>
+                                            <option value="phantram">Giảm theo phần trăm (%)</option>
+                                            <option value="tientruc">Giảm trực tiếp tiền (VND)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" name="muc_giamgia" id="edit_muc_giamgia" min="1" step="0.01" required>
+                                        <small class="text-muted">Nhập % nếu giảm phần trăm, nhập số tiền nếu giảm trực tiếp</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ĐIỀU KIỆN ÁP DỤNG -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ cần 1 trong 2)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Hóa đơn từ (VND)</label>
+                                                <input type="number" class="form-control" name="dk_hoadon_tu" id="edit_dk_hoadon_tu" min="0" step="10000">
+                                                <small class="text-muted">Áp dụng khi hóa đơn ≥ số tiền này</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Số đêm từ</label>
+                                                <input type="number" class="form-control" name="dk_sodem_tu" id="edit_dk_sodem_tu" min="1">
+                                                <small class="text-muted">Áp dụng khi đặt từ số đêm này</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <small><i class="fas fa-info-circle"></i> Để trống cả 2 nếu không có điều kiện</small>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
@@ -351,13 +446,11 @@ require_once __DIR__ . '/../layouts/header.php';
             }
         });
 
-        // Edit modal data - THÊM EVENT.PREVENTDEFAULT()
+        // Trong phần JavaScript của view/kinhdoanh/khuyenmai.php
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', function(e) {
-                e.preventDefault(); // QUAN TRỌNG: Ngăn không cho form submit
-                e.stopPropagation(); // Ngăn event bubbling
-
-                console.log('Edit button clicked!');
+                e.preventDefault();
+                e.stopPropagation();
 
                 const id = this.getAttribute('data-id');
                 const ten = this.getAttribute('data-ten');
@@ -365,14 +458,10 @@ require_once __DIR__ . '/../layouts/header.php';
                 const batdau = this.getAttribute('data-batdau');
                 const ketthuc = this.getAttribute('data-ketthuc');
                 const mota = this.getAttribute('data-mota');
-
-                console.log('Data:', {
-                    id,
-                    ten,
-                    giamgia,
-                    batdau,
-                    ketthuc
-                });
+                const hinhanh = this.getAttribute('data-hinhanh');
+                const loaigiamgia = this.getAttribute('data-loaigiamgia') || 'phantram';
+                const dkhoadontu = this.getAttribute('data-dkhoadontu') || '';
+                const dksodemtu = this.getAttribute('data-dksodemtu') || '';
 
                 document.getElementById('edit_ma_km').value = id;
                 document.getElementById('edit_ten_khuyenmai').value = ten;
@@ -380,6 +469,17 @@ require_once __DIR__ . '/../layouts/header.php';
                 document.getElementById('edit_ngay_batdau').value = batdau;
                 document.getElementById('edit_ngay_ketthuc').value = ketthuc;
                 document.getElementById('edit_mo_ta').value = mota || '';
+                document.getElementById('edit_loai_giamgia').value = loaigiamgia;
+                document.getElementById('edit_dk_hoadon_tu').value = dkhoadontu;
+                document.getElementById('edit_dk_sodem_tu').value = dksodemtu;
+                document.getElementById('edit_current_image').value = hinhanh || '';
+
+                // Set image preview
+                if (hinhanh) {
+                    document.getElementById('edit_image_preview').src = '../../../' + hinhanh;
+                } else {
+                    document.getElementById('edit_image_preview').src = '../../../client/assets/images/sales/default_promotion.png';
+                }
             });
         });
     });

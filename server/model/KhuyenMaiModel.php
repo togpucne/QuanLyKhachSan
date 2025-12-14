@@ -22,13 +22,14 @@ class KhuyenMaiModel
         }
     }
 
-    // Lấy tất cả khuyến mãi
+    // Trong getAllKhuyenMai() thêm các trường mới
     public function getAllKhuyenMai()
     {
-        $sql = "SELECT km.*, nv.HoTen as TenNhanVienTao
-                FROM khuyenmai km
-                LEFT JOIN nhanvien nv ON km.MaNhanVienTao = nv.MaNhanVien
-                ORDER BY km.MaKM DESC";
+        $sql = "SELECT km.*, nv.HoTen as TenNhanVienTao,
+                   km.LoaiGiamGia, km.DK_HoaDonTu, km.DK_SoDemTu
+            FROM khuyenmai km
+            LEFT JOIN nhanvien nv ON km.MaNhanVienTao = nv.MaNhanVien
+            ORDER BY km.MaKM DESC";
 
         $result = $this->conn->query($sql);
 
@@ -39,26 +40,79 @@ class KhuyenMaiModel
 
         return $result;
     }
-
-    // Thêm khuyến mãi mới với ảnh
-    public function addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $maNVTao)
+    // Trong model/KhuyenMaiModel.php - method addKhuyenMai()
+    public function addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $maNVTao, $loaiGiamGia = 'phantram', $dkHoaDonTu = null, $dkSoDemTu = null)
     {
         // Tự động tính trạng thái
         $today = date('Y-m-d');
-        $trangThai = 1; // Mặc định là hoạt động
+        $trangThai = 1;
 
-        // Nếu ngày kết thúc đã qua thì đánh dấu là đã kết thúc
         if ($ngayKetThuc < $today) {
-            $trangThai = 0; // Đã kết thúc
+            $trangThai = 0;
         }
 
-        $sql = "INSERT INTO khuyenmai (TenKhuyenMai, MucGiamGia, NgayBatDau, NgayKetThuc, MoTa, HinhAnh, TrangThai, MaNhanVienTao) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        // DEBUG: Log dữ liệu trước khi insert
+        error_log("MODEL DEBUG - DK_HoaDonTu: " . var_export($dkHoaDonTu, true));
+        error_log("MODEL DEBUG - DK_SoDemTu: " . var_export($dkSoDemTu, true));
+
+        $sql = "INSERT INTO khuyenmai (TenKhuyenMai, MucGiamGia, LoaiGiamGia, DK_HoaDonTu, DK_SoDemTu, NgayBatDau, NgayKetThuc, MoTa, HinhAnh, TrangThai, MaNhanVienTao) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        error_log("MODEL DEBUG - SQL: " . $sql);
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sdssssii", $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $trangThai, $maNVTao);
 
-        return $stmt->execute();
+        // DEBUG: Kiểm tra bind_param
+        if (!$stmt) {
+            error_log("MODEL DEBUG - Prepare failed: " . $this->conn->error);
+            return false;
+        }
+
+        // QUAN TRỌNG: Kiểm tra kiểu dữ liệu cho bind_param
+        // 'sdssdssssii' - s:string, d:double, i:integer
+        $types = "sdssdssssii";
+        $params = [
+            $tenKM,
+            $mucGiamGia,
+            $loaiGiamGia,
+            $dkHoaDonTu,
+            $dkSoDemTu,
+            $ngayBatDau,
+            $ngayKetThuc,
+            $moTa,
+            $hinhAnh,
+            $trangThai,
+            $maNVTao
+        ];
+
+        error_log("MODEL DEBUG - Bind types: " . $types);
+        error_log("MODEL DEBUG - Bind params: " . print_r($params, true));
+
+        $stmt->bind_param(
+            $types,
+            $tenKM,
+            $mucGiamGia,
+            $loaiGiamGia,
+            $dkHoaDonTu,
+            $dkSoDemTu,
+            $ngayBatDau,
+            $ngayKetThuc,
+            $moTa,
+            $hinhAnh,
+            $trangThai,
+            $maNVTao
+        );
+
+        $result = $stmt->execute();
+
+        // DEBUG: Lỗi nếu có
+        if (!$result) {
+            error_log("MODEL DEBUG - Execute failed: " . $stmt->error);
+        } else {
+            error_log("MODEL DEBUG - Insert successful, last insert ID: " . $this->conn->insert_id);
+        }
+
+        return $result;
     }
 
     public function deleteKhuyenMai($maKM)
@@ -102,7 +156,7 @@ class KhuyenMaiModel
         $stmt->bind_param("i", $maKM);
         return $stmt->execute();
     }
-    public function updateKhuyenMai($maKM, $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh = null)
+    public function updateKhuyenMai($maKM, $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh = null, $loaiGiamGia = 'phantram', $dkHoaDonTu = null, $dkSoDemTu = null)
     {
         // Tự động tính trạng thái
         $today = date('Y-m-d');
@@ -126,20 +180,11 @@ class KhuyenMaiModel
 
                 // Xóa ảnh cũ nếu tồn tại và không phải ảnh mặc định
                 if ($oldImage && $oldImage !== 'assets/images/sales/default_promotion.png') {
-                    // SỬA: Thêm assets/ vào đường dẫn
                     $oldFileName = basename($oldImage);
                     $oldFilePath = 'C:/xampp/htdocs/ABC-Resort/client/assets/images/sales/' . $oldFileName;
 
-                    // Debug
-                    error_log("Updating - Deleting old image: $oldFilePath");
-                    error_log("File exists: " . (file_exists($oldFilePath) ? 'Yes' : 'No'));
-
                     if (file_exists($oldFilePath)) {
-                        if (unlink($oldFilePath)) {
-                            error_log("Old image deleted successfully");
-                        } else {
-                            error_log("Failed to delete old image");
-                        }
+                        unlink($oldFilePath);
                     }
                 }
             }
@@ -148,6 +193,9 @@ class KhuyenMaiModel
             $sql = "UPDATE khuyenmai SET 
                 TenKhuyenMai = ?, 
                 MucGiamGia = ?, 
+                LoaiGiamGia = ?, 
+                DK_HoaDonTu = ?, 
+                DK_SoDemTu = ?, 
                 NgayBatDau = ?, 
                 NgayKetThuc = ?, 
                 MoTa = ?, 
@@ -156,12 +204,28 @@ class KhuyenMaiModel
                 WHERE MaKM = ?";
 
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sdssssii", $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $trangThai, $maKM);
+            $stmt->bind_param(
+                "sdssdssssii",
+                $tenKM,
+                $mucGiamGia,
+                $loaiGiamGia,
+                $dkHoaDonTu,
+                $dkSoDemTu,
+                $ngayBatDau,
+                $ngayKetThuc,
+                $moTa,
+                $hinhAnh,
+                $trangThai,
+                $maKM
+            );
         } else {
             // Không thay đổi ảnh
             $sql = "UPDATE khuyenmai SET 
                 TenKhuyenMai = ?, 
                 MucGiamGia = ?, 
+                LoaiGiamGia = ?, 
+                DK_HoaDonTu = ?, 
+                DK_SoDemTu = ?, 
                 NgayBatDau = ?, 
                 NgayKetThuc = ?, 
                 MoTa = ?,
@@ -169,7 +233,19 @@ class KhuyenMaiModel
                 WHERE MaKM = ?";
 
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sdsssii", $tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $trangThai, $maKM);
+            $stmt->bind_param(
+                "sdssdsssii",
+                $tenKM,
+                $mucGiamGia,
+                $loaiGiamGia,
+                $dkHoaDonTu,
+                $dkSoDemTu,
+                $ngayBatDau,
+                $ngayKetThuc,
+                $moTa,
+                $trangThai,
+                $maKM
+            );
         }
 
         // Kiểm tra và thực thi

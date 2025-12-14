@@ -22,11 +22,13 @@ class KhuyenMaiModel
         }
     }
 
-    // Trong getAllKhuyenMai() thêm các trường mới
+    // Trong model/KhuyenMaiModel.php - method getAllKhuyenMai()
     public function getAllKhuyenMai()
     {
         $sql = "SELECT km.*, nv.HoTen as TenNhanVienTao,
-                   km.LoaiGiamGia, km.DK_HoaDonTu, km.DK_SoDemTu
+                   km.LoaiGiamGia, 
+                   km.DK_HoaDonTu, 
+                   km.DK_SoDemTu
             FROM khuyenmai km
             LEFT JOIN nhanvien nv ON km.MaNhanVienTao = nv.MaNhanVien
             ORDER BY km.MaKM DESC";

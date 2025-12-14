@@ -153,6 +153,7 @@ require_once __DIR__ . '/../layouts/header.php';
                                             ?>
                                         </td>
                                         <td>
+                                            <!-- Trong file view/kinhdoanh/khuyenmai.php, phần table -->
                                             <button class="btn btn-sm btn-outline-primary edit-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#editKhuyenMaiModal"
@@ -163,6 +164,9 @@ require_once __DIR__ . '/../layouts/header.php';
                                                 data-ketthuc="<?php echo $km['NgayKetThuc']; ?>"
                                                 data-mota="<?php echo htmlspecialchars($km['MoTa']); ?>"
                                                 data-hinhanh="<?php echo $km['HinhAnh']; ?>"
+                                                data-loaigiamgia="<?php echo $km['LoaiGiamGia'] ?? 'phantram'; ?>"
+                                                data-dkhoadontu="<?php echo $km['DK_HoaDonTu'] ?? ''; ?>"
+                                                data-dksodemtu="<?php echo $km['DK_SoDemTu'] ?? ''; ?>"
                                                 title="Sửa">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -463,6 +467,18 @@ require_once __DIR__ . '/../layouts/header.php';
                 const dkhoadontu = this.getAttribute('data-dkhoadontu') || '';
                 const dksodemtu = this.getAttribute('data-dksodemtu') || '';
 
+                console.log('Edit data loaded:', {
+                    id,
+                    ten,
+                    giamgia,
+                    batdau,
+                    ketthuc,
+                    loaigiamgia,
+                    dkhoadontu,
+                    dksodemtu
+                });
+
+                // Set giá trị cho các input
                 document.getElementById('edit_ma_km').value = id;
                 document.getElementById('edit_ten_khuyenmai').value = ten;
                 document.getElementById('edit_muc_giamgia').value = giamgia;

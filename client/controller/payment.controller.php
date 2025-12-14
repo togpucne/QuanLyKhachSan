@@ -57,16 +57,25 @@ class PaymentController
     private function getCustomerInfo($userId)
     {
         try {
-            // JOIN cả hai bảng để lấy CMND từ tai_khoan và địa chỉ từ khachhang
+            // PHƯƠNG PHÁP ĐÚNG: Bắt đầu từ tai_khoan, LEFT JOIN khachhang
             $sql = "SELECT 
-                        kh.*, 
-                        tk.Email,
-                        tk.CMND,  -- LẤY CMND TỪ TAI_KHOAN
-                        tk.HoTen as TenTaiKhoan,
-                        tk.SoDienThoai as SDTTaiKhoan
-                    FROM khachhang kh 
-                    LEFT JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id 
-                    WHERE kh.MaTaiKhoan = ?";
+                    -- Từ bảng tai_khoan (LUÔN CÓ với user đã login)
+                    tk.id,
+                    tk.Email,
+                    tk.CMND,           -- CMND từ tai_khoan
+                    tk.HoTen as Ten_TK, -- Họ tên từ tài khoản
+                    tk.SoDienThoai as SDT_TK, -- SĐT từ tài khoản
+                    
+                    -- Từ bảng khachhang (CÓ THỂ NULL)
+                    kh.HoTen as Ten_KH,
+                    kh.SoDienThoai as SDT_KH,
+                    kh.DiaChi,         -- Địa chỉ từ khachhang
+                    kh.MaKH,
+                    kh.TrangThai
+                    
+                FROM tai_khoan tk 
+                LEFT JOIN khachhang kh ON tk.id = kh.MaTaiKhoan 
+                WHERE tk.id = ?";  // QUAN TRỌNG: Điều kiện trên tk.id
 
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $userId);
@@ -74,40 +83,97 @@ class PaymentController
             $result = $stmt->get_result();
 
             if ($result->num_rows > 0) {
-                $customer = $result->fetch_assoc();
+                $data = $result->fetch_assoc();
 
-                // Đảm bảo các trường có giá trị
+                // Ghi log để debug
+                error_log("=== DEBUG CUSTOMER INFO ===");
+                error_log("User ID: " . $userId);
+                error_log("CMND từ DB: " . ($data['CMND'] ?? 'NULL'));
+                error_log("DiaChi từ DB: " . ($data['DiaChi'] ?? 'NULL'));
+                error_log("Ten_TK từ DB: " . ($data['Ten_TK'] ?? 'NULL'));
+                error_log("Ten_KH từ DB: " . ($data['Ten_KH'] ?? 'NULL'));
+                error_log("========================");
+
+                // Trả về thông tin hợp nhất
                 return [
-                    'HoTen' => $customer['HoTen'] ?? $customer['TenTaiKhoan'] ?? '',
-                    'SoDienThoai' => $customer['SoDienThoai'] ?? $customer['SDTTaiKhoan'] ?? '',
-                    'Email' => $customer['Email'] ?? '',
-                    'CMND' => $customer['CMND'] ?? '',  // TRẢ VỀ CMND
-                    'DiaChi' => $customer['DiaChi'] ?? ''  // TRẢ VỀ ĐỊA CHỈ
+                    'HoTen' => !empty($data['Ten_KH']) ? $data['Ten_KH'] : (!empty($data['Ten_TK']) ? $data['Ten_TK'] : ($_SESSION['user_name'] ?? '')),
+
+                    'SoDienThoai' => !empty($data['SDT_KH']) ? $data['SDT_KH'] : (!empty($data['SDT_TK']) ? $data['SDT_TK'] : ''),
+
+                    'Email' => $data['Email'] ?? $_SESSION['email'] ?? '',
+
+                    // CMND từ tai_khoan
+                    'CMND' => $data['CMND'] ?? '',
+
+                    // Địa chỉ từ khachhang
+                    'DiaChi' => $data['DiaChi'] ?? '',
+
+                    // Thông tin debug
+                    'debug' => [
+                        'has_tai_khoan' => !empty($data['id']),
+                        'has_khachhang' => !empty($data['MaKH']),
+                        'cmnd_exists' => !empty($data['CMND']),
+                        'diachi_exists' => !empty($data['DiaChi'])
+                    ]
                 ];
             }
 
-            // Nếu không có trong khachhang, lấy từ tai_khoan
-            $sql2 = "SELECT * FROM tai_khoan WHERE id = ?";
-            $stmt2 = $this->conn->prepare($sql2);
-            $stmt2->bind_param("i", $userId);
-            $stmt2->execute();
-            $result2 = $stmt2->get_result();
-
-            if ($result2->num_rows > 0) {
-                $user = $result2->fetch_assoc();
-                return [
-                    'HoTen' => $user['HoTen'] ?? '',
-                    'SoDienThoai' => $user['SoDienThoai'] ?? '',
-                    'Email' => $user['Email'] ?? '',
-                    'CMND' => $user['CMND'] ?? '',
-                    'DiaChi' => $user['DiaChi'] ?? ''
-                ];
-            }
-
-            return [];
+            // Nếu không tìm thấy, fallback về session
+            return $this->getCustomerInfoFallback($userId);
         } catch (Exception $e) {
             error_log("Lỗi getCustomerInfo: " . $e->getMessage());
-            return [];
+            return $this->getCustomerInfoFallback($userId);
+        }
+    }
+
+    // Hàm fallback
+    private function getCustomerInfoFallback($userId)
+    {
+        try {
+            // Thử lấy từ tai_khoan trước
+            $sql_tk = "SELECT Email, CMND, HoTen, SoDienThoai FROM tai_khoan WHERE id = ?";
+            $stmt_tk = $this->conn->prepare($sql_tk);
+            $stmt_tk->bind_param("i", $userId);
+            $stmt_tk->execute();
+            $result_tk = $stmt_tk->get_result();
+
+            if ($result_tk->num_rows > 0) {
+                $tk_data = $result_tk->fetch_assoc();
+
+                // Thử lấy địa chỉ từ khachhang
+                $sql_kh = "SELECT DiaChi FROM khachhang WHERE MaTaiKhoan = ?";
+                $stmt_kh = $this->conn->prepare($sql_kh);
+                $stmt_kh->bind_param("i", $userId);
+                $stmt_kh->execute();
+                $result_kh = $stmt_kh->get_result();
+                $kh_data = $result_kh->fetch_assoc() ?? [];
+
+                return [
+                    'HoTen' => $tk_data['HoTen'] ?? $_SESSION['user_name'] ?? '',
+                    'SoDienThoai' => $tk_data['SoDienThoai'] ?? '',
+                    'Email' => $tk_data['Email'] ?? $_SESSION['email'] ?? '',
+                    'CMND' => $tk_data['CMND'] ?? '',
+                    'DiaChi' => $kh_data['DiaChi'] ?? ''
+                ];
+            }
+
+            // Cuối cùng lấy từ session
+            return [
+                'HoTen' => $_SESSION['user_name'] ?? '',
+                'SoDienThoai' => $_SESSION['phone'] ?? '',
+                'Email' => $_SESSION['email'] ?? '',
+                'CMND' => '',
+                'DiaChi' => ''
+            ];
+        } catch (Exception $e) {
+            error_log("Lỗi fallback: " . $e->getMessage());
+            return [
+                'HoTen' => $_SESSION['user_name'] ?? '',
+                'SoDienThoai' => $_SESSION['phone'] ?? '',
+                'Email' => $_SESSION['email'] ?? '',
+                'CMND' => '',
+                'DiaChi' => ''
+            ];
         }
     }
 

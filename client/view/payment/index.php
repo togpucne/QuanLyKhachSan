@@ -2,10 +2,7 @@
     include __DIR__ . '/../layouts/header.php';
 
     // Lấy thông tin khách hàng từ session nếu đã đăng nhập
-    $customerInfo = [];
-    if (isset($_SESSION['user_id'])) {
-        // Giả sử có hàm getCustomerInfo
-        // $customerInfo = getCustomerInfo($_SESSION['user_id']);
+    if (!isset($customerInfo)) {
         $customerInfo = [
             'HoTen' => $_SESSION['user_name'] ?? '',
             'SoDienThoai' => $_SESSION['phone'] ?? '',
@@ -101,7 +98,7 @@
             max-height: calc(100vh - 120px);
             overflow-y: auto;
         }
-        
+
         /* THÊM CSS CHO KHUYẾN MÃI */
         .promotion-item {
             border: 1px solid #dee2e6;
@@ -111,25 +108,25 @@
             transition: all 0.3s ease;
             background: white;
         }
-        
+
         .promotion-item:hover {
             border-color: #0d6efd;
             background-color: #f8f9ff;
         }
-        
-        .promotion-checkbox:disabled + label {
+
+        .promotion-checkbox:disabled+label {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
+
         .text-decoration-line-through {
             text-decoration: line-through !important;
         }
-        
+
         #discountSection {
             display: none;
         }
-        
+
         #originalTotal {
             display: none;
         }
@@ -151,7 +148,7 @@
                 </div>
             </div>
         </div>
-
+        
         <div class="row">
             <!-- Left Column - Thông tin thanh toán -->
             <div class="col-lg-8">
@@ -277,7 +274,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- PHẦN KHUYẾN MÃI MỚI -->
                 <div class="payment-section">
                     <div class="section-header">
@@ -311,12 +308,12 @@
                                                     </span>
                                                     <?php if ($promo['is_available']): ?>
                                                         <small class="d-block text-success">
-                                                            <i class="fas fa-check-circle"></i> 
+                                                            <i class="fas fa-check-circle"></i>
                                                             <?php echo $promo['MoTa']; ?>
                                                         </small>
                                                     <?php else: ?>
                                                         <small class="d-block text-danger">
-                                                            <i class="fas fa-times-circle"></i> 
+                                                            <i class="fas fa-times-circle"></i>
                                                             <?php echo $promo['reason']; ?>
                                                         </small>
                                                     <?php endif; ?>
@@ -329,7 +326,7 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        
+
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnClearPromotion">
                             <i class="fas fa-times me-1"></i> Bỏ chọn khuyến mãi
                         </button>
@@ -451,18 +448,18 @@
         // Tính toán giảm giá
         function calculateDiscount() {
             if (!selectedPromotion) return 0;
-            
+
             const discountType = selectedPromotion.type;
             const discountValue = parseFloat(selectedPromotion.discount);
-            
+
             let discountAmount = 0;
-            
+
             if (discountType === 'phantram') {
                 discountAmount = originalTotal * (discountValue / 100);
             } else if (discountType === 'tientruc') {
                 discountAmount = discountValue;
             }
-            
+
             return Math.round(discountAmount);
         }
 
@@ -470,17 +467,17 @@
         function updateTotal() {
             const discountAmount = calculateDiscount();
             const finalTotal = originalTotal - discountAmount;
-            
+
             // Cập nhật hiển thị
             if (discountAmount > 0) {
                 // Hiển thị giảm giá
                 document.getElementById('discountSection').style.display = 'flex';
                 document.getElementById('discountAmount').textContent = '-' + discountAmount.toLocaleString('vi-VN') + ' VND';
-                
+
                 // Hiển thị giá gốc có gạch ngang
                 document.getElementById('originalTotal').style.display = 'block';
                 document.getElementById('originalTotal').textContent = originalTotal.toLocaleString('vi-VN') + ' VND';
-                
+
                 // Hiển thị giá sau giảm
                 document.getElementById('finalTotal').textContent = finalTotal.toLocaleString('vi-VN') + ' VND';
                 document.getElementById('finalTotal').classList.add('text-danger');
@@ -488,7 +485,7 @@
                 // Ẩn phần giảm giá
                 document.getElementById('discountSection').style.display = 'none';
                 document.getElementById('originalTotal').style.display = 'none';
-                
+
                 // Hiển thị giá gốc
                 document.getElementById('finalTotal').textContent = originalTotal.toLocaleString('vi-VN') + ' VND';
                 document.getElementById('finalTotal').classList.remove('text-danger');
@@ -504,7 +501,7 @@
                         document.querySelectorAll('.promotion-checkbox').forEach(cb => {
                             if (cb !== this) cb.checked = false;
                         });
-                        
+
                         selectedPromotion = {
                             id: this.value,
                             type: this.dataset.type,
@@ -532,10 +529,10 @@
         function processPayment() {
             // Validation
             const requiredFields = [
-                'customerName', 'customerPhone', 'customerEmail', 
+                'customerName', 'customerPhone', 'customerEmail',
                 'customerIdNumber', 'guestName'
             ];
-            
+
             for (const field of requiredFields) {
                 const input = document.querySelector(`[name="${field}"]`);
                 if (!input.value.trim()) {
@@ -547,7 +544,7 @@
                     return;
                 }
             }
-            
+
             // Kiểm tra email
             const emailInput = document.querySelector('input[name="customerEmail"]');
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -556,26 +553,26 @@
                 emailInput.focus();
                 return;
             }
-            
+
             // Kiểm tra điều khoản
             if (!document.getElementById('agreeTerms').checked) {
                 alert('Vui lòng đồng ý với điều khoản và điều kiện');
                 return;
             }
-            
+
             // Kiểm tra phương thức thanh toán
             const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
             if (!paymentMethod) {
                 alert('Vui lòng chọn phương thức thanh toán');
                 return;
             }
-            
+
             // Hiển thị loading
             const submitBtn = document.querySelector('button[onclick="processPayment()"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             submitBtn.disabled = true;
-            
+
             // Chuẩn bị dữ liệu
             const formData = new FormData();
             formData.append('roomId', '<?php echo $roomId; ?>');
@@ -607,7 +604,7 @@
                 .then(data => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
-                    
+
                     if (data.success) {
                         alert(data.message);
                         window.location.href = '/ABC-Resort/client/view/payment/payment-success.php?bookingCode=' + data.bookingCode;
@@ -628,7 +625,7 @@
             selectPaymentMethod('creditCard');
             setupPromotionListeners();
             updateTotal(); // Cập nhật tổng tiền ban đầu
-            
+
             // Tự động điền thông tin
             document.getElementById('bookForMyself').addEventListener('change', function() {
                 if (this.checked) {

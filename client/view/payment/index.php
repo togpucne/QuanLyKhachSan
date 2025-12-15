@@ -286,20 +286,7 @@ if (!isset($customerInfo)) {
                     <span class="text-muted fs-6 ms-2">(<?php echo $adults; ?> người)</span>
                 </div>
                 <div class="section-body">
-                    <!-- Thông báo về số lượng khách -->
-                    <?php if ($adults > 1): ?>
-                        <div class="alert alert-info mb-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Lưu ý:</strong> 
-                            <ul class="mb-0 mt-2">
-                                <li>Thông tin liên hệ sẽ tự động điền vào thông tin khách hàng chính</li>
-                                <li><strong>Tất cả khách hàng đều phải nhập số điện thoại</strong></li>
-                                <li>Khách hàng thứ 2 trở đi chỉ cần nhập: Họ tên, Số điện thoại, Địa chỉ</li>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- THÔNG TIN LIÊN HỆ -->
+                            <!-- THÔNG TIN LIÊN HỆ -->
                     <div class="common-info-section mb-4">
                         <h6 class="guest-section-header">
                             <i class="fas fa-address-book me-2"></i> Thông tin liên hệ & Khách hàng chính
@@ -344,11 +331,11 @@ if (!isset($customerInfo)) {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label required-field">Địa chỉ</label>
+                                    <label class="form-label required-field">Địa chỉ <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="contactAddress" name="address" required
                                         placeholder="192-126 Đ.Nguyễn Văn Nghi, Phường 1, Gò Vấp, Thành phố Hồ Chí Minh"
                                         value="<?php echo htmlspecialchars($customerInfo['DiaChi'] ?? ''); ?>">
-                                    <div class="error-message" id="addressError">Vui lòng nhập địa chỉ</div>
+                                    <div class="error-message" id="contactAddressError">Vui lòng nhập địa chỉ</div>
                                 </div>
                             </div>
                         </div>
@@ -385,9 +372,10 @@ if (!isset($customerInfo)) {
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Địa chỉ</label>
-                                        <input type="text" class="form-control guest-input" name="guestAddress[]"
+                                        <label class="form-label required-field">Địa chỉ</label>
+                                        <input type="text" class="form-control guest-input address-input" name="guestAddress[]" required
                                             placeholder="Nhập địa chỉ đầy đủ">
+                                        <div class="error-message" id="guestAddressError<?php echo $guestNumber; ?>">Vui lòng nhập địa chỉ</div>
                                     </div>
                                 </div>
                             </div>
@@ -676,7 +664,62 @@ if (!isset($customerInfo)) {
             this.classList.remove('is-duplicate');
             hideDuplicateNotice();
         });
+        
+        // Thêm sự kiện validate địa chỉ real-time
+        document.querySelectorAll('.address-input').forEach(input => {
+            input.addEventListener('blur', function() {
+                validateAddressField(this);
+            });
+        });
+        
+        // Validate địa chỉ khách hàng chính
+        document.getElementById('contactAddress').addEventListener('blur', function() {
+            validateAddressField(this);
+        });
     });
+    
+    // Hàm validate địa chỉ real-time
+    function validateAddressField(inputElement) {
+        const value = inputElement.value.trim();
+        const guestNumber = getGuestNumberFromInput(inputElement);
+        const errorId = guestNumber === 'contact' ? 'contactAddressError' : `guestAddressError${guestNumber}`;
+        
+        if (!value) {
+            showError(inputElement, errorId, 'Vui lòng nhập địa chỉ');
+            return false;
+        } else if (value.length < 10) {
+            showError(inputElement, errorId, 'Địa chỉ quá ngắn (ít nhất 10 ký tự)');
+            return false;
+        } else {
+            clearError(inputElement, errorId);
+            return true;
+        }
+    }
+    
+    // Hàm lấy số thứ tự khách hàng từ input
+    function getGuestNumberFromInput(inputElement) {
+        if (inputElement.id === 'contactAddress') {
+            return 'contact';
+        }
+        
+        const parentSection = inputElement.closest('.additional-guest-section');
+        if (parentSection && parentSection.id) {
+            const match = parentSection.id.match(/guestSection(\d+)/);
+            if (match) {
+                return match[1];
+            }
+        }
+        return '';
+    }
+    
+    // Hàm xóa lỗi
+    function clearError(inputElement, errorId) {
+        inputElement.classList.remove('is-invalid');
+        const errorElement = document.getElementById(errorId);
+        if (errorElement) {
+            errorElement.style.display = 'none';
+        }
+    }
 
     // Hàm kiểm tra trùng SDT real-time
     function checkPhoneDuplicatesRealTime() {
@@ -819,15 +862,19 @@ if (!isset($customerInfo)) {
             isValid = false;
         }
 
-        // Validate địa chỉ liên hệ
+        // Validate địa chỉ liên hệ (BẮT BUỘC)
         if (!contactAddress) {
-            showError(document.getElementById('contactAddress'), 'addressError', 'Vui lòng nhập địa chỉ');
+            showError(document.getElementById('contactAddress'), 'contactAddressError', 'Vui lòng nhập địa chỉ');
+            isValid = false;
+        } else if (contactAddress.length < 10) {
+            showError(document.getElementById('contactAddress'), 'contactAddressError', 'Địa chỉ quá ngắn (ít nhất 10 ký tự)');
             isValid = false;
         }
 
         // Validate khách hàng bổ sung
         const guestNames = document.querySelectorAll('input[name="guestName[]"]');
         const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
+        const guestAddresses = document.querySelectorAll('input[name="guestAddress[]"]');
 
         // Mảng lưu các giá trị đã nhập để kiểm tra trùng
         const usedPhones = [contactPhone]; // Bắt đầu với SDT khách hàng chính
@@ -837,6 +884,7 @@ if (!isset($customerInfo)) {
             const guestNumber = i + 2; // Bắt đầu từ khách hàng thứ 2
             const guestNameValue = guestNames[i].value.trim();
             const guestPhoneValue = guestPhones[i] ? guestPhones[i].value.trim() : '';
+            const guestAddressValue = guestAddresses[i] ? guestAddresses[i].value.trim() : '';
 
             // Validate họ tên
             if (!guestNameValue) {
@@ -859,6 +907,15 @@ if (!isset($customerInfo)) {
                 } else {
                     usedPhones.push(guestPhoneValue);
                 }
+            }
+
+            // Validate địa chỉ (BẮT BUỘC)
+            if (!guestAddressValue) {
+                showError(guestAddresses[i], `guestAddressError${guestNumber}`, `Vui lòng nhập địa chỉ khách hàng ${guestNumber}`);
+                isValid = false;
+            } else if (guestAddressValue.length < 10) {
+                showError(guestAddresses[i], `guestAddressError${guestNumber}`, `Địa chỉ quá ngắn (ít nhất 10 ký tự)`);
+                isValid = false;
             }
         }
 

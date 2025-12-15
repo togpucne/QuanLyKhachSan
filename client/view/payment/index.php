@@ -306,44 +306,45 @@
                         Phương thức thanh toán <span class="text-danger">*</span>
                     </div>
                     <div class="section-body">
-                        <div class="payment-method" onclick="selectPaymentMethod('creditCard')">
-                            <div class="form-check">
+                        <!-- Cách 1: Dùng label bao toàn bộ -->
+                        <label class="payment-method cursor-pointer mb-3 d-block" for="creditCard">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="creditCard" id="creditCard">
-                                <label class="form-check-label fw-bold" for="creditCard">
+                                <div class="form-check-label fw-bold">
                                     Thẻ tín dụng/Ghi nợ
-                                </label>
+                                </div>
                                 <div class="mt-2">
                                     <img src="/ABC-Resort/client/assets/images/payments/visa_mastercard.jpg" alt="Visa Mastercard" height="30" class="me-2">
                                     <small class="text-muted">Thanh toán an toàn với thẻ Visa, Mastercard</small>
                                 </div>
                             </div>
-                        </div>
+                        </label>
 
-                        <div class="payment-method" onclick="selectPaymentMethod('bankTransfer')">
-                            <div class="form-check">
+                        <label class="payment-method cursor-pointer mb-3 d-block" for="bankTransfer">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="bankTransfer" id="bankTransfer">
-                                <label class="form-check-label fw-bold" for="bankTransfer">
+                                <div class="form-check-label fw-bold">
                                     Chuyển khoản ngân hàng
-                                </label>
+                                </div>
                                 <div class="mt-2">
                                     <img src="/ABC-Resort/client/assets/images/payments/bank.jpg" alt="Banking" height="30" class="me-2">
                                     <small class="text-muted">Chuyển khoản qua Internet Banking, Mobile Banking</small>
                                 </div>
                             </div>
-                        </div>
+                        </label>
 
-                        <div class="payment-method" onclick="selectPaymentMethod('cash')">
-                            <div class="form-check">
+                        <label class="payment-method cursor-pointer mb-3 d-block" for="cash">
+                            <div class="form-check mb-0">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="cash" id="cash">
-                                <label class="form-check-label fw-bold" for="cash">
+                                <div class="form-check-label fw-bold">
                                     Thanh toán tại resort
-                                </label>
+                                </div>
                                 <div class="mt-2">
                                     <img src="/ABC-Resort/client/assets/images/payments/cash.jpg" alt="Cash" height="30" class="me-2">
                                     <small class="text-muted">Thanh toán bằng tiền mặt khi nhận phòng</small>
                                 </div>
                             </div>
-                        </div>
+                        </label>
                     </div>
                 </div>
                 <!-- PHẦN KHUYẾN MÃI MỚI -->
@@ -357,7 +358,7 @@
                             <div id="promotionList">
                                 <?php if (!empty($promotions)): ?>
                                     <?php foreach ($promotions as $promo): ?>
-                                        <div class="promotion-item mb-2">
+                                        <div class="promotion-item mb-2" style="cursor: pointer">
                                             <div class="form-check">
                                                 <input class="form-check-input promotion-checkbox"
                                                     type="radio"
@@ -375,7 +376,7 @@
                                                     <span class="badge <?php echo $promo['is_available'] ? 'bg-success' : 'bg-secondary'; ?> ms-2">
                                                         <?php if ($promo['LoaiGiamGia'] == 'phantram'): ?>
                                                             Giảm <?php echo $promo['MucGiamGia']; ?>%
-                                                            
+
                                                         <?php else: ?>
                                                             Giảm <?php echo number_format($promo['MucGiamGia']); ?> VND
                                                         <?php endif; ?>

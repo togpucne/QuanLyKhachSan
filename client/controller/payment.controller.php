@@ -297,3 +297,32 @@ if ($action == 'processPayment') {
 } else {
     $controller->index();
 }
+// Lấy thông tin dịch vụ từ URL
+$selectedServices = isset($_GET['services']) ? explode(',', $_GET['services']) : [];
+$servicesPrice = 0;
+
+if (!empty($selectedServices) && count($selectedServices) > 0) {
+    // Lấy số người từ URL
+    $adults = isset($_GET['adults']) ? (int)$_GET['adults'] : 1;
+    
+    // Query lấy giá dịch vụ
+    $serviceIds = implode(',', array_map('intval', $selectedServices));
+    $sqlDichVu = "SELECT MaDV, DonGia FROM dichvu WHERE MaDV IN ($serviceIds)";
+    $resultDichVu = $conn->query($sqlDichVu);
+    
+    while ($row = $resultDichVu->fetch_assoc()) {
+        // NHÂN ĐÔI GIÁ NẾU CÓ 2 NGƯỜI
+        $servicesPrice += $row['DonGia'] * $adults;
+    }
+}
+
+// Tính tổng giá phòng (đã tính đêm)
+$roomPrice = $phong['TongGia'] * $nights;
+
+// Tính thuế 10% trên tổng giá phòng và dịch vụ
+$tax = ($roomPrice + $servicesPrice) * 0.1;
+
+// Tổng thanh toán
+$totalAmount = $roomPrice + $servicesPrice + $tax;
+
+?>  

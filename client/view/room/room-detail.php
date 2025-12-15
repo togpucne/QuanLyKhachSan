@@ -622,6 +622,8 @@ $connect->closeConnect($conn);
     let selectedServices = [];
     const roomPricePerNight = <?php echo $phong['TongGia']; ?>;
     const nights = <?php echo $nights; ?>;
+    const adults = <?php echo $adults; ?>; // Lấy số người
+
 
     function changeMainImage(src, element) {
         document.getElementById('mainImage').src = src;
@@ -656,8 +658,12 @@ $connect->closeConnect($conn);
     }
 
     function updateTotalPrice() {
-        let servicesTotal = selectedServices.reduce((total, service) => total + service.price, 0);
+        // Tính giá phòng
         let roomTotal = roomPricePerNight * nights;
+
+        // Tính giá dịch vụ: giá mỗi dịch vụ * số người
+        let servicesTotal = selectedServices.reduce((total, service) => total + (service.price * adults), 0);
+
         let total = roomTotal + servicesTotal;
 
         document.getElementById('roomPriceTotal').textContent = roomTotal.toLocaleString() + ' đ';
@@ -680,8 +686,29 @@ $connect->closeConnect($conn);
             queryParams.append('services', selectedServiceIds.join(','));
         }
 
-        if (confirm('Bạn có chắc muốn đặt phòng này?' + (selectedServiceIds.length > 0 ? '\n\nCác dịch vụ đã chọn:\n' + selectedServices.map(s => '- ' + s.name).join('\n') : ''))) {
-            // CHUYỂN ĐẾN TRANG THANH TOÁN
+        // Hiển thị thông tin chi tiết giá
+        let servicesInfo = '';
+        if (selectedServices.length > 0) {
+            servicesInfo = '\n\nDịch vụ đã chọn (tính theo ' + adults + ' người):\n';
+            selectedServices.forEach(service => {
+                const totalServicePrice = service.price * adults;
+                servicesInfo += '- ' + service.name + ': ' + service.price.toLocaleString() + ' đ x ' + adults + ' = ' + totalServicePrice.toLocaleString() + ' đ\n';
+            });
+        }
+
+        const roomTotal = (roomPricePerNight * nights).toLocaleString() + ' đ';
+        const servicesTotal = selectedServices.reduce((total, service) => total + (service.price * adults), 0).toLocaleString() + ' đ';
+        const finalTotal = (roomPricePerNight * nights + selectedServices.reduce((total, service) => total + (service.price * adults), 0)).toLocaleString() + ' đ';
+
+        const confirmationMessage = 'Bạn có chắc muốn đặt phòng này?' +
+            '\n\n--- CHI TIẾT GIÁ ---' +
+            '\nGiá phòng (' + nights + ' đêm): ' + roomTotal +
+            '\nDịch vụ bổ sung: ' + servicesTotal +
+            '\n-------------------------' +
+            '\nTổng cộng: ' + finalTotal +
+            servicesInfo;
+
+        if (confirm(confirmationMessage)) {
             window.location.href = `/ABC-Resort/client/controller/payment.controller.php?${queryParams.toString()}`;
         }
     }

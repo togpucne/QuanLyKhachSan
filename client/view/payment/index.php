@@ -394,11 +394,10 @@
                         <?php endif; ?>
 
                         <!-- DÒNG KHUYẾN MÃI - BAN ĐẦU ẨN -->
-                        <div class="d-flex justify-content-between mb-2 discount-section" id="discountSection">
-                            <small class="text-success" >Khuyến mãi:</small>
+                        <div class="d-flex justify-content-between mb-2 d-none" id="discountSection">
+                            <small class="text-success">Khuyến mãi:</small>
                             <small class="text-success" id="discountAmount"></small>
                         </div>
-
                         <!-- DÒNG THUẾ - THÊM ID -->
                         <div class="d-flex justify-content-between mb-2">
                             <small>Thuế và phí (10%):</small>
@@ -496,10 +495,12 @@
             const discountAmountEl = document.getElementById('discountAmount');
 
             if (discountAmount > 0) {
-                discountSection.style.display = 'flex'; // HIỆN
+                // Sử dụng setAttribute để ghi đè CSS !important
+                discountSection.setAttribute('style', 'display: flex !important');
                 discountAmountEl.textContent = '-' + formatCurrency(discountAmount);
             } else {
-                discountSection.style.display = 'none'; // ẨN
+                discountSection.setAttribute('style', 'display: none !important');
+                discountAmountEl.textContent = '';
             }
 
             // 2. DÒNG THUẾ
@@ -536,12 +537,16 @@
             document.querySelectorAll('input[name="promotion"]').forEach(checkbox => {
                 checkbox.checked = false;
             });
-            discountSection.style.display = 'none';
-            discountAmount.textContent = '';
+
+            const discountSection = document.getElementById('discountSection');
+            const discountAmountEl = document.getElementById('discountAmount');
+
+            // Sử dụng setAttribute để ẩn
+            discountSection.setAttribute('style', 'display: none !important');
+            discountAmountEl.textContent = '';
 
             // Reset về giá ban đầu
             updateDisplay(0, originalTax, originalTotal);
-
 
             console.log('Đã reset về ban đầu');
         }

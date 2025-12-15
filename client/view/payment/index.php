@@ -346,7 +346,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- PHẦN KHUYẾN MÃI MỚI -->
                 <div class="payment-section">
                     <div class="section-header">
@@ -376,17 +375,18 @@
                                                     <span class="badge <?php echo $promo['is_available'] ? 'bg-success' : 'bg-secondary'; ?> ms-2">
                                                         <?php if ($promo['LoaiGiamGia'] == 'phantram'): ?>
                                                             Giảm <?php echo $promo['MucGiamGia']; ?>%
+                                                            
                                                         <?php else: ?>
                                                             Giảm <?php echo number_format($promo['MucGiamGia']); ?> VND
                                                         <?php endif; ?>
                                                     </span>
                                                     <?php if ($promo['is_available']): ?>
-                                                        <small class="d-block text-success">
+                                                        <small class="d-block text-success mt-1">
                                                             <i class="fas fa-check-circle"></i>
                                                             <?php echo $promo['MoTa']; ?>
                                                         </small>
                                                     <?php else: ?>
-                                                        <small class="d-block text-danger">
+                                                        <small class="d-block text-danger mt-1">
                                                             <i class="fas fa-times-circle"></i>
                                                             <?php echo $promo['reason']; ?>
                                                         </small>
@@ -471,7 +471,7 @@
                         </div>
                         <!-- DÒNG THUẾ - THÊM ID -->
                         <div class="d-flex justify-content-between mb-2">
-                            <small>Thuế và phí (10%):</small>
+                            <small>Thuế và phí (<?php echo isset($taxRate) ? ($taxRate * 100) : '10'; ?>%):</small>
                             <small id="taxDisplay"><?php echo number_format($tax); ?> VND</small>
                         </div>
 
@@ -509,31 +509,72 @@
             </div>
         </div>
     </div>
-
     <script>
+        // CHUYỂN BIẾN NÀY LÊN ĐẦU
         const originalTotalBeforeTax = <?php echo $roomPrice + $servicesPrice; ?>;
         const originalTax = <?php echo $tax; ?>;
         const originalTotal = <?php echo $totalAmount; ?>;
-        const taxRate = 0.1;
+        const taxRate = <?php echo isset($taxRate) ? $taxRate : 0.1; ?>; // Lấy từ database
+
+        // Chuyển các biến promotions từ PHP sang JS
+        const promotionsData = <?php echo json_encode($promotions); ?>;
+        console.log('Promotions from PHP:', promotionsData);
 
         // Hàm format tiền
         function formatCurrency(amount) {
             return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' VND';
         }
 
-        // Hàm xử lý khi tick khuyến mãi
+        // Hàm xử lý khi tick khuyến mãi - SỬA LẠI THEO LOGIC ĐÚNG
         function applyPromotion(checkbox) {
             console.log('=== CHỌN KHUYẾN MÃI ===');
 
-            // Lấy thông tin từ checkbox
-            const discountPercent = parseFloat(checkbox.dataset.discount);
+            // Lấy thông tin khuyến mãi từ dataset
+            const discountValue = parseFloat(checkbox.dataset.discount);
+            const discountType = checkbox.dataset.type;
             const maxDiscount = parseFloat(checkbox.dataset.max) || 0;
+            const promotionId = checkbox.value;
 
-            // Tính discount
-            let discountAmount = originalTotalBeforeTax * (discountPercent / 100);
-            if (maxDiscount > 0 && discountAmount > maxDiscount) {
-                discountAmount = maxDiscount;
+            console.log('Thông tin khuyến mãi:', {
+                promotionId,
+                discountType,
+                discountValue,
+                maxDiscount,
+                originalTotalBeforeTax,
+                taxRate
+            });
+
+            // Tìm khuyến mãi từ mảng promotionsData
+            const selectedPromotion = promotionsData.find(p => p.MaKM == promotionId);
+            if (selectedPromotion) {
+                console.log('Khuyến mãi đã chọn từ DB:', selectedPromotion);
             }
+
+            // Tính discount theo đúng logic database
+            let discountAmount = 0;
+
+            if (discountType === 'phantram') {
+                // Giảm theo phần trăm: Tính % của tổng trước thuế
+                discountAmount = originalTotalBeforeTax * (discountValue / 100);
+                console.log('Discount theo %:', discountValue + '% = ' + discountAmount);
+
+                // Áp dụng giới hạn tối đa nếu có
+                if (maxDiscount > 0 && discountAmount > maxDiscount) {
+                    console.log('Áp dụng giới hạn tối đa:', maxDiscount);
+                    discountAmount = maxDiscount;
+                }
+            } else {
+                // Giảm theo số tiền cố định
+                discountAmount = discountValue;
+                console.log('Discount theo số tiền:', discountAmount);
+
+                // Áp dụng giới hạn tối đa nếu có
+                if (maxDiscount > 0 && discountAmount > maxDiscount) {
+                    console.log('Áp dụng giới hạn tối đa:', maxDiscount);
+                    discountAmount = maxDiscount;
+                }
+            }
+
             discountAmount = Math.round(discountAmount);
 
             // Tính lại tổng sau discount
@@ -541,276 +582,20 @@
             const newTax = afterDiscount * taxRate;
             const finalTotal = afterDiscount + newTax;
 
-            console.log('Kết quả:', {
+            console.log('Kết quả tính toán:', {
                 discountAmount: discountAmount,
+                afterDiscount: afterDiscount,
                 newTax: newTax,
-                finalTotal: finalTotal
+                finalTotal: finalTotal,
+                originalTotalBeforeTax: originalTotalBeforeTax
             });
-            if (discountAmount > 0) {
-                discountSection.style.display = 'flex'; // HIỆN
-            } else {
-                discountSection.style.display = 'none'; // ẨN
-            }
 
             // CẬP NHẬT GIAO DIỆN
             updateDisplay(discountAmount, newTax, finalTotal);
 
             console.log('Đã áp dụng khuyến mãi giảm:', discountAmount, 'VND');
         }
-        // Hàm validate form
-        function validateForm() {
-            let isValid = true;
 
-            // Kiểm tra thông tin liên hệ
-            const customerName = document.querySelector('input[name="customerName"]').value.trim();
-            const customerPhone = document.querySelector('input[name="customerPhone"]').value.trim();
-            const customerEmail = document.querySelector('input[name="customerEmail"]').value.trim();
-
-            if (!customerName) {
-                showError('customerName', 'Vui lòng nhập họ tên');
-                isValid = false;
-            } else {
-                hideError('customerName');
-            }
-
-            if (!customerPhone) {
-                showError('customerPhone', 'Vui lòng nhập số điện thoại');
-                isValid = false;
-            } else {
-                hideError('customerPhone');
-            }
-
-            if (!customerEmail) {
-                showError('customerEmail', 'Vui lòng nhập email');
-                isValid = false;
-            } else if (!validateEmail(customerEmail)) {
-                showError('customerEmail', 'Vui lòng nhập email hợp lệ');
-                isValid = false;
-            } else {
-                hideError('customerEmail');
-            }
-
-            // Kiểm tra thông tin khách hàng
-            const guestNames = document.querySelectorAll('input[name="guestName[]"]');
-            const guestIds = document.querySelectorAll('input[name="guestIdNumber[]"]');
-
-            for (let i = 0; i < guestNames.length; i++) {
-                if (!guestNames[i].value.trim()) {
-                    showError(`guestName${i+1}`, `Vui lòng nhập họ tên cho khách hàng ${i+1}`);
-                    isValid = false;
-                } else {
-                    hideError(`guestName${i+1}`);
-                }
-
-                if (!guestIds[i].value.trim()) {
-                    showError(`guestId${i+1}`, `Vui lòng nhập CMND/CCCD cho khách hàng ${i+1}`);
-                    isValid = false;
-                } else if (!validateIdNumber(guestIds[i].value.trim())) {
-                    showError(`guestId${i+1}`, `CMND/CCCD của khách hàng ${i+1} phải có 9 hoặc 12 số`);
-                    isValid = false;
-                } else {
-                    hideError(`guestId${i+1}`);
-                }
-            }
-
-            // Kiểm tra phương thức thanh toán
-            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
-            if (!paymentMethod) {
-                alert('Vui lòng chọn phương thức thanh toán');
-                isValid = false;
-            }
-
-            // Kiểm tra đồng ý điều khoản
-            if (!document.getElementById('agreeTerms').checked) {
-                alert('Vui lòng đồng ý với Điều khoản và Điều kiện');
-                isValid = false;
-            }
-
-            return isValid;
-        }
-
-        // Hàm hiển thị lỗi
-        function showError(fieldId, message) {
-            const errorElement = document.getElementById(`${fieldId}Error`);
-            if (errorElement) {
-                errorElement.textContent = message;
-                errorElement.style.display = 'block';
-
-                const inputElement = document.querySelector(`[name="${fieldId}"]`);
-                if (inputElement) {
-                    inputElement.classList.add('is-invalid');
-                }
-            }
-        }
-
-        // Hàm ẩn lỗi
-        function hideError(fieldId) {
-            const errorElement = document.getElementById(`${fieldId}Error`);
-            if (errorElement) {
-                errorElement.style.display = 'none';
-
-                const inputElement = document.querySelector(`[name="${fieldId}"]`);
-                if (inputElement) {
-                    inputElement.classList.remove('is-invalid');
-                }
-            }
-        }
-
-        // Hàm validate email
-        function validateEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        // Hàm validate CMND/CCCD
-        function validateIdNumber(idNumber) {
-            const idRegex = /^[0-9]{9}$|^[0-9]{12}$/;
-            return idRegex.test(idNumber);
-        }
-
-        // Sửa lại hàm processPayment
-        function processPayment() {
-            console.log('=== BẮT ĐẦU THANH TOÁN ===');
-
-            if (!validateForm()) {
-                console.log('Validation failed');
-                return;
-            }
-
-            // Kiểm tra xem đã đăng nhập chưa
-            const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
-            if (!isLoggedIn) {
-                alert('Vui lòng đăng nhập để thanh toán');
-                window.location.href = '/ABC-Resort/client/view/login.php';
-                return;
-            }
-
-            console.log('Form validation passed');
-
-            // Lấy thông tin form
-            const formData = {
-                customerName: document.querySelector('input[name="customerName"]').value,
-                customerPhone: document.querySelector('input[name="customerPhone"]').value,
-                customerEmail: document.querySelector('input[name="customerEmail"]').value,
-                guests: [],
-                address: document.querySelector('input[name="address"]').value,
-                specialRequests: document.querySelector('textarea[name="specialRequests"]').value,
-                nonSmoking: document.querySelector('input[name="nonSmoking"]').checked,
-                paymentMethod: document.querySelector('input[name="paymentMethod"]:checked')?.value,
-                promotion: document.querySelector('input[name="promotion"]:checked')?.value,
-                agreeTerms: document.getElementById('agreeTerms').checked,
-                roomId: <?php echo $_GET['roomId'] ?? 0; ?>,
-                checkin: '<?php echo $_GET['checkin'] ?? ''; ?>',
-                checkout: '<?php echo $_GET['checkout'] ?? ''; ?>',
-                adults: <?php echo $adults; ?>,
-                nights: <?php echo $nights; ?>,
-                services: '<?php echo $_GET['services'] ?? ''; ?>'
-            };
-
-            // Lấy thông tin khách hàng
-            const guestNames = document.querySelectorAll('input[name="guestName[]"]');
-            const guestIds = document.querySelectorAll('input[name="guestIdNumber[]"]');
-            const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
-            const guestAddresses = document.querySelectorAll('input[name="guestAddress[]"]');
-
-            for (let i = 0; i < guestNames.length; i++) {
-                formData.guests.push({
-                    name: guestNames[i].value,
-                    idNumber: guestIds[i].value,
-                    phone: guestPhones[i] ? guestPhones[i].value : '',
-                    address: guestAddresses[i] ? guestAddresses[i].value : ''
-                });
-            }
-
-            console.log('Dữ liệu thanh toán:', formData);
-
-            // Hiển thị thông báo xác nhận
-            const confirmation = confirm('Bạn có chắc chắn muốn thanh toán?\n\nTổng số tiền: ' + document.getElementById('finalTotal').textContent);
-
-            if (confirmation) {
-                // Gọi API thanh toán
-                processPaymentAPI(formData);
-            }
-        }
-
-        // Hàm gọi API thanh toán
-        function processPaymentAPI(formData) {
-            const btn = document.querySelector('button[onclick="processPayment()"]');
-            const originalText = btn.textContent;
-            btn.textContent = 'ĐANG XỬ LÝ...';
-            btn.disabled = true;
-
-            // Tạm thời chuyển đến trang xác nhận
-            setTimeout(() => {
-                alert('Thanh toán thành công! Chuyển đến trang xác nhận...');
-                // window.location.href = '/ABC-Resort/client/view/confirmation.php';
-
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 2000);
-        }
-
-        // Thêm sự kiện validation cho các input
-        document.addEventListener('DOMContentLoaded', function() {
-            // Thêm validation real-time cho các input
-            const inputs = document.querySelectorAll('input[required], textarea[required]');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    validateField(this);
-                });
-
-                input.addEventListener('input', function() {
-                    if (this.classList.contains('is-invalid')) {
-                        validateField(this);
-                    }
-                });
-            });
-
-            // Thêm sự kiện cho phương thức thanh toán
-            document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    document.querySelectorAll('.payment-method').forEach(method => {
-                        method.classList.remove('selected');
-                    });
-                    if (this.checked) {
-                        this.closest('.payment-method').classList.add('selected');
-                    }
-                });
-            });
-        });
-
-        // Hàm validate từng field
-        function validateField(field) {
-            const value = field.value.trim();
-            const fieldName = field.name;
-
-            if (!value) {
-                showError(fieldName, 'Trường này là bắt buộc');
-                return false;
-            }
-
-            if (fieldName.includes('customerEmail') && !validateEmail(value)) {
-                showError(fieldName, 'Vui lòng nhập email hợp lệ');
-                return false;
-            }
-
-            if (fieldName.includes('guestIdNumber') && !validateIdNumber(value)) {
-                showError(fieldName, 'CMND/CCCD phải có 9 hoặc 12 số');
-                return false;
-            }
-
-            hideError(fieldName);
-            return true;
-        }
-
-        // Hàm chọn phương thức thanh toán
-        function selectPaymentMethod(method) {
-            document.getElementById(method).checked = true;
-            document.querySelectorAll('.payment-method').forEach(m => {
-                m.classList.remove('selected');
-            });
-            document.getElementById(method).closest('.payment-method').classList.add('selected');
-        }
         // Hàm cập nhật giao diện
         function updateDisplay(discountAmount, newTax, finalTotal) {
             // 1. DÒNG KHUYẾN MÃI
@@ -818,11 +603,12 @@
             const discountAmountEl = document.getElementById('discountAmount');
 
             if (discountAmount > 0) {
-                // Sử dụng setAttribute để ghi đè CSS !important
-                discountSection.setAttribute('style', 'display: flex !important');
+                discountSection.classList.remove('d-none');
+                discountSection.style.display = 'flex';
                 discountAmountEl.textContent = '-' + formatCurrency(discountAmount);
             } else {
-                discountSection.setAttribute('style', 'display: none !important');
+                discountSection.classList.add('d-none');
+                discountSection.style.display = 'none';
                 discountAmountEl.textContent = '';
             }
 
@@ -861,13 +647,6 @@
                 checkbox.checked = false;
             });
 
-            const discountSection = document.getElementById('discountSection');
-            const discountAmountEl = document.getElementById('discountAmount');
-
-            // Sử dụng setAttribute để ẩn
-            discountSection.setAttribute('style', 'display: none !important');
-            discountAmountEl.textContent = '';
-
             // Reset về giá ban đầu
             updateDisplay(0, originalTax, originalTotal);
 
@@ -880,14 +659,14 @@
             console.log('Tổng trước thuế:', originalTotalBeforeTax);
             console.log('Thuế ban đầu:', originalTax);
             console.log('Tổng ban đầu:', originalTotal);
+            console.log('Tỷ lệ thuế:', taxRate);
+            console.log('Danh sách khuyến mãi:', promotionsData);
 
             // Setup nút bỏ chọn
             const clearBtn = document.getElementById('btnClearPromotion');
             if (clearBtn) {
                 clearBtn.addEventListener('click', clearPromotion);
             }
-
-
         });
     </script>
     <?php include __DIR__ . '/../layouts/footer.php'; ?>

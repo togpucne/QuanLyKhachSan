@@ -184,10 +184,10 @@ class PaymentController
         try {
             // Lấy tất cả khuyến mãi đang hoạt động
             $sql = "SELECT * FROM khuyenmai 
-                    WHERE TrangThai = 1 
-                    AND NgayBatDau <= ? 
-                    AND NgayKetThuc >= ?
-                    ORDER BY MucGiamGia DESC";
+                WHERE TrangThai = 1 
+                AND NgayBatDau <= ? 
+                AND NgayKetThuc >= ?
+                ORDER BY MucGiamGia DESC";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ss", $today, $today);
@@ -200,6 +200,7 @@ class PaymentController
                 $row['LoaiGiamGia'] = $row['LoaiGiamGia'] ?? 'phantram';
                 $row['DK_HoaDonTu'] = $row['DK_HoaDonTu'] ?? null;
                 $row['DK_SoDemTu'] = $row['DK_SoDemTu'] ?? null;
+                $row['GiamGiaToiDa'] = $row['GiamGiaToiDa'] ?? 0;
 
                 // Kiểm tra điều kiện
                 $isAvailable = true;
@@ -217,16 +218,36 @@ class PaymentController
                     $reason = "Đặt tối thiểu " . $row['DK_SoDemTu'] . " đêm";
                 }
 
-                // Tính toán số tiền giảm
+                // Tính toán số tiền giảm THỰC TẾ
+                $discountAmount = 0;
                 if ($row['LoaiGiamGia'] == 'phantram') {
-                    $discountAmount = $totalAmount * ($row['MucGiamGia'] / 100);
-                    $row['discount_amount'] = $discountAmount;
+                    // Tính % giảm
+                    $discountPercent = $row['MucGiamGia'] / 100;
+                    $discountAmount = $totalAmount * $discountPercent;
+
+                    // Áp dụng giới hạn tối đa nếu có
+                    if ($row['GiamGiaToiDa'] > 0 && $discountAmount > $row['GiamGiaToiDa']) {
+                        $discountAmount = $row['GiamGiaToiDa'];
+                    }
                 } else {
-                    $row['discount_amount'] = $row['MucGiamGia'];
+                    // Giảm theo số tiền cố định
+                    $discountAmount = $row['MucGiamGia'];
+                    if ($row['GiamGiaToiDa'] > 0 && $discountAmount > $row['GiamGiaToiDa']) {
+                        $discountAmount = $row['GiamGiaToiDa'];
+                    }
                 }
 
+                $row['discount_amount'] = $discountAmount;
                 $row['is_available'] = $isAvailable;
                 $row['reason'] = $reason;
+
+                // DEBUG LOG
+                error_log("Promotion: " . $row['TenKhuyenMai'] .
+                    ", Type: " . $row['LoaiGiamGia'] .
+                    ", Discount: " . $row['MucGiamGia'] .
+                    ", Max: " . $row['GiamGiaToiDa'] .
+                    ", Calculated: " . $discountAmount);
+
                 $promotions[] = $row;
             }
 
@@ -237,7 +258,7 @@ class PaymentController
         }
     }
 
-   
+
 
     public function processPayment()
     {
@@ -304,12 +325,12 @@ $servicesPrice = 0;
 if (!empty($selectedServices) && count($selectedServices) > 0) {
     // Lấy số người từ URL
     $adults = isset($_GET['adults']) ? (int)$_GET['adults'] : 1;
-    
+
     // Query lấy giá dịch vụ
     $serviceIds = implode(',', array_map('intval', $selectedServices));
     $sqlDichVu = "SELECT MaDV, DonGia FROM dichvu WHERE MaDV IN ($serviceIds)";
     $resultDichVu = $conn->query($sqlDichVu);
-    
+
     while ($row = $resultDichVu->fetch_assoc()) {
         // NHÂN ĐÔI GIÁ NẾU CÓ 2 NGƯỜI
         $servicesPrice += $row['DonGia'] * $adults;
@@ -324,5 +345,3 @@ $tax = ($roomPrice + $servicesPrice) * 0.1;
 
 // Tổng thanh toán
 $totalAmount = $roomPrice + $servicesPrice + $tax;
-
-?>  

@@ -237,25 +237,7 @@ class PaymentController
         }
     }
 
-    // Dữ liệu mẫu fallback
-    private function getSamplePromotions($totalAmount, $nights)
-    {
-        $samplePromotions = [
-            [
-                'MaKM' => '16',
-                'TenKhuyenMai' => 'Khuyến mãi tuần lễ vàng',
-                'MucGiamGia' => '10.00',
-                'LoaiGiamGia' => 'phantram',
-                'DK_HoaDonTu' => 2000000,
-                'DK_SoDemTu' => null,
-                'MoTa' => 'Giảm 10% tất cả các loại phòng',
-                'is_available' => $totalAmount >= 2000000,
-                'reason' => $totalAmount >= 2000000 ? '' : 'Hóa đơn tối thiểu 2,000,000 VND'
-            ]
-        ];
-
-        return $samplePromotions;
-    }
+   
 
     public function processPayment()
     {

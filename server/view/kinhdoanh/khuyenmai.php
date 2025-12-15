@@ -32,6 +32,51 @@ require_once __DIR__ . '/../layouts/header.php';
 
 ?>
 
+<style>
+    /* Style cho field điều kiện */
+    .condition-active {
+        background-color: #e8f5e9 !important;
+        border-color: #4caf50 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    }
+
+    .condition-disabled {
+        background-color: #f5f5f5 !important;
+        border-color: #e0e0e0 !important;
+        color: #9e9e9e !important;
+    }
+
+    .condition-disabled::placeholder {
+        color: #bdbdbd !important;
+    }
+
+    /* Hiệu ứng chuyển đổi */
+    .condition-field {
+        transition: all 0.3s ease;
+    }
+
+    /* Indicator cho field active */
+    .condition-active-indicator {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #4caf50;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+    }
+
+    /* Style cho nút reset */
+    .reset-btn {
+        font-size: 12px;
+        padding: 2px 8px;
+    }
+</style>
 <div class="row">
     <div class="col-12">
 
@@ -153,7 +198,7 @@ require_once __DIR__ . '/../layouts/header.php';
                                             ?>
                                         </td>
                                         <td>
-                                            <!-- Trong file view/kinhdoanh/khuyenmai.php, phần table -->
+                                            <!-- Trong table, cập nhật nút edit -->
                                             <button class="btn btn-sm btn-outline-primary edit-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#editKhuyenMaiModal"
@@ -167,6 +212,7 @@ require_once __DIR__ . '/../layouts/header.php';
                                                 data-loaigiamgia="<?php echo $km['LoaiGiamGia'] ?? 'phantram'; ?>"
                                                 data-dkhoadontu="<?php echo $km['DK_HoaDonTu'] ?? ''; ?>"
                                                 data-dksodemtu="<?php echo $km['DK_SoDemTu'] ?? ''; ?>"
+                                                data-giamgiatoida="<?php echo $km['GiamGiaToiDa'] ?? '0'; ?>"
                                                 title="Sửa">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -205,11 +251,11 @@ require_once __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- Modal Thêm khuyến mãi -->
+<!-- Modal Thêm khuyến mãi - CẬP NHẬT -->
 <div class="modal fade" id="addKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form action="../../controller/khuyenmaiController.php?action=add" method="POST" enctype="multipart/form-data">
+            <form id="addKhuyenMaiModalForm" action="../../controller/khuyenmaiController.php?action=add" method="POST" enctype="multipart/form-data">
                 <div class="modal-header">
                     <h5 class="modal-title">Thêm khuyến mãi mới</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -223,48 +269,57 @@ require_once __DIR__ . '/../layouts/header.php';
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="loai_giamgia" required>
+                                        <select class="form-control" name="loai_giamgia" id="add_loai_giamgia" required>
                                             <option value="phantram">Giảm theo phần trăm (%)</option>
                                             <option value="tientruc">Giảm trực tiếp tiền (VND)</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="muc_giamgia" min="1" step="0.01" required>
-                                        <small class="text-muted">Nhập % nếu giảm phần trăm, nhập số tiền nếu giảm trực tiếp</small>
+                                        <input type="number" class="form-control" name="muc_giamgia" id="add_muc_giamgia" min="1" step="0.01" required>
+                                        <small class="text-muted" id="add_donvi_giamgia">%</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Giảm tối đa (VND)</label>
+                                        <input type="number" class="form-control" name="giamgia_toida" id="add_giamgia_toida" min="0" step="10000">
+                                        <small class="text-muted">Nhập 0 = không giới hạn</small>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- ĐIỀU KIỆN ÁP DỤNG -->
+                            <!-- Trong phần điều kiện của modal thêm -->
                             <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ cần 1 trong 2)</h6>
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ được nhập MỘT trong hai)</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="add_reset_dk">
+                                        <i class="fas fa-undo me-1"></i>Reset
+                                    </button>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Hóa đơn từ (VND)</label>
-                                                <input type="number" class="form-control" name="dk_hoadon_tu" min="0" step="10000">
+                                                <input type="number" class="form-control" name="dk_hoadon_tu" id="add_dk_hoadon_tu" min="0" step="10000" placeholder="Nhập số tiền">
                                                 <small class="text-muted">Áp dụng khi hóa đơn ≥ số tiền này</small>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Số đêm từ</label>
-                                                <input type="number" class="form-control" name="dk_sodem_tu" min="1">
+                                                <input type="number" class="form-control" name="dk_sodem_tu" id="add_dk_sodem_tu" min="1" placeholder="Nhập số đêm">
                                                 <small class="text-muted">Áp dụng khi đặt từ số đêm này</small>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="alert alert-info">
-                                        <small><i class="fas fa-info-circle"></i> Để trống cả 2 nếu không có điều kiện</small>
+                                    <div class="alert alert-warning">
+                                        <small><i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Chỉ được nhập một điều kiện. Nhập mới sẽ xóa điều kiện cũ</small>
                                     </div>
                                 </div>
                             </div>
@@ -312,11 +367,12 @@ require_once __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 </div>
-<!-- Modal Sửa khuyến mãi -->
+
+<!-- Modal Sửa khuyến mãi - CẬP NHẬT -->
 <div class="modal fade" id="editKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form action="../../controller/khuyenmaiController.php?action=edit" method="POST" enctype="multipart/form-data">
+            <form id="editKhuyenMaiModalForm" action="../../controller/khuyenmaiController.php?action=edit" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="ma_km" id="edit_ma_km">
                 <div class="modal-header">
                     <h5 class="modal-title">Sửa khuyến mãi</h5>
@@ -331,7 +387,7 @@ require_once __DIR__ . '/../layouts/header.php';
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
                                         <select class="form-control" name="loai_giamgia" id="edit_loai_giamgia" required>
@@ -340,19 +396,28 @@ require_once __DIR__ . '/../layouts/header.php';
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
                                         <input type="number" class="form-control" name="muc_giamgia" id="edit_muc_giamgia" min="1" step="0.01" required>
-                                        <small class="text-muted">Nhập % nếu giảm phần trăm, nhập số tiền nếu giảm trực tiếp</small>
+                                        <small class="text-muted" id="edit_donvi_giamgia">%</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Giảm tối đa (VND)</label>
+                                        <input type="number" class="form-control" name="giamgia_toida" id="edit_giamgia_toida" min="0" step="10000">
+                                        <small class="text-muted">Nhập 0 = không giới hạn</small>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- ĐIỀU KIỆN ÁP DỤNG -->
                             <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ cần 1 trong 2)</h6>
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ được nhập MỘT trong hai)</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="edit_reset_dk">
+                                        <i class="fas fa-undo me-1"></i>Reset
+                                    </button>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
@@ -371,12 +436,11 @@ require_once __DIR__ . '/../layouts/header.php';
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="alert alert-info">
-                                        <small><i class="fas fa-info-circle"></i> Để trống cả 2 nếu không có điều kiện</small>
+                                    <div class="alert alert-warning">
+                                        <small><i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý khi sửa:</strong> Nhập điều kiện mới sẽ tự động xóa điều kiện cũ</small>
                                     </div>
                                 </div>
                             </div>
-
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -424,7 +488,6 @@ require_once __DIR__ . '/../layouts/header.php';
 <!-- Thêm jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    // Thêm jQuery
     document.addEventListener('DOMContentLoaded', function() {
         // Select all checkbox
         document.getElementById('selectAll').addEventListener('change', function() {
@@ -434,10 +497,10 @@ require_once __DIR__ . '/../layouts/header.php';
             });
         });
 
-        // Delete multiple - THÊM EVENT.PREVENTDEFAULT()
+        // Delete multiple
         document.getElementById('deleteMultipleBtn').addEventListener('click', function(e) {
-            e.preventDefault(); // QUAN TRỌNG: Ngăn không cho form submit
-            e.stopPropagation(); // Ngăn event bubbling
+            e.preventDefault();
+            e.stopPropagation();
 
             const selectedIds = document.querySelectorAll('.select-item:checked');
             if (selectedIds.length === 0) {
@@ -450,7 +513,104 @@ require_once __DIR__ . '/../layouts/header.php';
             }
         });
 
-        // Trong phần JavaScript của view/kinhdoanh/khuyenmai.php
+        // Xử lý thay đổi loại giảm giá
+        function handleLoaiGiamGiaChange(prefix) {
+            const loaiGiamGia = document.getElementById(prefix + '_loai_giamgia');
+            const donViGiamGia = document.getElementById(prefix + '_donvi_giamgia');
+            const giamGiaToiDa = document.getElementById(prefix + '_giamgia_toida');
+
+            function updateDisplay() {
+                if (loaiGiamGia.value === 'phantram') {
+                    // Nếu giảm theo phần trăm => hiển thị giảm tối đa
+                    donViGiamGia.textContent = '%';
+                    giamGiaToiDa.parentElement.style.display = 'block';
+                    giamGiaToiDa.required = false;
+                } else {
+                    // Nếu giảm trực tiếp tiền => ẩn giảm tối đa
+                    donViGiamGia.textContent = 'VND';
+                    giamGiaToiDa.parentElement.style.display = 'none';
+                    giamGiaToiDa.value = '0';
+                    giamGiaToiDa.required = false;
+                }
+            }
+
+            loaiGiamGia.addEventListener('change', updateDisplay);
+            updateDisplay(); // Gọi lần đầu
+        }
+
+        // Áp dụng cho modal thêm
+        handleLoaiGiamGiaChange('add');
+
+        // Áp dụng cho modal sửa
+        handleLoaiGiamGiaChange('edit');
+
+        // Function xử lý điều kiện - CHỈ ĐƯỢC NHẬP MỘT
+        function handleSingleInput(prefix) {
+            const dkHoaDonEl = document.getElementById(prefix + '_dk_hoadon_tu');
+            const dkSoDemEl = document.getElementById(prefix + '_dk_sodem_tu');
+            const resetBtn = document.getElementById(prefix + '_reset_dk');
+
+            // Nút reset điều kiện
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    dkHoaDonEl.value = '';
+                    dkSoDemEl.value = '';
+                    dkHoaDonEl.disabled = false;
+                    dkSoDemEl.disabled = false;
+                    updateConditionStyle();
+                });
+            }
+
+            function updateConditionStyle() {
+                // Xóa style cũ
+                dkHoaDonEl.classList.remove('condition-active', 'condition-disabled');
+                dkSoDemEl.classList.remove('condition-active', 'condition-disabled');
+
+                if (dkHoaDonEl.value.trim() !== '') {
+                    // Nếu có hóa đơn => active hóa đơn, disable số đêm
+                    dkHoaDonEl.classList.add('condition-active');
+                    dkSoDemEl.classList.add('condition-disabled');
+                    dkSoDemEl.disabled = true;
+                    dkHoaDonEl.disabled = false;
+                } else if (dkSoDemEl.value.trim() !== '') {
+                    // Nếu có số đêm => active số đêm, disable hóa đơn
+                    dkSoDemEl.classList.add('condition-active');
+                    dkHoaDonEl.classList.add('condition-disabled');
+                    dkHoaDonEl.disabled = true;
+                    dkSoDemEl.disabled = false;
+                } else {
+                    // Không có gì => enable cả hai
+                    dkHoaDonEl.disabled = false;
+                    dkSoDemEl.disabled = false;
+                }
+            }
+
+            // Xử lý khi người dùng nhập
+            dkHoaDonEl.addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    dkSoDemEl.value = '';
+                }
+                updateConditionStyle();
+            });
+
+            dkSoDemEl.addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    dkHoaDonEl.value = '';
+                }
+                updateConditionStyle();
+            });
+
+            // Gọi lần đầu
+            updateConditionStyle();
+        }
+
+        // Áp dụng cho modal thêm
+        handleSingleInput('add');
+
+        // Áp dụng cho modal sửa
+        handleSingleInput('edit');
+
+        // Xử lý edit modal - QUAN TRỌNG: Cho phép chuyển đổi
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -466,6 +626,7 @@ require_once __DIR__ . '/../layouts/header.php';
                 const loaigiamgia = this.getAttribute('data-loaigiamgia') || 'phantram';
                 const dkhoadontu = this.getAttribute('data-dkhoadontu') || '';
                 const dksodemtu = this.getAttribute('data-dksodemtu') || '';
+                const giamgiatoida = this.getAttribute('data-giamgiatoida') || '0';
 
                 console.log('Edit data loaded:', {
                     id,
@@ -475,7 +636,8 @@ require_once __DIR__ . '/../layouts/header.php';
                     ketthuc,
                     loaigiamgia,
                     dkhoadontu,
-                    dksodemtu
+                    dksodemtu,
+                    giamgiatoida
                 });
 
                 // Set giá trị cho các input
@@ -486,9 +648,50 @@ require_once __DIR__ . '/../layouts/header.php';
                 document.getElementById('edit_ngay_ketthuc').value = ketthuc;
                 document.getElementById('edit_mo_ta').value = mota || '';
                 document.getElementById('edit_loai_giamgia').value = loaigiamgia;
-                document.getElementById('edit_dk_hoadon_tu').value = dkhoadontu;
-                document.getElementById('edit_dk_sodem_tu').value = dksodemtu;
+                document.getElementById('edit_giamgia_toida').value = giamgiatoida;
                 document.getElementById('edit_current_image').value = hinhanh || '';
+
+                // QUAN TRỌNG: Set giá trị điều kiện NHƯNG vẫn cho phép thay đổi
+                const dkHoaDonEl = document.getElementById('edit_dk_hoadon_tu');
+                const dkSoDemEl = document.getElementById('edit_dk_sodem_tu');
+
+                if (dkhoadontu !== '') {
+                    // Đang có hóa đơn từ
+                    dkHoaDonEl.value = dkhoadontu;
+                    dkSoDemEl.value = '';
+                    // KHÔNG disable số đêm - cho phép chuyển đổi
+                    dkSoDemEl.disabled = false;
+                    dkHoaDonEl.disabled = false;
+                } else if (dksodemtu !== '') {
+                    // Đang có số đêm từ
+                    dkSoDemEl.value = dksodemtu;
+                    dkHoaDonEl.value = '';
+                    // KHÔNG disable hóa đơn - cho phép chuyển đổi
+                    dkHoaDonEl.disabled = false;
+                    dkSoDemEl.disabled = false;
+                } else {
+                    // Không có điều kiện
+                    dkHoaDonEl.value = '';
+                    dkSoDemEl.value = '';
+                    dkHoaDonEl.disabled = false;
+                    dkSoDemEl.disabled = false;
+                }
+
+                // Áp dụng style sau khi set giá trị
+                setTimeout(() => {
+                    updateConditionStyleForEdit();
+                }, 100);
+
+                // Cập nhật display theo loại giảm giá
+                const donViEl = document.getElementById('edit_donvi_giamgia');
+                const giamGiaToiDaEl = document.getElementById('edit_giamgia_toida');
+                if (loaigiamgia === 'phantram') {
+                    donViEl.textContent = '%';
+                    giamGiaToiDaEl.parentElement.style.display = 'block';
+                } else {
+                    donViEl.textContent = 'VND';
+                    giamGiaToiDaEl.parentElement.style.display = 'none';
+                }
 
                 // Set image preview
                 if (hinhanh) {
@@ -498,69 +701,90 @@ require_once __DIR__ . '/../layouts/header.php';
                 }
             });
         });
-    });
-    // Preview image for add modal
-    document.getElementById('add_hinh_anh').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('add_image_preview').src = e.target.result;
+
+        // Function update style cho edit modal
+        function updateConditionStyleForEdit() {
+            const dkHoaDonEl = document.getElementById('edit_dk_hoadon_tu');
+            const dkSoDemEl = document.getElementById('edit_dk_sodem_tu');
+
+            // Xóa style cũ
+            dkHoaDonEl.classList.remove('condition-active', 'condition-disabled');
+            dkSoDemEl.classList.remove('condition-active', 'condition-disabled');
+
+            if (dkHoaDonEl.value.trim() !== '') {
+                dkHoaDonEl.classList.add('condition-active');
+                dkSoDemEl.classList.add('condition-disabled');
+            } else if (dkSoDemEl.value.trim() !== '') {
+                dkSoDemEl.classList.add('condition-active');
+                dkHoaDonEl.classList.add('condition-disabled');
             }
-            reader.readAsDataURL(file);
         }
-    });
 
-    // Preview image for edit modal
-    document.getElementById('edit_hinh_anh').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('edit_image_preview').src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Edit modal data
-    document.querySelectorAll('.edit-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const id = this.getAttribute('data-id');
-            const ten = this.getAttribute('data-ten');
-            const giamgia = this.getAttribute('data-giamgia');
-            const batdau = this.getAttribute('data-batdau');
-            const ketthuc = this.getAttribute('data-ketthuc');
-            const mota = this.getAttribute('data-mota');
-            const hinhanh = this.getAttribute('data-hinhanh');
-
-            document.getElementById('edit_ma_km').value = id;
-            document.getElementById('edit_ten_khuyenmai').value = ten;
-            document.getElementById('edit_muc_giamgia').value = giamgia;
-            document.getElementById('edit_ngay_batdau').value = batdau;
-            document.getElementById('edit_ngay_ketthuc').value = ketthuc;
-            document.getElementById('edit_mo_ta').value = mota || '';
-            document.getElementById('edit_current_image').value = hinhanh || '';
-
-            // Set image preview
-            if (hinhanh) {
-                document.getElementById('edit_image_preview').src = '../../../' + hinhanh;
-            } else {
-                document.getElementById('edit_image_preview').src = '../../../client/assets/images/sales/default_promotion.png';
+        // Preview image for add modal
+        document.getElementById('add_hinh_anh').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('add_image_preview').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
             }
         });
+
+        // Preview image for edit modal
+        document.getElementById('edit_hinh_anh').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('edit_image_preview').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Set min date for date inputs
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('add_ngay_batdau').min = today;
+        document.getElementById('add_ngay_ketthuc').min = today;
+
+        // Debug: Kiểm tra xem JavaScript có chạy không
+        console.log('JavaScript loaded for khuyenmai.php');
     });
 
-    // Set min date for date inputs
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('add_ngay_batdau').min = today;
-    document.getElementById('add_ngay_ketthuc').min = today;
+    // Thêm hàm validate form trước khi submit
+    function validateForm(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return true;
 
-    // Debug: Kiểm tra xem JavaScript có chạy không
-    console.log('JavaScript loaded for khuyenmai.php');
+        const dkHoaDon = document.querySelector(`#${formId} [name="dk_hoadon_tu"]`);
+        const dkSoDem = document.querySelector(`#${formId} [name="dk_sodem_tu"]`);
+
+        // Kiểm tra nếu nhập cả hai
+        if (dkHoaDon && dkSoDem && dkHoaDon.value.trim() !== '' && dkSoDem.value.trim() !== '') {
+            alert('Chỉ được nhập một điều kiện: HOẶC hóa đơn từ, HOẶC số đêm từ!');
+            return false;
+        }
+
+        return true;
+    }
+
+    // Thêm event listener cho form submit
+    document.addEventListener('submit', function(e) {
+        // Kiểm tra nếu là form thêm khuyến mãi
+        if (e.target.closest('form[action*="action=add"]')) {
+            if (!validateForm('addKhuyenMaiModalForm')) {
+                e.preventDefault();
+            }
+        }
+
+        // Kiểm tra nếu là form sửa khuyến mãi
+        if (e.target.closest('form[action*="action=edit"]')) {
+            if (!validateForm('editKhuyenMaiModalForm')) {
+                e.preventDefault();
+            }
+        }
+    });
 </script>
-
 <?php include_once '../layouts/footer.php'; ?>

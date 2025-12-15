@@ -48,7 +48,24 @@ class KhuyenMaiController
             $ngayKetThuc = $_POST['ngay_ketthuc'] ?? '';
             $moTa = $_POST['mo_ta'] ?? '';
             $loaiGiamGia = $_POST['loai_giamgia'] ?? 'phantram';
+            $giamGiaToiDa = !empty($_POST['giamgia_toida']) ? (float) $_POST['giamgia_toida'] : 0;
 
+            // KIỂM TRA CHỈ ĐƯỢC NHẬP MỘT TRONG HAI
+            $dkHoaDonTu = null;
+            $dkSoDemTu = null;
+
+            if (!empty($_POST['dk_hoadon_tu'])) {
+                $dkHoaDonTu = (float) $_POST['dk_hoadon_tu'];
+            } elseif (!empty($_POST['dk_sodem_tu'])) {
+                $dkSoDemTu = (int) $_POST['dk_sodem_tu'];
+            }
+
+            // Nếu nhập cả hai, hiển thị lỗi
+            if (!empty($_POST['dk_hoadon_tu']) && !empty($_POST['dk_sodem_tu'])) {
+                $_SESSION['error'] = "Chỉ được nhập một điều kiện: HOẶC hóa đơn từ, HOẶC số đêm từ!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
             // DEBUG: Kiểm tra giá trị nhận được
             error_log("DEBUG - DK_HoaDonTu raw: " . ($_POST['dk_hoadon_tu'] ?? 'empty'));
             error_log("DEBUG - DK_SoDemTu raw: " . ($_POST['dk_sodem_tu'] ?? 'empty'));
@@ -83,7 +100,8 @@ class KhuyenMaiController
                     $maNVTao,
                     $loaiGiamGia,
                     $dkHoaDonTu,
-                    $dkSoDemTu
+                    $dkSoDemTu,
+                    $giamGiaToiDa
                 );
 
                 // DEBUG: Kết quả insert
@@ -115,8 +133,27 @@ class KhuyenMaiController
             $ngayKetThuc = $_POST['ngay_ketthuc'] ?? '';
             $moTa = $_POST['mo_ta'] ?? '';
             $loaiGiamGia = $_POST['loai_giamgia'] ?? 'phantram';
-            $dkHoaDonTu = !empty($_POST['dk_hoadon_tu']) ? $_POST['dk_hoadon_tu'] : null;
-            $dkSoDemTu = !empty($_POST['dk_sodem_tu']) ? $_POST['dk_sodem_tu'] : null;
+
+            // THÊM: Lấy giá trị giảm giá tối đa
+            $giamGiaToiDa = isset($_POST['giamgia_toida']) && $_POST['giamgia_toida'] !== ''
+                ? (float) $_POST['giamgia_toida']
+                : 0;
+
+            // XỬ LÝ ĐIỀU KIỆN CHỈ MỘT TRONG HAI
+            $dkHoaDonTu = null;
+            $dkSoDemTu = null;
+
+            // Nếu nhập hóa đơn mới => xóa số đêm
+            if (!empty($_POST['dk_hoadon_tu'])) {
+                $dkHoaDonTu = (float) $_POST['dk_hoadon_tu'];
+                $dkSoDemTu = null; // Xóa số đêm
+            }
+            // Nếu nhập số đêm mới => xóa hóa đơn
+            elseif (!empty($_POST['dk_sodem_tu'])) {
+                $dkSoDemTu = (int) $_POST['dk_sodem_tu'];
+                $dkHoaDonTu = null; // Xóa hóa đơn
+            }
+            // Nếu không nhập gì => giữ nguyên giá trị cũ
 
             // Xử lý upload ảnh (có thể không có ảnh mới)
             $hinhAnh = null;
@@ -135,7 +172,8 @@ class KhuyenMaiController
                     $hinhAnh,
                     $loaiGiamGia,
                     $dkHoaDonTu,
-                    $dkSoDemTu
+                    $dkSoDemTu,
+                    $giamGiaToiDa // THÊM THAM SỐ NÀY
                 );
 
                 if ($result) {

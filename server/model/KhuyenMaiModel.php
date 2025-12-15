@@ -75,7 +75,7 @@ class KhuyenMaiModel
 
         return $promotions;
     }
-    // Sửa method addKhuyenMai() - THÊM THAM SỐ $giamGiaToiDa
+    // Trong KhuyenMaiModel.php - cập nhật method addKhuyenMai()
     public function addKhuyenMai($tenKM, $mucGiamGia, $ngayBatDau, $ngayKetThuc, $moTa, $hinhAnh, $maNVTao, $loaiGiamGia = 'phantram', $dkHoaDonTu = null, $dkSoDemTu = null, $giamGiaToiDa = 0)
     {
         // Tự động tính trạng thái
@@ -85,15 +85,18 @@ class KhuyenMaiModel
             $trangThai = 0;
         }
 
-        // KIỂM TRA CHỈ ĐƯỢC NHẬP MỘT TRONG HAI
-        // Nếu cả hai đều có giá trị, chỉ lấy một
-        if ($dkHoaDonTu !== null && $dkSoDemTu !== null) {
-            // Ưu tiên giữ DK_HoaDonTu, xóa DK_SoDemTu
+        // KIỂM TRA BẮT BUỘC PHẢI CÓ ÍT NHẤT 1 ĐIỀU KIỆN
+        // Nếu không có cả hai => tự động set hóa đơn từ 500k
+        if ($dkHoaDonTu === null && $dkSoDemTu === null) {
+            $dkHoaDonTu = 500000; // Mặc định hóa đơn từ 500k
+        }
+        // Nếu có cả hai => ưu tiên giữ hóa đơn từ
+        elseif ($dkHoaDonTu !== null && $dkSoDemTu !== null) {
             $dkSoDemTu = null;
         }
 
         $sql = "INSERT INTO khuyenmai (TenKhuyenMai, MucGiamGia, LoaiGiamGia, DK_HoaDonTu, DK_SoDemTu, NgayBatDau, NgayKetThuc, MoTa, HinhAnh, TrangThai, MaNhanVienTao, GiamGiaToiDa) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
 

@@ -66,9 +66,6 @@ class KhuyenMaiController
                 header('Location: ../view/kinhdoanh/khuyenmai.php');
                 exit();
             }
-            // DEBUG: Kiểm tra giá trị nhận được
-            error_log("DEBUG - DK_HoaDonTu raw: " . ($_POST['dk_hoadon_tu'] ?? 'empty'));
-            error_log("DEBUG - DK_SoDemTu raw: " . ($_POST['dk_sodem_tu'] ?? 'empty'));
 
             // Sửa: Chuyển sang int/float đúng cách
             $dkHoaDonTu = isset($_POST['dk_hoadon_tu']) && $_POST['dk_hoadon_tu'] !== ''
@@ -79,10 +76,24 @@ class KhuyenMaiController
                 ? (int) $_POST['dk_sodem_tu']
                 : null;
 
-            // DEBUG: Giá trị sau khi xử lý
-            error_log("DEBUG - DK_HoaDonTu processed: " . var_export($dkHoaDonTu, true));
-            error_log("DEBUG - DK_SoDemTu processed: " . var_export($dkSoDemTu, true));
+            if (!empty($_POST['dk_hoadon_tu']) && $_POST['dk_hoadon_tu'] < 500000) {
+                $_SESSION['error'] = "Hóa đơn tối thiểu phải từ 500,000 VND!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
 
+            if (!empty($_POST['dk_sodem_tu']) && $_POST['dk_sodem_tu'] < 2) {
+                $_SESSION['error'] = "Số đêm tối thiểu phải từ 2 đêm!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
+
+            // Kiểm tra ngày
+            if ($_POST['ngay_ketthuc'] <= $_POST['ngay_batdau']) {
+                $_SESSION['error'] = "Ngày kết thúc phải sau ngày bắt đầu!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
             // Lấy mã nhân viên từ session
             $maNVTao = $_SESSION['user']['ma_nhan_vien'] ?? 3;
 
@@ -153,9 +164,25 @@ class KhuyenMaiController
                 $dkSoDemTu = (int) $_POST['dk_sodem_tu'];
                 $dkHoaDonTu = null; // Xóa hóa đơn
             }
-            // Nếu không nhập gì => giữ nguyên giá trị cũ
+            if (!empty($_POST['dk_hoadon_tu']) && $_POST['dk_hoadon_tu'] < 500000) {
+                $_SESSION['error'] = "Hóa đơn tối thiểu phải từ 500,000 VND!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
 
-            // Xử lý upload ảnh (có thể không có ảnh mới)
+            if (!empty($_POST['dk_sodem_tu']) && $_POST['dk_sodem_tu'] < 2) {
+                $_SESSION['error'] = "Số đêm tối thiểu phải từ 2 đêm!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
+
+            // Kiểm tra ngày
+            if ($_POST['ngay_ketthuc'] <= $_POST['ngay_batdau']) {
+                $_SESSION['error'] = "Ngày kết thúc phải sau ngày bắt đầu!";
+                header('Location: ../view/kinhdoanh/khuyenmai.php');
+                exit();
+            }
+           
             $hinhAnh = null;
             if (!empty($_FILES['hinh_anh']['name'])) {
                 $hinhAnh = $this->handleImageUpload();

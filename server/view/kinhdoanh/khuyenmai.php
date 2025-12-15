@@ -31,50 +31,67 @@ if ($khuyenMais === false) {
 require_once __DIR__ . '/../layouts/header.php';
 
 ?>
-
 <style>
-    /* Style cho field điều kiện */
+    /* Style đơn giản cho điều kiện */
     .condition-active {
-        background-color: #e8f5e9 !important;
-        border-color: #4caf50 !important;
-        box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
     }
 
     .condition-disabled {
-        background-color: #f5f5f5 !important;
-        border-color: #e0e0e0 !important;
-        color: #9e9e9e !important;
+        opacity: 0.6;
     }
 
-    .condition-disabled::placeholder {
-        color: #bdbdbd !important;
+    /* Bố cục đơn giản cho modal */
+    .modal-section {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background-color: #fff;
     }
 
-    /* Hiệu ứng chuyển đổi */
-    .condition-field {
-        transition: all 0.3s ease;
+    .modal-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #495057;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
     }
 
-    /* Indicator cho field active */
-    .condition-active-indicator {
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        background: #4caf50;
-        color: white;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
     }
 
-    /* Style cho nút reset */
-    .reset-btn {
-        font-size: 12px;
-        padding: 2px 8px;
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+    }
+
+    /* Ảnh preview */
+    .image-preview-container {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        text-align: center;
+        background-color: #f8f9fa;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Icon đơn giản */
+    .simple-icon {
+        font-size: 0.9rem;
+        opacity: 0.8;
     }
 </style>
 <div class="row">
@@ -251,7 +268,7 @@ require_once __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- Modal Thêm khuyến mãi - CẬP NHẬT -->
+<!-- Modal Thêm khuyến mãi - BỐ CỤC MỚI -->
 <div class="modal fade" id="addKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -261,106 +278,162 @@ require_once __DIR__ . '/../layouts/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
+
+                    <!-- Phần 1: Thông tin cơ bản -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Thông tin cơ bản</div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
                                 <label class="form-label">Tên khuyến mãi <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="ten_khuyenmai" required>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="loai_giamgia" id="add_loai_giamgia" required>
-                                            <option value="phantram">Giảm theo phần trăm (%)</option>
-                                            <option value="tientruc">Giảm trực tiếp tiền (VND)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="muc_giamgia" id="add_muc_giamgia" min="1" step="0.01" required>
-                                        <small class="text-muted" id="add_donvi_giamgia">%</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Giảm tối đa (VND)</label>
-                                        <input type="number" class="form-control" name="giamgia_toida" id="add_giamgia_toida" min="0" step="10000">
-                                        <small class="text-muted">Nhập 0 = không giới hạn</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Trong phần điều kiện của modal thêm -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ được nhập MỘT trong hai)</h6>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="add_reset_dk">
-                                        <i class="fas fa-undo me-1"></i>Reset
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label">Hóa đơn từ (VND)</label>
-                                                <input type="number" class="form-control" name="dk_hoadon_tu" id="add_dk_hoadon_tu" min="0" step="10000" placeholder="Nhập số tiền">
-                                                <small class="text-muted">Áp dụng khi hóa đơn ≥ số tiền này</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label">Số đêm từ</label>
-                                                <input type="number" class="form-control" name="dk_sodem_tu" id="add_dk_sodem_tu" min="1" placeholder="Nhập số đêm">
-                                                <small class="text-muted">Áp dụng khi đặt từ số đêm này</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-warning">
-                                        <small><i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Chỉ được nhập một điều kiện. Nhập mới sẽ xóa điều kiện cũ</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="ngay_batdau" id="add_ngay_batdau" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="ngay_ketthuc" id="add_ngay_ketthuc" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Mô tả</label>
-                                <textarea class="form-control" name="mo_ta" rows="3" placeholder="Mô tả về khuyến mãi..."></textarea>
+                                <input type="text" class="form-control" name="ten_khuyenmai" placeholder="Nhập tên khuyến mãi" required>
                             </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Ảnh khuyến mãi</label>
-                                <div class="border rounded p-3 text-center mb-2">
-                                    <img id="add_image_preview" src="../../../client/assets/images/sales/default_promotion.png"
-                                        class="img-fluid rounded mb-2"
-                                        style="max-height: 150px; object-fit: cover;">
-                                    <input type="file" class="form-control" name="hinh_anh" id="add_hinh_anh" accept="image/*">
-                                    <small class="text-muted d-block mt-2">Định dạng: JPEG, PNG, GIF, WebP<br>Kích thước tối đa: 5MB</small>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Mô tả</label>
+                                <textarea class="form-control" name="mo_ta" rows="2" placeholder="Mô tả ngắn về khuyến mãi"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 2: Chi tiết giảm giá -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Chi tiết giảm giá</div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Loại giảm giá </label>
+                                <select class="form-control" name="loai_giamgia" id="add_loai_giamgia" required>
+                                    <option value="phantram">Giảm theo phần trăm (%)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="muc_giamgia" id="add_muc_giamgia"
+                                        min="1" step="0.01" placeholder="10" required>
+                                    <span class="input-group-text" id="add_donvi_giamgia">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Giảm tối đa (VND) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="giamgia_toida" id="add_giamgia_toida"
+                                        min="0" step="10000" placeholder="0" required>
+                                    <span class="input-group-text">VND</span>
+                                </div>
+                                <div class="form-text">Để 0 nếu không giới hạn</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Thêm khuyến mãi - Phần điều kiện -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">
+                            Điều kiện áp dụng <span class="text-danger">*</span>
+                        </div>
+
+                        <div class="alert alert-light border mb-3">
+                           
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card condition-field" id="add_condition_hoadon">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="form-label fw-bold">Hóa đơn từ</label>
+                                                <span class="badge bg-primary">Điều kiện 1</span>
+                                            </div>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control condition-input"
+                                                    name="dk_hoadon_tu" id="add_dk_hoadon_tu"
+                                                    min="500000" step="100000"
+                                                    placeholder="500000">
+                                                <span class="input-group-text">VND</span>
+                                            </div>
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i> Tối thiểu: 500,000 VND
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <div class="card condition-field" id="add_condition_sodem">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="form-label fw-bold">Số đêm từ</label>
+                                                <span class="badge bg-primary">Điều kiện 2</span>
+                                            </div>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control condition-input"
+                                                    name="dk_sodem_tu" id="add_dk_sodem_tu"
+                                                    min="2" step="1" placeholder="2">
+                                                <span class="input-group-text">đêm</span>
+                                            </div>
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i> Tối thiểu: 2 đêm
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            
+
+                            <div class="alert alert-info mt-3">
+                                <div class="small">
+                                    <i class="fas fa-lightbulb me-1"></i> <strong>Lưu ý:</strong>
+                                    Nếu không chọn điều kiện nào, hệ thống sẽ tự động áp dụng <strong>Hóa đơn từ 500,000 VND</strong>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Phần 4: Thời gian áp dụng -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Thời gian áp dụng</div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="ngay_batdau" id="add_ngay_batdau" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="ngay_ketthuc" id="add_ngay_ketthuc" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 5: Hình ảnh -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Hình ảnh khuyến mãi <span class="text-danger">*</span></div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="image-preview-container">
+                                    <img id="add_image_preview" src="../../../client/assets/images/sales/default_promotion.png"
+                                        class="image-preview">
+                                    <div class="mb-2">
+                                        <input type="file" class="form-control" name="hinh_anh" id="add_hinh_anh" accept="image/*" required>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Định dạng: JPEG, PNG, GIF • Kích thước tối đa: 5MB
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary">Thêm khuyến mãi</button>
                 </div>
             </form>
@@ -368,118 +441,157 @@ require_once __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- Modal Sửa khuyến mãi - CẬP NHẬT -->
+<!-- Modal Sửa khuyến mãi - BỐ CỤC MỚI -->
 <div class="modal fade" id="editKhuyenMaiModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="editKhuyenMaiModalForm" action="../../controller/khuyenmaiController.php?action=edit" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="ma_km" id="edit_ma_km">
+
                 <div class="modal-header">
                     <h5 class="modal-title">Sửa khuyến mãi</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
+
+                    <!-- Phần 1: Thông tin cơ bản -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Thông tin cơ bản</div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
                                 <label class="form-label">Tên khuyến mãi <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="ten_khuyenmai" id="edit_ten_khuyenmai" required>
                             </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Loại giảm giá <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="loai_giamgia" id="edit_loai_giamgia" required>
-                                            <option value="phantram">Giảm theo phần trăm (%)</option>
-                                            <option value="tientruc">Giảm trực tiếp tiền (VND)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="muc_giamgia" id="edit_muc_giamgia" min="1" step="0.01" required>
-                                        <small class="text-muted" id="edit_donvi_giamgia">%</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Giảm tối đa (VND)</label>
-                                        <input type="number" class="form-control" name="giamgia_toida" id="edit_giamgia_toida" min="0" step="10000">
-                                        <small class="text-muted">Nhập 0 = không giới hạn</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="card mb-3">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">Điều kiện áp dụng (chỉ được nhập MỘT trong hai)</h6>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="edit_reset_dk">
-                                        <i class="fas fa-undo me-1"></i>Reset
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label">Hóa đơn từ (VND)</label>
-                                                <input type="number" class="form-control" name="dk_hoadon_tu" id="edit_dk_hoadon_tu" min="0" step="10000">
-                                                <small class="text-muted">Áp dụng khi hóa đơn ≥ số tiền này</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label">Số đêm từ</label>
-                                                <input type="number" class="form-control" name="dk_sodem_tu" id="edit_dk_sodem_tu" min="1">
-                                                <small class="text-muted">Áp dụng khi đặt từ số đêm này</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-warning">
-                                        <small><i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý khi sửa:</strong> Nhập điều kiện mới sẽ tự động xóa điều kiện cũ</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="ngay_batdau" id="edit_ngay_batdau" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="ngay_ketthuc" id="edit_ngay_ketthuc" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Mô tả</label>
-                                <textarea class="form-control" name="mo_ta" id="edit_mo_ta" rows="3"></textarea>
-                            </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Ảnh khuyến mãi</label>
-                                <div class="border rounded p-3 text-center mb-2">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Mô tả</label>
+                                <textarea class="form-control" name="mo_ta" id="edit_mo_ta" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 2: Chi tiết giảm giá -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Chi tiết giảm giá</div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Loại giảm giá </label>
+                                <select class="form-control" name="loai_giamgia" id="edit_loai_giamgia" required>
+                                    <option value="phantram">Giảm theo phần trăm (%)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Mức giảm giá <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="muc_giamgia" id="edit_muc_giamgia"
+                                        min="1" step="0.01" required>
+                                    <span class="input-group-text" id="edit_donvi_giamgia">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Giảm tối đa (VND)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="giamgia_toida" id="edit_giamgia_toida"
+                                        min="0" step="10000">
+                                    <span class="input-group-text">VND</span>
+                                </div>
+                                <div class="form-text">Để 0 nếu không giới hạn</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 3: Điều kiện áp dụng -->
+                    <div class="modal-section">
+                        <div class="modal-section-title d-flex justify-content-between align-items-center">
+                            <span>Điều kiện áp dụng</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="edit_reset_dk">
+                                <span class="simple-icon">↻ Reset</span>
+                            </button>
+                        </div>
+
+                        <div class="alert alert-light border mb-3">
+                            <div class="small text-muted mb-2">Chỉ chọn một trong hai điều kiện:</div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card condition-field" id="edit_condition_hoadon">
+                                        <div class="card-body">
+                                            <label class="form-label">Hóa đơn từ</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" name="dk_hoadon_tu"
+                                                    id="edit_dk_hoadon_tu" min="500000" step="100000">
+                                                <span class="input-group-text">VND</span>
+                                            </div>
+                                            <div class="form-text">Tối thiểu: 500,000 VND</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <div class="card condition-field" id="edit_condition_sodem">
+                                        <div class="card-body">
+                                            <label class="form-label">Số đêm từ</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" name="dk_sodem_tu"
+                                                    id="edit_dk_sodem_tu" min="2" step="1">
+                                                <span class="input-group-text">đêm</span>
+                                            </div>
+                                            <div class="form-text">Tối thiểu: 2 đêm</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 4: Thời gian áp dụng -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Thời gian áp dụng</div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="ngay_batdau" id="edit_ngay_batdau" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="ngay_ketthuc" id="edit_ngay_ketthuc" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phần 5: Hình ảnh -->
+                    <div class="modal-section">
+                        <div class="modal-section-title">Hình ảnh khuyến mãi</div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="image-preview-container">
                                     <img id="edit_image_preview" src=""
-                                        class="img-fluid rounded mb-2"
-                                        style="max-height: 150px; object-fit: cover;">
-                                    <input type="file" class="form-control" name="hinh_anh" id="edit_hinh_anh" accept="image/*">
-                                    <small class="text-muted d-block mt-2">Để trống nếu không thay đổi ảnh</small>
+                                        class="image-preview">
+                                    <div class="mb-2">
+                                        <input type="file" class="form-control" name="hinh_anh" id="edit_hinh_anh" accept="image/*">
+                                    </div>
+                                    <div class="small text-muted">
+                                        Để trống nếu không thay đổi ảnh
+                                    </div>
                                 </div>
                                 <input type="hidden" name="current_image" id="edit_current_image">
                             </div>
                         </div>
                     </div>
+
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật khuyến mãi</button>
                 </div>
             </form>
         </div>
@@ -521,96 +633,102 @@ require_once __DIR__ . '/../layouts/header.php';
 
             function updateDisplay() {
                 if (loaiGiamGia.value === 'phantram') {
-                    // Nếu giảm theo phần trăm => hiển thị giảm tối đa
                     donViGiamGia.textContent = '%';
-                    giamGiaToiDa.parentElement.style.display = 'block';
-                    giamGiaToiDa.required = false;
+                    giamGiaToiDa.parentElement.parentElement.style.display = 'block';
                 } else {
-                    // Nếu giảm trực tiếp tiền => ẩn giảm tối đa
                     donViGiamGia.textContent = 'VND';
-                    giamGiaToiDa.parentElement.style.display = 'none';
+                    giamGiaToiDa.parentElement.parentElement.style.display = 'none';
                     giamGiaToiDa.value = '0';
-                    giamGiaToiDa.required = false;
                 }
             }
 
             loaiGiamGia.addEventListener('change', updateDisplay);
-            updateDisplay(); // Gọi lần đầu
+            updateDisplay();
         }
 
-        // Áp dụng cho modal thêm
         handleLoaiGiamGiaChange('add');
-
-        // Áp dụng cho modal sửa
         handleLoaiGiamGiaChange('edit');
 
-        // Function xử lý điều kiện - CHỈ ĐƯỢC NHẬP MỘT
-        function handleSingleInput(prefix) {
+        // Xử lý điều kiện BẮT BUỘC nhập một trong hai
+        function handleConditionValidation(prefix) {
             const dkHoaDonEl = document.getElementById(prefix + '_dk_hoadon_tu');
             const dkSoDemEl = document.getElementById(prefix + '_dk_sodem_tu');
             const resetBtn = document.getElementById(prefix + '_reset_dk');
+            const conditionHoaDon = document.getElementById(prefix + '_condition_hoadon');
+            const conditionSoDem = document.getElementById(prefix + '_condition_sodem');
+            const conditionError = document.getElementById(prefix + '_condition_error');
 
-            // Nút reset điều kiện
+            // Kiểm tra xem có ít nhất một điều kiện không
+            function checkCondition() {
+                const hasHoaDon = dkHoaDonEl.value.trim() !== '';
+                const hasSoDem = dkSoDemEl.value.trim() !== '';
+                
+                if (!hasHoaDon && !hasSoDem) {
+                    // Không có điều kiện nào - hiển thị cảnh báo
+                    if (conditionError) conditionError.classList.remove('d-none');
+                    conditionHoaDon.classList.add('border-danger');
+                    conditionSoDem.classList.add('border-danger');
+                    return false;
+                } else {
+                    // Có ít nhất 1 điều kiện
+                    if (conditionError) conditionError.classList.add('d-none');
+                    conditionHoaDon.classList.remove('border-danger');
+                    conditionSoDem.classList.remove('border-danger');
+                    return true;
+                }
+            }
+
+            // Reset điều kiện
             if (resetBtn) {
                 resetBtn.addEventListener('click', function() {
                     dkHoaDonEl.value = '';
                     dkSoDemEl.value = '';
-                    dkHoaDonEl.disabled = false;
-                    dkSoDemEl.disabled = false;
+                    checkCondition();
                     updateConditionStyle();
                 });
             }
 
             function updateConditionStyle() {
                 // Xóa style cũ
-                dkHoaDonEl.classList.remove('condition-active', 'condition-disabled');
-                dkSoDemEl.classList.remove('condition-active', 'condition-disabled');
+                conditionHoaDon.classList.remove('condition-active', 'condition-disabled', 'border-primary', 'border-success');
+                conditionSoDem.classList.remove('condition-active', 'condition-disabled', 'border-primary', 'border-success');
 
                 if (dkHoaDonEl.value.trim() !== '') {
-                    // Nếu có hóa đơn => active hóa đơn, disable số đêm
-                    dkHoaDonEl.classList.add('condition-active');
-                    dkSoDemEl.classList.add('condition-disabled');
-                    dkSoDemEl.disabled = true;
-                    dkHoaDonEl.disabled = false;
+                    conditionHoaDon.classList.add('condition-active', 'border-primary');
+                    conditionSoDem.classList.add('condition-disabled');
                 } else if (dkSoDemEl.value.trim() !== '') {
-                    // Nếu có số đêm => active số đêm, disable hóa đơn
-                    dkSoDemEl.classList.add('condition-active');
-                    dkHoaDonEl.classList.add('condition-disabled');
-                    dkHoaDonEl.disabled = true;
-                    dkSoDemEl.disabled = false;
-                } else {
-                    // Không có gì => enable cả hai
-                    dkHoaDonEl.disabled = false;
-                    dkSoDemEl.disabled = false;
+                    conditionSoDem.classList.add('condition-active', 'border-success');
+                    conditionHoaDon.classList.add('condition-disabled');
                 }
             }
 
-            // Xử lý khi người dùng nhập
+            // Khi nhập hóa đơn => xóa số đêm
             dkHoaDonEl.addEventListener('input', function() {
                 if (this.value.trim() !== '') {
                     dkSoDemEl.value = '';
                 }
+                checkCondition();
                 updateConditionStyle();
             });
 
+            // Khi nhập số đêm => xóa hóa đơn
             dkSoDemEl.addEventListener('input', function() {
                 if (this.value.trim() !== '') {
                     dkHoaDonEl.value = '';
                 }
+                checkCondition();
                 updateConditionStyle();
             });
 
-            // Gọi lần đầu
+            // Kiểm tra ban đầu
+            checkCondition();
             updateConditionStyle();
         }
 
-        // Áp dụng cho modal thêm
-        handleSingleInput('add');
+        handleConditionValidation('add');
+        handleConditionValidation('edit');
 
-        // Áp dụng cho modal sửa
-        handleSingleInput('edit');
-
-        // Xử lý edit modal - QUAN TRỌNG: Cho phép chuyển đổi
+        // Xử lý edit modal
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -628,19 +746,7 @@ require_once __DIR__ . '/../layouts/header.php';
                 const dksodemtu = this.getAttribute('data-dksodemtu') || '';
                 const giamgiatoida = this.getAttribute('data-giamgiatoida') || '0';
 
-                console.log('Edit data loaded:', {
-                    id,
-                    ten,
-                    giamgia,
-                    batdau,
-                    ketthuc,
-                    loaigiamgia,
-                    dkhoadontu,
-                    dksodemtu,
-                    giamgiatoida
-                });
-
-                // Set giá trị cho các input
+                // Set giá trị
                 document.getElementById('edit_ma_km').value = id;
                 document.getElementById('edit_ten_khuyenmai').value = ten;
                 document.getElementById('edit_muc_giamgia').value = giamgia;
@@ -651,46 +757,42 @@ require_once __DIR__ . '/../layouts/header.php';
                 document.getElementById('edit_giamgia_toida').value = giamgiatoida;
                 document.getElementById('edit_current_image').value = hinhanh || '';
 
-                // QUAN TRỌNG: Set giá trị điều kiện NHƯNG vẫn cho phép thay đổi
+                // Set điều kiện
                 const dkHoaDonEl = document.getElementById('edit_dk_hoadon_tu');
                 const dkSoDemEl = document.getElementById('edit_dk_sodem_tu');
 
                 if (dkhoadontu !== '') {
-                    // Đang có hóa đơn từ
                     dkHoaDonEl.value = dkhoadontu;
                     dkSoDemEl.value = '';
-                    // KHÔNG disable số đêm - cho phép chuyển đổi
-                    dkSoDemEl.disabled = false;
-                    dkHoaDonEl.disabled = false;
                 } else if (dksodemtu !== '') {
-                    // Đang có số đêm từ
                     dkSoDemEl.value = dksodemtu;
                     dkHoaDonEl.value = '';
-                    // KHÔNG disable hóa đơn - cho phép chuyển đổi
-                    dkHoaDonEl.disabled = false;
-                    dkSoDemEl.disabled = false;
                 } else {
-                    // Không có điều kiện
+                    // Nếu không có điều kiện nào trong database
+                    // Để trống, validation sẽ xử lý
                     dkHoaDonEl.value = '';
                     dkSoDemEl.value = '';
-                    dkHoaDonEl.disabled = false;
-                    dkSoDemEl.disabled = false;
                 }
 
-                // Áp dụng style sau khi set giá trị
+                // Update display
                 setTimeout(() => {
                     updateConditionStyleForEdit();
+                    // Kiểm tra lại điều kiện
+                    const conditionError = document.getElementById('edit_condition_error');
+                    if (conditionError && !dkHoaDonEl.value && !dkSoDemEl.value) {
+                        conditionError.classList.remove('d-none');
+                    }
                 }, 100);
 
                 // Cập nhật display theo loại giảm giá
                 const donViEl = document.getElementById('edit_donvi_giamgia');
-                const giamGiaToiDaEl = document.getElementById('edit_giamgia_toida');
+                const giamGiaToiDaContainer = document.getElementById('edit_giamgia_toida').parentElement.parentElement;
                 if (loaigiamgia === 'phantram') {
                     donViEl.textContent = '%';
-                    giamGiaToiDaEl.parentElement.style.display = 'block';
+                    giamGiaToiDaContainer.style.display = 'block';
                 } else {
                     donViEl.textContent = 'VND';
-                    giamGiaToiDaEl.parentElement.style.display = 'none';
+                    giamGiaToiDaContainer.style.display = 'none';
                 }
 
                 // Set image preview
@@ -702,25 +804,25 @@ require_once __DIR__ . '/../layouts/header.php';
             });
         });
 
-        // Function update style cho edit modal
         function updateConditionStyleForEdit() {
             const dkHoaDonEl = document.getElementById('edit_dk_hoadon_tu');
             const dkSoDemEl = document.getElementById('edit_dk_sodem_tu');
+            const conditionHoaDon = document.getElementById('edit_condition_hoadon');
+            const conditionSoDem = document.getElementById('edit_condition_sodem');
 
-            // Xóa style cũ
-            dkHoaDonEl.classList.remove('condition-active', 'condition-disabled');
-            dkSoDemEl.classList.remove('condition-active', 'condition-disabled');
+            conditionHoaDon.classList.remove('condition-active', 'condition-disabled', 'border-primary', 'border-success');
+            conditionSoDem.classList.remove('condition-active', 'condition-disabled', 'border-primary', 'border-success');
 
             if (dkHoaDonEl.value.trim() !== '') {
-                dkHoaDonEl.classList.add('condition-active');
-                dkSoDemEl.classList.add('condition-disabled');
+                conditionHoaDon.classList.add('condition-active', 'border-primary');
+                conditionSoDem.classList.add('condition-disabled');
             } else if (dkSoDemEl.value.trim() !== '') {
-                dkSoDemEl.classList.add('condition-active');
-                dkHoaDonEl.classList.add('condition-disabled');
+                conditionSoDem.classList.add('condition-active', 'border-success');
+                conditionHoaDon.classList.add('condition-disabled');
             }
         }
 
-        // Preview image for add modal
+        // Preview image
         document.getElementById('add_hinh_anh').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -732,7 +834,6 @@ require_once __DIR__ . '/../layouts/header.php';
             }
         });
 
-        // Preview image for edit modal
         document.getElementById('edit_hinh_anh').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -744,16 +845,83 @@ require_once __DIR__ . '/../layouts/header.php';
             }
         });
 
-        // Set min date for date inputs
+        // Set min date và validation cho ngày
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('add_ngay_batdau').min = today;
-        document.getElementById('add_ngay_ketthuc').min = today;
+        const addNgayBatDau = document.getElementById('add_ngay_batdau');
+        const addNgayKetThuc = document.getElementById('add_ngay_ketthuc');
+        const editNgayBatDau = document.getElementById('edit_ngay_batdau');
+        const editNgayKetThuc = document.getElementById('edit_ngay_ketthuc');
 
-        // Debug: Kiểm tra xem JavaScript có chạy không
-        console.log('JavaScript loaded for khuyenmai.php');
+        addNgayBatDau.min = today;
+        addNgayKetThuc.min = today;
+        editNgayBatDau.min = today;
+        editNgayKetThuc.min = today;
+
+        // Validation: Ngày kết thúc phải sau ngày bắt đầu
+        function setupDateValidation(startId, endId) {
+            const startEl = document.getElementById(startId);
+            const endEl = document.getElementById(endId);
+
+            function validateDates() {
+                if (startEl.value && endEl.value) {
+                    if (new Date(endEl.value) <= new Date(startEl.value)) {
+                        endEl.setCustomValidity('Ngày kết thúc phải sau ngày bắt đầu');
+                        return false;
+                    } else {
+                        endEl.setCustomValidity('');
+                        return true;
+                    }
+                }
+                return true;
+            }
+
+            startEl.addEventListener('change', validateDates);
+            endEl.addEventListener('change', validateDates);
+        }
+
+        setupDateValidation('add_ngay_batdau', 'add_ngay_ketthuc');
+        setupDateValidation('edit_ngay_batdau', 'edit_ngay_ketthuc');
+
+        // Validation: Hóa đơn tối thiểu 500,000 VND
+        function setupMinValidation(inputId, minValue, message) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('change', function() {
+                    if (this.value && parseFloat(this.value) < minValue) {
+                        this.setCustomValidity(message);
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        }
+
+        setupMinValidation('add_dk_hoadon_tu', 500000, 'Hóa đơn tối thiểu 500,000 VND');
+        setupMinValidation('edit_dk_hoadon_tu', 500000, 'Hóa đơn tối thiểu 500,000 VND');
+        setupMinValidation('add_dk_sodem_tu', 2, 'Số đêm tối thiểu 2');
+        setupMinValidation('edit_dk_sodem_tu', 2, 'Số đêm tối thiểu 2');
+
+        // Validation: Mức giảm giá tối đa không âm
+        function setupNonNegativeValidation(inputId, message) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('change', function() {
+                    if (this.value && parseFloat(this.value) < 0) {
+                        this.setCustomValidity(message);
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        }
+
+        setupNonNegativeValidation('add_giamgia_toida', 'Giảm giá tối đa không được âm');
+        setupNonNegativeValidation('edit_giamgia_toida', 'Giảm giá tối đa không được âm');
+        setupNonNegativeValidation('add_muc_giamgia', 'Mức giảm giá không được âm');
+        setupNonNegativeValidation('edit_muc_giamgia', 'Mức giảm giá không được âm');
     });
 
-    // Thêm hàm validate form trước khi submit
+    // Validate form submit với điều kiện BẮT BUỘC
     function validateForm(formId) {
         const form = document.getElementById(formId);
         if (!form) return true;
@@ -761,28 +929,111 @@ require_once __DIR__ . '/../layouts/header.php';
         const dkHoaDon = document.querySelector(`#${formId} [name="dk_hoadon_tu"]`);
         const dkSoDem = document.querySelector(`#${formId} [name="dk_sodem_tu"]`);
 
-        // Kiểm tra nếu nhập cả hai
+        // Kiểm tra chỉ được nhập một điều kiện
         if (dkHoaDon && dkSoDem && dkHoaDon.value.trim() !== '' && dkSoDem.value.trim() !== '') {
             alert('Chỉ được nhập một điều kiện: HOẶC hóa đơn từ, HOẶC số đêm từ!');
+            return false;
+        }
+
+        // Kiểm tra BẮT BUỘC phải có ít nhất một điều kiện
+        if (dkHoaDon && dkSoDem && dkHoaDon.value.trim() === '' && dkSoDem.value.trim() === '') {
+            alert('Vui lòng nhập ít nhất một điều kiện áp dụng!');
+            return false;
+        }
+
+        // Kiểm tra giá trị tối thiểu
+        if (dkHoaDon && dkHoaDon.value.trim() !== '' && parseFloat(dkHoaDon.value) < 500000) {
+            alert('Hóa đơn tối thiểu phải từ 500,000 VND!');
+            return false;
+        }
+
+        if (dkSoDem && dkSoDem.value.trim() !== '' && parseInt(dkSoDem.value) < 2) {
+            alert('Số đêm tối thiểu phải từ 2 đêm!');
+            return false;
+        }
+
+        // Kiểm tra ngày
+        const ngayBatDau = document.querySelector(`#${formId} [name="ngay_batdau"]`);
+        const ngayKetThuc = document.querySelector(`#${formId} [name="ngay_ketthuc"]`);
+
+        if (ngayBatDau && ngayKetThuc && ngayBatDau.value && ngayKetThuc.value) {
+            if (new Date(ngayKetThuc.value) <= new Date(ngayBatDau.value)) {
+                alert('Ngày kết thúc phải sau ngày bắt đầu!');
+                return false;
+            }
+        }
+
+        // Kiểm tra mức giảm giá
+        const mucGiamGia = document.querySelector(`#${formId} [name="muc_giamgia"]`);
+        if (mucGiamGia && mucGiamGia.value && parseFloat(mucGiamGia.value) <= 0) {
+            alert('Mức giảm giá phải lớn hơn 0!');
+            return false;
+        }
+
+        // Kiểm tra giảm giá tối đa
+        const giamGiaToiDa = document.querySelector(`#${formId} [name="giamgia_toida"]`);
+        if (giamGiaToiDa && giamGiaToiDa.value && parseFloat(giamGiaToiDa.value) < 0) {
+            alert('Giảm giá tối đa không được âm!');
             return false;
         }
 
         return true;
     }
 
-    // Thêm event listener cho form submit
+    // Event listener cho form submit
     document.addEventListener('submit', function(e) {
-        // Kiểm tra nếu là form thêm khuyến mãi
+        let shouldSubmit = true;
+        
         if (e.target.closest('form[action*="action=add"]')) {
             if (!validateForm('addKhuyenMaiModalForm')) {
                 e.preventDefault();
+                shouldSubmit = false;
             }
         }
 
-        // Kiểm tra nếu là form sửa khuyến mãi
         if (e.target.closest('form[action*="action=edit"]')) {
             if (!validateForm('editKhuyenMaiModalForm')) {
                 e.preventDefault();
+                shouldSubmit = false;
+            }
+        }
+
+        // Nếu validation pass, có thể xử lý thêm
+        if (shouldSubmit) {
+            // Đảm bảo có ít nhất một điều kiện
+            const form = e.target;
+            const dkHoaDon = form.querySelector('[name="dk_hoadon_tu"]');
+            const dkSoDem = form.querySelector('[name="dk_sodem_tu"]');
+            
+            // Nếu không có điều kiện nào, tự động set hóa đơn 500k
+            if (dkHoaDon && dkSoDem && !dkHoaDon.value && !dkSoDem.value) {
+                dkHoaDon.value = '500000';
+            }
+            
+            // Nếu có cả hai điều kiện, ưu tiên giữ hóa đơn
+            if (dkHoaDon && dkSoDem && dkHoaDon.value && dkSoDem.value) {
+                dkSoDem.value = '';
+                console.log('Đã tự động xóa điều kiện số đêm để giữ điều kiện hóa đơn');
+            }
+        }
+    });
+
+    // Reset form khi modal đóng
+    document.addEventListener('hidden.bs.modal', function(e) {
+        if (e.target.id === 'addKhuyenMaiModal') {
+            // Reset các validation message
+            const form = document.getElementById('addKhuyenMaiModalForm');
+            if (form) {
+                form.reset();
+                // Reset image preview
+                document.getElementById('add_image_preview').src = '../../../client/assets/images/sales/default_promotion.png';
+                // Reset điều kiện
+                const conditionError = document.getElementById('add_condition_error');
+                if (conditionError) conditionError.classList.add('d-none');
+                const conditionHoaDon = document.getElementById('add_condition_hoadon');
+                const conditionSoDem = document.getElementById('add_condition_sodem');
+                if (conditionHoaDon) conditionHoaDon.classList.remove('border-danger', 'condition-active', 'condition-disabled', 'border-primary', 'border-success');
+                if (conditionSoDem) conditionSoDem.classList.remove('border-danger', 'condition-active', 'condition-disabled', 'border-primary', 'border-success');
             }
         }
     });

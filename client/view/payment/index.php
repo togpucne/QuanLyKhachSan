@@ -123,6 +123,22 @@ if (!isset($customerInfo)) {
     .was-validated .form-control:valid {
         border-color: #198754;
     }
+    
+    /* Style cho hiển thị lỗi trùng */
+    .duplicate-notice {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: #856404;
+    }
+    
+    .duplicate-notice ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+    }
 </style>
 <style>
     .payment-container {
@@ -277,6 +293,7 @@ if (!isset($customerInfo)) {
                             <strong>Lưu ý:</strong> 
                             <ul class="mb-0 mt-2">
                                 <li>Thông tin liên hệ sẽ tự động điền vào thông tin khách hàng chính</li>
+                                <li><strong>Tất cả khách hàng đều phải nhập số điện thoại</strong></li>
                                 <li>Khách hàng thứ 2 trở đi chỉ cần nhập: Họ tên, Số điện thoại, Địa chỉ</li>
                             </ul>
                         </div>
@@ -285,7 +302,7 @@ if (!isset($customerInfo)) {
                     <!-- THÔNG TIN LIÊN HỆ -->
                     <div class="common-info-section mb-4">
                         <h6 class="guest-section-header">
-                            <i class="fas fa-address-book me-2"></i> Thông tin liên hệ
+                            <i class="fas fa-address-book me-2"></i> Thông tin liên hệ & Khách hàng chính
                             <span class="badge bg-primary ms-2">Bắt buộc</span>
                         </h6>
                         <div class="mb-3">
@@ -293,22 +310,25 @@ if (!isset($customerInfo)) {
                             <input type="text" class="form-control" id="contactName" name="customerName" required
                                 placeholder="Như trên CMND (không dấu)"
                                 value="<?php echo htmlspecialchars($customerInfo['HoTen'] ?? ''); ?>">
+                            <div class="error-message" id="contactNameError"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
-                                <label class="form-label">Số điện thoại liên hệ <span class="text-danger">*</span></label>
+                                <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">+84</span>
                                     <input type="tel" class="form-control" id="contactPhone" name="customerPhone" required
                                         placeholder="901234567"
                                         value="<?php echo htmlspecialchars($customerInfo['SoDienThoai'] ?? ''); ?>">
                                 </div>
+                                <div class="error-message" id="contactPhoneError"></div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" id="contactEmail" name="customerEmail" required
                                     placeholder="email@example.com"
                                     value="<?php echo htmlspecialchars($customerInfo['Email'] ?? ''); ?>">
+                                <div class="error-message" id="contactEmailError"></div>
                             </div>
                         </div>
                         <div class="row">
@@ -324,20 +344,13 @@ if (!isset($customerInfo)) {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label required-field">Địa chỉ liên hệ chính</label>
+                                    <label class="form-label required-field">Địa chỉ</label>
                                     <input type="text" class="form-control" id="contactAddress" name="address" required
                                         placeholder="192-126 Đ.Nguyễn Văn Nghi, Phường 1, Gò Vấp, Thành phố Hồ Chí Minh"
                                         value="<?php echo htmlspecialchars($customerInfo['DiaChi'] ?? ''); ?>">
                                     <div class="error-message" id="addressError">Vui lòng nhập địa chỉ</div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="autoFillMainGuest" checked>
-                            <label class="form-check-label" for="autoFillMainGuest">
-                                Tự động điền thông tin cho khách hàng chính
-                            </label>
                         </div>
                     </div>
 
@@ -361,13 +374,13 @@ if (!isset($customerInfo)) {
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Số điện thoại</label>
+                                        <label class="form-label required-field">Số điện thoại</label>
                                         <div class="input-group">
                                             <span class="input-group-text">+84</span>
-                                            <input type="tel" class="form-control guest-input" name="guestPhone[]"
-                                                placeholder="901234567">
+                                            <input type="tel" class="form-control guest-input phone-input" 
+                                                name="guestPhone[]" required placeholder="901234567">
                                         </div>
-                                        <div class="error-message" id="guestPhoneError<?php echo $guestNumber; ?>"></div>
+                                        <div class="error-message" id="guestPhoneError<?php echo $guestNumber; ?>">Vui lòng nhập số điện thoại</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -395,6 +408,13 @@ if (!isset($customerInfo)) {
                             </label>
                             <div class="error-message" id="nonSmokingError">Vui lòng đồng ý với điều khoản phòng không hút thuốc</div>
                         </div>
+                    </div>
+                    
+                    <!-- HIỂN THỊ LỖI TRÙNG SDT -->
+                    <div class="duplicate-notice mt-3 d-none" id="duplicatePhoneNotice">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Cảnh báo:</strong> Có số điện thoại bị trùng lặp
+                        <ul id="duplicatePhoneList"></ul>
                     </div>
                 </div>
             </div>
@@ -444,6 +464,7 @@ if (!isset($customerInfo)) {
                             </div>
                         </div>
                     </label>
+                    <div class="error-message" id="paymentMethodError"></div>
                 </div>
             </div>
             <!-- PHẦN KHUYẾN MÃI MỚI -->
@@ -599,6 +620,7 @@ if (!isset($customerInfo)) {
                     <label class="form-check-label" for="agreeTerms">
                         Tôi đồng ý với <a href="#" target="_blank">Điều khoản và Điều kiện</a>
                     </label>
+                    <div class="error-message" id="termsError"></div>
                 </div>
 
                 <!-- Nút thanh toán -->
@@ -634,25 +656,118 @@ if (!isset($customerInfo)) {
             clearBtn.addEventListener('click', clearPromotion);
         }
 
-        // Tự động điền thông tin cho khách hàng chính nếu checkbox được tick
-        const autoFillCheckbox = document.getElementById('autoFillMainGuest');
-        autoFillCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                // Không cần điền gì vì sẽ lấy từ form liên hệ khi submit
-                console.log('Tự động điền thông tin khách hàng chính đã bật');
-            }
-        });
-
-        // Thêm sự kiện để khi nhập vào form liên hệ, tự động fill vào hidden fields nếu checkbox được tick
-        const contactFields = document.querySelectorAll('#contactName, #contactPhone, #contactEmail, #contactCMND, #contactAddress');
-        contactFields.forEach(field => {
-            field.addEventListener('blur', function() {
-                if (autoFillCheckbox.checked) {
-                    console.log('Đã cập nhật thông tin liên hệ');
-                }
+        // Thêm sự kiện kiểm tra trùng SDT real-time
+        document.querySelectorAll('.phone-input').forEach(input => {
+            input.addEventListener('blur', function() {
+                checkPhoneDuplicatesRealTime();
+            });
+            input.addEventListener('input', function() {
+                // Clear duplicate highlight khi người dùng sửa
+                this.classList.remove('is-duplicate');
+                hideDuplicateNotice();
             });
         });
+
+        // Thêm sự kiện cho SDT khách hàng chính
+        document.getElementById('contactPhone').addEventListener('blur', function() {
+            checkPhoneDuplicatesRealTime();
+        });
+        document.getElementById('contactPhone').addEventListener('input', function() {
+            this.classList.remove('is-duplicate');
+            hideDuplicateNotice();
+        });
     });
+
+    // Hàm kiểm tra trùng SDT real-time
+    function checkPhoneDuplicatesRealTime() {
+        const phoneMap = {};
+        const duplicates = [];
+        
+        // Lấy SDT khách hàng chính
+        const mainPhone = document.getElementById('contactPhone').value.trim();
+        if (mainPhone) {
+            phoneMap[mainPhone] = 'Khách hàng chính';
+        }
+        
+        // Lấy SDT khách hàng bổ sung
+        const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
+        guestPhones.forEach((input, index) => {
+            const value = input.value.trim();
+            if (value) {
+                if (phoneMap[value]) {
+                    duplicates.push({
+                        phone: value,
+                        guest1: phoneMap[value],
+                        guest2: `Khách hàng ${index + 2}`
+                    });
+                } else {
+                    phoneMap[value] = `Khách hàng ${index + 2}`;
+                }
+            }
+        });
+        
+        // Highlight và hiển thị thông báo
+        if (duplicates.length > 0) {
+            showDuplicateNotice(duplicates);
+            highlightDuplicatePhones(duplicates, phoneMap);
+            return true;
+        } else {
+            hideDuplicateNotice();
+            removeDuplicateHighlights();
+            return false;
+        }
+    }
+    
+    // Hàm hiển thị thông báo trùng SDT
+    function showDuplicateNotice(duplicates) {
+        const notice = document.getElementById('duplicatePhoneNotice');
+        const list = document.getElementById('duplicatePhoneList');
+        
+        list.innerHTML = '';
+        duplicates.forEach(dup => {
+            const li = document.createElement('li');
+            li.textContent = `Số điện thoại ${dup.phone} được sử dụng bởi ${dup.guest1} và ${dup.guest2}`;
+            list.appendChild(li);
+        });
+        
+        notice.classList.remove('d-none');
+    }
+    
+    // Hàm ẩn thông báo trùng SDT
+    function hideDuplicateNotice() {
+        document.getElementById('duplicatePhoneNotice').classList.add('d-none');
+    }
+    
+    // Hàm highlight các SDT trùng
+    function highlightDuplicatePhones(duplicates, phoneMap) {
+        // Reset highlight
+        removeDuplicateHighlights();
+        
+        // Tìm tất cả các SDT trùng
+        const duplicatePhones = duplicates.map(d => d.phone);
+        
+        // Highlight SDT khách hàng chính nếu trùng
+        const mainPhone = document.getElementById('contactPhone').value.trim();
+        if (duplicatePhones.includes(mainPhone)) {
+            document.getElementById('contactPhone').classList.add('is-duplicate');
+        }
+        
+        // Highlight SDT khách hàng bổ sung nếu trùng
+        const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
+        guestPhones.forEach(input => {
+            if (duplicatePhones.includes(input.value.trim())) {
+                input.classList.add('is-duplicate');
+            }
+        });
+    }
+    
+    // Hàm xóa highlight trùng
+    function removeDuplicateHighlights() {
+        document.getElementById('contactPhone').classList.remove('is-duplicate');
+        document.querySelectorAll('input[name="guestPhone[]"]').forEach(input => {
+            input.classList.remove('is-duplicate');
+        });
+    }
 
     // Hàm validate thông tin
     function validateGuests() {
@@ -667,7 +782,7 @@ if (!isset($customerInfo)) {
             el.classList.remove('is-invalid');
         });
 
-        // Validate thông tin liên hệ
+        // Validate thông tin liên hệ (khách hàng chính)
         const contactName = document.getElementById('contactName').value.trim();
         const contactPhone = document.getElementById('contactPhone').value.trim();
         const contactEmail = document.getElementById('contactEmail').value.trim();
@@ -676,13 +791,13 @@ if (!isset($customerInfo)) {
 
         // Validate họ tên liên hệ
         if (!contactName) {
-            showError(document.getElementById('contactName'), 'contactNameError', 'Vui lòng nhập họ tên liên hệ');
+            showError(document.getElementById('contactName'), 'contactNameError', 'Vui lòng nhập họ tên');
             isValid = false;
         }
 
         // Validate số điện thoại liên hệ
         if (!contactPhone) {
-            showError(document.getElementById('contactPhone'), 'contactPhoneError', 'Vui lòng nhập số điện thoại liên hệ');
+            showError(document.getElementById('contactPhone'), 'contactPhoneError', 'Vui lòng nhập số điện thoại');
             isValid = false;
         } else if (!/^[0-9]{9,10}$/.test(contactPhone)) {
             showError(document.getElementById('contactPhone'), 'contactPhoneError', 'Số điện thoại không hợp lệ (9-10 số)');
@@ -691,7 +806,7 @@ if (!isset($customerInfo)) {
 
         // Validate email liên hệ
         if (!contactEmail) {
-            showError(document.getElementById('contactEmail'), 'contactEmailError', 'Vui lòng nhập email liên hệ');
+            showError(document.getElementById('contactEmail'), 'contactEmailError', 'Vui lòng nhập email');
             isValid = false;
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
             showError(document.getElementById('contactEmail'), 'contactEmailError', 'Email không hợp lệ');
@@ -706,24 +821,22 @@ if (!isset($customerInfo)) {
 
         // Validate địa chỉ liên hệ
         if (!contactAddress) {
-            showError(document.getElementById('contactAddress'), 'addressError', 'Vui lòng nhập địa chỉ liên hệ');
+            showError(document.getElementById('contactAddress'), 'addressError', 'Vui lòng nhập địa chỉ');
             isValid = false;
         }
 
         // Validate khách hàng bổ sung
         const guestNames = document.querySelectorAll('input[name="guestName[]"]');
         const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
-        const guestAddresses = document.querySelectorAll('input[name="guestAddress[]"]');
 
         // Mảng lưu các giá trị đã nhập để kiểm tra trùng
-        const usedPhones = [];
+        const usedPhones = [contactPhone]; // Bắt đầu với SDT khách hàng chính
 
         // Validate tất cả khách hàng bổ sung
         for (let i = 0; i < guestNames.length; i++) {
             const guestNumber = i + 2; // Bắt đầu từ khách hàng thứ 2
             const guestNameValue = guestNames[i].value.trim();
             const guestPhoneValue = guestPhones[i] ? guestPhones[i].value.trim() : '';
-            const guestAddressValue = guestAddresses[i] ? guestAddresses[i].value.trim() : '';
 
             // Validate họ tên
             if (!guestNameValue) {
@@ -731,14 +844,14 @@ if (!isset($customerInfo)) {
                 isValid = false;
             }
 
-            // Validate số điện thoại (nếu có nhập)
-            if (guestPhoneValue) {
-                // Kiểm tra định dạng số điện thoại
-                if (!/^[0-9]{9,10}$/.test(guestPhoneValue)) {
-                    showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Số điện thoại không hợp lệ (9-10 số)`);
-                    isValid = false;
-                }
-
+            // Validate số điện thoại (BẮT BUỘC)
+            if (!guestPhoneValue) {
+                showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Vui lòng nhập số điện thoại khách hàng ${guestNumber}`);
+                isValid = false;
+            } else if (!/^[0-9]{9,10}$/.test(guestPhoneValue)) {
+                showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Số điện thoại không hợp lệ (9-10 số)`);
+                isValid = false;
+            } else {
                 // Kiểm tra trùng số điện thoại
                 if (usedPhones.includes(guestPhoneValue)) {
                     showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Số điện thoại này đã được sử dụng bởi khách hàng khác`);
@@ -759,36 +872,51 @@ if (!isset($customerInfo)) {
         // Validate phương thức thanh toán
         const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
         if (!paymentMethod) {
-            let paymentError = document.getElementById('paymentMethodError');
-            if (!paymentError) {
-                paymentError = document.createElement('div');
-                paymentError.id = 'paymentMethodError';
-                paymentError.className = 'error-message';
-                paymentError.style.marginTop = '10px';
-                document.querySelector('.payment-section .section-body').appendChild(paymentError);
-            }
-            paymentError.textContent = 'Vui lòng chọn phương thức thanh toán';
-            paymentError.style.display = 'block';
+            document.getElementById('paymentMethodError').textContent = 'Vui lòng chọn phương thức thanh toán';
+            document.getElementById('paymentMethodError').style.display = 'block';
             isValid = false;
         }
 
         // Validate điều khoản
         const agreeTerms = document.getElementById('agreeTerms');
         if (!agreeTerms.checked) {
-            let termsError = document.getElementById('termsError');
-            if (!termsError) {
-                termsError = document.createElement('div');
-                termsError.id = 'termsError';
-                termsError.className = 'error-message';
-                termsError.style.marginTop = '5px';
-                agreeTerms.parentElement.appendChild(termsError);
-            }
-            termsError.textContent = 'Vui lòng đồng ý với điều khoản và điều kiện';
-            termsError.style.display = 'block';
+            document.getElementById('termsError').textContent = 'Vui lòng đồng ý với điều khoản và điều kiện';
+            document.getElementById('termsError').style.display = 'block';
             isValid = false;
         }
 
         return isValid;
+    }
+
+    // Hàm kiểm tra trùng số điện thoại chi tiết
+    function checkPhoneDuplicates() {
+        const phoneMap = {};
+        const duplicates = [];
+        
+        // Lấy SDT khách hàng chính
+        const mainPhone = document.getElementById('contactPhone').value.trim();
+        if (mainPhone) {
+            phoneMap[mainPhone] = 'Khách hàng chính';
+        }
+        
+        // Lấy SDT khách hàng bổ sung
+        const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
+        guestPhones.forEach((input, index) => {
+            const value = input.value.trim();
+            if (value) {
+                if (phoneMap[value]) {
+                    duplicates.push({
+                        phone: value,
+                        guest1: phoneMap[value],
+                        guest2: `Khách hàng ${index + 2}`
+                    });
+                } else {
+                    phoneMap[value] = `Khách hàng ${index + 2}`;
+                }
+            }
+        });
+        
+        return duplicates;
     }
 
     // Hàm hiển thị lỗi
@@ -809,75 +937,21 @@ if (!isset($customerInfo)) {
         }
     }
 
-    // Hàm kiểm tra trùng lặp số điện thoại
-    function checkPhoneDuplicates() {
-        const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
-        const phoneMap = {};
-        const duplicates = [];
-
-        guestPhones.forEach((input, index) => {
-            const value = input.value.trim();
-            if (value) {
-                if (phoneMap[value]) {
-                    duplicates.push({
-                        index: index + 2, // +2 vì khách hàng bổ sung bắt đầu từ thứ 2
-                        value: value,
-                        existingIndex: phoneMap[value]
-                    });
-                } else {
-                    phoneMap[value] = index + 2;
-                }
-            }
-        });
-
-        return duplicates;
-    }
-
     // Hàm xử lý thanh toán
     function processPayment() {
         // Reset all errors
         document.querySelectorAll('.error-message').forEach(el => {
             el.style.display = 'none';
         });
+        
+        hideDuplicateNotice();
+        removeDuplicateHighlights();
 
-        // Kiểm tra có tự động điền thông tin khách hàng chính không
-        const autoFill = document.getElementById('autoFillMainGuest').checked;
-
-        if (autoFill) {
-            // Tạo hidden fields để gửi thông tin khách hàng chính
-            const contactName = document.getElementById('contactName').value;
-            const contactPhone = document.getElementById('contactPhone').value;
-            const contactEmail = document.getElementById('contactEmail').value;
-            const contactCMND = document.getElementById('contactCMND').value;
-            const contactAddress = document.getElementById('contactAddress').value;
-
-            // Thêm các hidden field vào form nếu chưa có
-            let form = document.querySelector('form') || document.createElement('form');
-            
-            // Thêm thông tin khách hàng chính
-            const mainGuestName = document.createElement('input');
-            mainGuestName.type = 'hidden';
-            mainGuestName.name = 'mainGuestName';
-            mainGuestName.value = contactName;
-            form.appendChild(mainGuestName);
-
-            const mainGuestPhone = document.createElement('input');
-            mainGuestPhone.type = 'hidden';
-            mainGuestPhone.name = 'mainGuestPhone';
-            mainGuestPhone.value = contactPhone;
-            form.appendChild(mainGuestPhone);
-
-            const mainGuestCMND = document.createElement('input');
-            mainGuestCMND.type = 'hidden';
-            mainGuestCMND.name = 'mainGuestCMND';
-            mainGuestCMND.value = contactCMND;
-            form.appendChild(mainGuestCMND);
-
-            const mainGuestEmail = document.createElement('input');
-            mainGuestEmail.type = 'hidden';
-            mainGuestEmail.name = 'mainGuestEmail';
-            mainGuestEmail.value = contactEmail;
-            form.appendChild(mainGuestEmail);
+        // Kiểm tra trùng SDT real-time trước
+        const hasDuplicates = checkPhoneDuplicatesRealTime();
+        if (hasDuplicates) {
+            alert('Có số điện thoại bị trùng lặp. Vui lòng kiểm tra và sửa lại.');
+            return;
         }
 
         // Validate form
@@ -886,11 +960,11 @@ if (!isset($customerInfo)) {
             return;
         }
 
-        // Kiểm tra trùng số điện thoại
+        // Kiểm tra trùng số điện thoại chi tiết
         const phoneDuplicates = checkPhoneDuplicates();
         if (phoneDuplicates.length > 0) {
             const duplicateMessage = phoneDuplicates.map(dup =>
-                `• Khách hàng ${dup.index} và khách hàng ${dup.existingIndex} có cùng số điện thoại: ${dup.value}`
+                `• Số điện thoại ${dup.phone} được sử dụng bởi ${dup.guest1} và ${dup.guest2}`
             ).join('\n');
             
             alert(`CÓ THÔNG TIN TRÙNG LẶP:\n\n${duplicateMessage}\n\nVui lòng kiểm tra và sửa lại.`);

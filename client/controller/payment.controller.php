@@ -184,10 +184,10 @@ class PaymentController
         try {
             // Lấy tất cả khuyến mãi đang hoạt động
             $sql = "SELECT * FROM khuyenmai 
-                WHERE TrangThai = 1 
-                AND NgayBatDau <= ? 
-                AND NgayKetThuc >= ?
-                ORDER BY MucGiamGia DESC";
+                    WHERE TrangThai = 1 
+                    AND NgayBatDau <= ? 
+                    AND NgayKetThuc >= ?
+                    ORDER BY MucGiamGia DESC";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ss", $today, $today);
@@ -224,7 +224,7 @@ class PaymentController
                     // Tính % giảm
                     $discountPercent = $row['MucGiamGia'] / 100;
                     $discountAmount = $totalAmount * $discountPercent;
-
+                    
                     // Áp dụng giới hạn tối đa nếu có
                     if ($row['GiamGiaToiDa'] > 0 && $discountAmount > $row['GiamGiaToiDa']) {
                         $discountAmount = $row['GiamGiaToiDa'];
@@ -240,14 +240,14 @@ class PaymentController
                 $row['discount_amount'] = $discountAmount;
                 $row['is_available'] = $isAvailable;
                 $row['reason'] = $reason;
-
+                
                 // DEBUG LOG
-                error_log("Promotion: " . $row['TenKhuyenMai'] .
-                    ", Type: " . $row['LoaiGiamGia'] .
-                    ", Discount: " . $row['MucGiamGia'] .
-                    ", Max: " . $row['GiamGiaToiDa'] .
-                    ", Calculated: " . $discountAmount);
-
+                error_log("Promotion: " . $row['TenKhuyenMai'] . 
+                         ", Type: " . $row['LoaiGiamGia'] . 
+                         ", Discount: " . $row['MucGiamGia'] . 
+                         ", Max: " . $row['GiamGiaToiDa'] . 
+                         ", Calculated: " . $discountAmount);
+                
                 $promotions[] = $row;
             }
 
@@ -258,40 +258,52 @@ class PaymentController
         }
     }
 
-
-
     public function processPayment()
     {
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            // Nhận dữ liệu JSON từ request
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Dữ liệu không hợp lệ'
+                ]);
+                exit;
+            }
+
             // Validation cơ bản
-            $required = ['customerName', 'customerPhone', 'customerEmail', 'customerIdNumber', 'paymentMethod'];
+            $required = ['customerName', 'customerPhone', 'customerEmail', 'paymentMethod', 'roomId', 'checkin', 'checkout', 'adults'];
             foreach ($required as $field) {
-                if (empty($_POST[$field])) {
+                if (empty($input[$field])) {
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Vui lòng điền đầy đủ thông tin'
+                        'message' => 'Vui lòng điền đầy đủ thông tin: ' . $field
                     ]);
                     exit;
                 }
             }
 
             $paymentData = [
-                'roomId' => $_POST['roomId'],
-                'checkin' => $_POST['checkin'],
-                'checkout' => $_POST['checkout'],
-                'adults' => $_POST['adults'],
-                'nights' => $_POST['nights'],
-                'services' => $_POST['services'] ?? '',
-                'customerName' => $_POST['customerName'],
-                'customerPhone' => $_POST['customerPhone'],
-                'customerEmail' => $_POST['customerEmail'],
-                'customerIdNumber' => $_POST['customerIdNumber'],
-                'specialRequests' => $_POST['specialRequests'] ?? '',
-                'paymentMethod' => $_POST['paymentMethod'],
-                'totalAmount' => $_POST['totalAmount'],
-                'discountAmount' => $_POST['discountAmount'] ?? 0,
-                'finalAmount' => $_POST['finalAmount'] ?? $_POST['totalAmount'],
-                'promotionId' => $_POST['promotionId'] ?? '',
+                'roomId' => $input['roomId'],
+                'checkin' => $input['checkin'],
+                'checkout' => $input['checkout'],
+                'adults' => $input['adults'],
+                'nights' => $input['nights'] ?? 1,
+                'services' => $input['services'] ?? '',
+                'customerName' => $input['customerName'],
+                'customerPhone' => $input['customerPhone'],
+                'customerEmail' => $input['customerEmail'],
+                'customerIdNumber' => $input['customerIdNumber'] ?? '',
+                'specialRequests' => $input['specialRequests'] ?? '',
+                'paymentMethod' => $input['paymentMethod'],
+                'totalAmount' => $input['totalAmount'] ?? 0,
+                'discountAmount' => $input['discountAmount'] ?? 0,
+                'finalAmount' => $input['finalAmount'] ?? ($input['totalAmount'] ?? 0),
+                'promotionId' => $input['promotionId'] ?? '',
+                'guests' => $input['guests'] ?? [],
+                'address' => $input['address'] ?? '',
+                'nonSmoking' => $input['nonSmoking'] ?? false,
                 'userId' => $_SESSION['user_id']
             ];
 
@@ -318,30 +330,5 @@ if ($action == 'processPayment') {
 } else {
     $controller->index();
 }
-// Lấy thông tin dịch vụ từ URL
-$selectedServices = isset($_GET['services']) ? explode(',', $_GET['services']) : [];
-$servicesPrice = 0;
 
-if (!empty($selectedServices) && count($selectedServices) > 0) {
-    // Lấy số người từ URL
-    $adults = isset($_GET['adults']) ? (int)$_GET['adults'] : 1;
-
-    // Query lấy giá dịch vụ
-    $serviceIds = implode(',', array_map('intval', $selectedServices));
-    $sqlDichVu = "SELECT MaDV, DonGia FROM dichvu WHERE MaDV IN ($serviceIds)";
-    $resultDichVu = $conn->query($sqlDichVu);
-
-    while ($row = $resultDichVu->fetch_assoc()) {
-        // NHÂN ĐÔI GIÁ NẾU CÓ 2 NGƯỜI
-        $servicesPrice += $row['DonGia'] * $adults;
-    }
-}
-
-// Tính tổng giá phòng (đã tính đêm)
-$roomPrice = $phong['TongGia'] * $nights;
-
-// Tính thuế 10% trên tổng giá phòng và dịch vụ
-$tax = ($roomPrice + $servicesPrice) * 0.1;
-
-// Tổng thanh toán
-$totalAmount = $roomPrice + $servicesPrice + $tax;
+// KHÔNG CÓ CODE NÀO SAU DÒNG NÀY - XÓA HẾT MỌI THỨ SAU ĐÂY

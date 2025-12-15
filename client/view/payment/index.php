@@ -123,7 +123,7 @@ if (!isset($customerInfo)) {
     .was-validated .form-control:valid {
         border-color: #198754;
     }
-    
+
     /* Style cho hiển thị lỗi trùng */
     .duplicate-notice {
         background-color: #fff3cd;
@@ -134,7 +134,7 @@ if (!isset($customerInfo)) {
         font-size: 0.9rem;
         color: #856404;
     }
-    
+
     .duplicate-notice ul {
         margin-bottom: 0;
         padding-left: 20px;
@@ -286,7 +286,7 @@ if (!isset($customerInfo)) {
                     <span class="text-muted fs-6 ms-2">(<?php echo $adults; ?> người)</span>
                 </div>
                 <div class="section-body">
-                            <!-- THÔNG TIN LIÊN HỆ -->
+                    <!-- THÔNG TIN LIÊN HỆ -->
                     <div class="common-info-section mb-4">
                         <h6 class="guest-section-header">
                             <i class="fas fa-address-book me-2"></i> Thông tin liên hệ & Khách hàng chính
@@ -364,7 +364,7 @@ if (!isset($customerInfo)) {
                                         <label class="form-label required-field">Số điện thoại</label>
                                         <div class="input-group">
                                             <span class="input-group-text">+84</span>
-                                            <input type="tel" class="form-control guest-input phone-input" 
+                                            <input type="tel" class="form-control guest-input phone-input"
                                                 name="guestPhone[]" required placeholder="901234567">
                                         </div>
                                         <div class="error-message" id="guestPhoneError<?php echo $guestNumber; ?>">Vui lòng nhập số điện thoại</div>
@@ -397,7 +397,7 @@ if (!isset($customerInfo)) {
                             <div class="error-message" id="nonSmokingError">Vui lòng đồng ý với điều khoản phòng không hút thuốc</div>
                         </div>
                     </div>
-                    
+
                     <!-- HIỂN THỊ LỖI TRÙNG SDT -->
                     <div class="duplicate-notice mt-3 d-none" id="duplicatePhoneNotice">
                         <i class="fas fa-exclamation-triangle me-2"></i>
@@ -413,29 +413,17 @@ if (!isset($customerInfo)) {
                     Phương thức thanh toán <span class="text-danger">*</span>
                 </div>
                 <div class="section-body">
-                    <!-- Cách 1: Dùng label bao toàn bộ -->
-                    <label class="payment-method cursor-pointer mb-3 d-block" for="creditCard">
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="radio" name="paymentMethod" value="creditCard" id="creditCard">
-                            <div class="form-check-label fw-bold">
-                                Thẻ tín dụng/Ghi nợ
-                            </div>
-                            <div class="mt-2">
-                                <img src="/ABC-Resort/client/assets/images/payments/visa_mastercard.jpg" alt="Visa Mastercard" height="30" class="me-2">
-                                <small class="text-muted">Thanh toán an toàn với thẻ Visa, Mastercard</small>
-                            </div>
-                        </div>
-                    </label>
+
 
                     <label class="payment-method cursor-pointer mb-3 d-block" for="bankTransfer">
                         <div class="form-check mb-0">
                             <input class="form-check-input" type="radio" name="paymentMethod" value="bankTransfer" id="bankTransfer">
                             <div class="form-check-label fw-bold">
-                                Chuyển khoản ngân hàng
+                                Chuyển khoản qua Ngân hàng / Ví điện tử
                             </div>
                             <div class="mt-2">
                                 <img src="/ABC-Resort/client/assets/images/payments/bank.jpg" alt="Banking" height="30" class="me-2">
-                                <small class="text-muted">Chuyển khoản qua Internet Banking, Mobile Banking</small>
+                                <small class="text-muted">Thanh toán, quét mã tiện lợi qua Momo</small>
                             </div>
                         </div>
                     </label>
@@ -444,7 +432,7 @@ if (!isset($customerInfo)) {
                         <div class="form-check mb-0">
                             <input class="form-check-input" type="radio" name="paymentMethod" value="cash" id="cash">
                             <div class="form-check-label fw-bold">
-                                Thanh toán tại resort
+                                Thanh toán tại Tiền mặt
                             </div>
                             <div class="mt-2">
                                 <img src="/ABC-Resort/client/assets/images/payments/cash.jpg" alt="Cash" height="30" class="me-2">
@@ -513,6 +501,13 @@ if (!isset($customerInfo)) {
                     <button type="button" class="btn btn-outline-secondary btn-sm" id="btnClearPromotion">
                         <i class="fas fa-times me-1"></i> Bỏ chọn khuyến mãi
                     </button>
+                    <form class="" method="POST" target="_blank" enctype="application/x-www-form-urlencoded"
+                        action="../controller/xulythanhtoanmomo_atm.php">
+
+                        <input type="submit" name="momo" value="Thanh toán MOMO QRcode" class="btn btn-danger">
+
+                    </form>
+
                 </div>
             </div>
         </div>
@@ -664,26 +659,26 @@ if (!isset($customerInfo)) {
             this.classList.remove('is-duplicate');
             hideDuplicateNotice();
         });
-        
+
         // Thêm sự kiện validate địa chỉ real-time
         document.querySelectorAll('.address-input').forEach(input => {
             input.addEventListener('blur', function() {
                 validateAddressField(this);
             });
         });
-        
+
         // Validate địa chỉ khách hàng chính
         document.getElementById('contactAddress').addEventListener('blur', function() {
             validateAddressField(this);
         });
     });
-    
+
     // Hàm validate địa chỉ real-time
     function validateAddressField(inputElement) {
         const value = inputElement.value.trim();
         const guestNumber = getGuestNumberFromInput(inputElement);
         const errorId = guestNumber === 'contact' ? 'contactAddressError' : `guestAddressError${guestNumber}`;
-        
+
         if (!value) {
             showError(inputElement, errorId, 'Vui lòng nhập địa chỉ');
             return false;
@@ -695,13 +690,13 @@ if (!isset($customerInfo)) {
             return true;
         }
     }
-    
+
     // Hàm lấy số thứ tự khách hàng từ input
     function getGuestNumberFromInput(inputElement) {
         if (inputElement.id === 'contactAddress') {
             return 'contact';
         }
-        
+
         const parentSection = inputElement.closest('.additional-guest-section');
         if (parentSection && parentSection.id) {
             const match = parentSection.id.match(/guestSection(\d+)/);
@@ -711,7 +706,7 @@ if (!isset($customerInfo)) {
         }
         return '';
     }
-    
+
     // Hàm xóa lỗi
     function clearError(inputElement, errorId) {
         inputElement.classList.remove('is-invalid');
@@ -725,13 +720,13 @@ if (!isset($customerInfo)) {
     function checkPhoneDuplicatesRealTime() {
         const phoneMap = {};
         const duplicates = [];
-        
+
         // Lấy SDT khách hàng chính
         const mainPhone = document.getElementById('contactPhone').value.trim();
         if (mainPhone) {
             phoneMap[mainPhone] = 'Khách hàng chính';
         }
-        
+
         // Lấy SDT khách hàng bổ sung
         const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
         guestPhones.forEach((input, index) => {
@@ -748,7 +743,7 @@ if (!isset($customerInfo)) {
                 }
             }
         });
-        
+
         // Highlight và hiển thị thông báo
         if (duplicates.length > 0) {
             showDuplicateNotice(duplicates);
@@ -760,41 +755,41 @@ if (!isset($customerInfo)) {
             return false;
         }
     }
-    
+
     // Hàm hiển thị thông báo trùng SDT
     function showDuplicateNotice(duplicates) {
         const notice = document.getElementById('duplicatePhoneNotice');
         const list = document.getElementById('duplicatePhoneList');
-        
+
         list.innerHTML = '';
         duplicates.forEach(dup => {
             const li = document.createElement('li');
             li.textContent = `Số điện thoại ${dup.phone} được sử dụng bởi ${dup.guest1} và ${dup.guest2}`;
             list.appendChild(li);
         });
-        
+
         notice.classList.remove('d-none');
     }
-    
+
     // Hàm ẩn thông báo trùng SDT
     function hideDuplicateNotice() {
         document.getElementById('duplicatePhoneNotice').classList.add('d-none');
     }
-    
+
     // Hàm highlight các SDT trùng
     function highlightDuplicatePhones(duplicates, phoneMap) {
         // Reset highlight
         removeDuplicateHighlights();
-        
+
         // Tìm tất cả các SDT trùng
         const duplicatePhones = duplicates.map(d => d.phone);
-        
+
         // Highlight SDT khách hàng chính nếu trùng
         const mainPhone = document.getElementById('contactPhone').value.trim();
         if (duplicatePhones.includes(mainPhone)) {
             document.getElementById('contactPhone').classList.add('is-duplicate');
         }
-        
+
         // Highlight SDT khách hàng bổ sung nếu trùng
         const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
         guestPhones.forEach(input => {
@@ -803,7 +798,7 @@ if (!isset($customerInfo)) {
             }
         });
     }
-    
+
     // Hàm xóa highlight trùng
     function removeDuplicateHighlights() {
         document.getElementById('contactPhone').classList.remove('is-duplicate');
@@ -949,13 +944,13 @@ if (!isset($customerInfo)) {
     function checkPhoneDuplicates() {
         const phoneMap = {};
         const duplicates = [];
-        
+
         // Lấy SDT khách hàng chính
         const mainPhone = document.getElementById('contactPhone').value.trim();
         if (mainPhone) {
             phoneMap[mainPhone] = 'Khách hàng chính';
         }
-        
+
         // Lấy SDT khách hàng bổ sung
         const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
         guestPhones.forEach((input, index) => {
@@ -972,7 +967,7 @@ if (!isset($customerInfo)) {
                 }
             }
         });
-        
+
         return duplicates;
     }
 
@@ -995,12 +990,12 @@ if (!isset($customerInfo)) {
     }
 
     // Hàm xử lý thanh toán
-    function processPayment() {
+    async function processPayment() {
         // Reset all errors
         document.querySelectorAll('.error-message').forEach(el => {
             el.style.display = 'none';
         });
-        
+
         hideDuplicateNotice();
         removeDuplicateHighlights();
 
@@ -1023,16 +1018,223 @@ if (!isset($customerInfo)) {
             const duplicateMessage = phoneDuplicates.map(dup =>
                 `• Số điện thoại ${dup.phone} được sử dụng bởi ${dup.guest1} và ${dup.guest2}`
             ).join('\n');
-            
+
             alert(`CÓ THÔNG TIN TRÙNG LẶP:\n\n${duplicateMessage}\n\nVui lòng kiểm tra và sửa lại.`);
             return;
         }
 
-        // Nếu tất cả hợp lệ, tiếp tục với thanh toán
-        alert('Thông tin hợp lệ. Tiến hành thanh toán...');
-        // Thêm code xử lý thanh toán ở đây
+        // 1. LẤY PHƯƠNG THỨC THANH TOÁN
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+        if (!paymentMethod) {
+            document.getElementById('paymentMethodError').textContent = 'Vui lòng chọn phương thức thanh toán';
+            document.getElementById('paymentMethodError').style.display = 'block';
+            return;
+        }
+
+        // 2. LẤY KHÁCH HÀNG BỔ SUNG
+        const guests = [];
+        const guestNames = document.querySelectorAll('input[name="guestName[]"]');
+        const guestPhones = document.querySelectorAll('input[name="guestPhone[]"]');
+        const guestAddresses = document.querySelectorAll('input[name="guestAddress[]"]');
+
+        for (let i = 0; i < guestNames.length; i++) {
+            guests.push({
+                name: guestNames[i].value.trim(),
+                phone: guestPhones[i] ? guestPhones[i].value.trim() : '',
+                address: guestAddresses[i] ? guestAddresses[i].value.trim() : ''
+            });
+        }
+
+        // 3. LẤY KHUYẾN MÃI
+        const promotionCheckbox = document.querySelector('input[name="promotion"]:checked');
+        const promotionId = promotionCheckbox ? promotionCheckbox.value : '';
+        const discountAmount = promotionCheckbox ?
+            parseInt(document.getElementById('discountAmount').textContent.replace(/[^\d]/g, '')) || 0 : 0;
+
+        // 4. CHUẨN BỊ DỮ LIỆU GỬI ĐI
+        const paymentData = {
+            roomId: <?php echo $room['MaPhong']; ?>,
+            checkin: '<?php echo $checkin; ?>',
+            checkout: '<?php echo $checkout; ?>',
+            adults: <?php echo $adults; ?>,
+            nights: <?php echo $nights; ?>,
+            services: '<?php echo $_GET['services'] ?? ''; ?>',
+            customerName: document.getElementById('contactName').value.trim(),
+            customerPhone: document.getElementById('contactPhone').value.trim(),
+            customerEmail: document.getElementById('contactEmail').value.trim(),
+            customerIdNumber: document.getElementById('contactCMND').value.trim(),
+            specialRequests: document.querySelector('textarea[name="specialRequests"]').value.trim(),
+            paymentMethod: paymentMethod.value,
+            totalAmount: originalTotal,
+            discountAmount: discountAmount,
+            finalAmount: parseInt(document.getElementById('finalTotal').textContent.replace(/[^\d]/g, '')) || originalTotal,
+            promotionId: promotionId,
+            guests: guests,
+            address: document.getElementById('contactAddress').value.trim(),
+            nonSmoking: document.getElementById('nonSmoking').checked,
+            userId: <?php echo $_SESSION['user_id']; ?>,
+
+            // Thêm các trường cần thiết cho model
+            guestName: Array.from(guestNames).map(input => input.value.trim()),
+            guestPhone: Array.from(guestPhones).map(input => input.value.trim()),
+            guestAddress: Array.from(guestAddresses).map(input => input.value.trim()),
+            roomPrice: <?php echo $roomPrice; ?>,
+            servicesPrice: <?php echo $servicesPrice; ?>
+        };
+
+        // 5. GỬI REQUEST ĐẾN SERVER
+        try {
+            // Hiển thị loading
+            const btn = document.querySelector('.btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            console.log('Gửi payment data:', paymentData);
+
+            const response = await fetch('/ABC-Resort/client/controller/payment.controller.php?action=processPayment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(paymentData)
+            });
+
+            // Lấy response text để debug
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+
+            // Kiểm tra xem có phải JSON không
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.error('Không thể parse JSON:', jsonError);
+                console.error('Response text đầu tiên 500 ký tự:', responseText.substring(0, 500));
+
+                // Hiển thị lỗi chi tiết
+                alert('❌ Lỗi server: Server trả về dữ liệu không hợp lệ. Vui lòng kiểm tra console.');
+
+                // Khôi phục nút
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            // Kiểm tra HTTP status
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Khôi phục nút
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (result.success) {
+                if (paymentMethod.value === 'cash') {
+                    // TIỀN MẶT: Hiển thị thông báo thành công
+                    showSuccessModal(result);
+
+                    // Ghi log thành công
+                    console.log('🎉 Đặt phòng thành công! Mã đặt phòng:', result.bookingCode);
+
+                } else {
+                    // MOMO: Chuyển hướng đến cổng thanh toán
+                    window.location.href = '../controller/xulythanhtoanmomo_atm.php?' +
+                        'amount=' + result.finalAmount +
+                        '&bookingCode=' + result.bookingCode +
+                        '&maHoaDon=' + result.maHoaDon;
+                }
+            } else {
+                alert('❌ Lỗi: ' + result.message);
+            }
+        } catch (error) {
+            console.error('❌ Lỗi kết nối server:', error);
+
+            // Hiển thị thông báo chi tiết hơn
+            let errorMessage = 'Lỗi kết nối server: ';
+            errorMessage += error.message;
+
+            alert(errorMessage);
+
+            // Khôi phục nút
+            const btn = document.querySelector('.btn-primary');
+            btn.innerHTML = 'THANH TOÁN NGAY';
+            btn.disabled = false;
+        }
     }
 
+    // Hàm để debug response
+    async function debugResponse(response) {
+        const text = await response.text();
+        console.log('Response text:', text);
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Không thể parse JSON:', e);
+            throw new Error('Server trả về dữ liệu không hợp lệ: ' + text.substring(0, 100));
+        }
+    }
+
+    // Hàm hiển thị modal thành công
+    function showSuccessModal(result) {
+        const modalHTML = `
+        <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">🎉 Đặt phòng thành công!</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                            <h4 class="text-success">${result.message}</h4>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Thông tin đặt phòng</h5>
+                                <p class="card-text">
+                                    <strong>Mã đặt phòng:</strong> ${result.bookingCode}<br>
+                                    <strong>Trạng thái:</strong> Chưa thanh toán<br>
+                                    <strong>Phương thức:</strong> Thanh toán tại quầy
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Vui lòng đến quầy lễ tân của Tỏa Sáng Resort để thanh toán và nhận phòng.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='/ABC-Resort/client/'">
+                            <i class="fas fa-home"></i> Về trang chủ
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="window.location.href='/ABC-Resort/client/view/booking/history.php'">
+                            <i class="fas fa-history"></i> Xem lịch sử đặt phòng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+        // Thêm modal vào body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Hiển thị modal
+        const modal = new bootstrap.Modal(document.getElementById('successModal'));
+        modal.show();
+
+        // Xóa modal khi đóng
+        document.getElementById('successModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+            // Chuyển hướng về trang chủ
+            window.location.href = '/ABC-Resort/client/view/home/';
+        });
+    }
     // Hàm format tiền
     function formatCurrency(amount) {
         return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' VND';

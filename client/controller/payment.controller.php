@@ -1,10 +1,18 @@
 <?php
 session_start();
 
+// ĐẢM BẢO KHÔNG CÓ LỖI PHP XUẤT HIỆN TRONG OUTPUT
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
 // KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['user_id'])) {
-    $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-    header('Location: /ABC-Resort/client/view/auth/login.php?message=Vui lòng đăng nhập để đặt phòng');
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Vui lòng đăng nhập để đặt phòng'
+    ]);
     exit;
 }
 
@@ -18,9 +26,13 @@ class PaymentController
 
     public function __construct()
     {
-        $this->paymentModel = new PaymentModel();
-        $db = new Connect();
-        $this->conn = $db->openConnect();
+        try {
+            $this->paymentModel = new PaymentModel();
+            $db = new Connect();
+            $this->conn = $db->openConnect();
+        } catch (Exception $e) {
+            error_log("Lỗi khởi tạo PaymentController: " . $e->getMessage());
+        }
     }
 
     public function index()
@@ -53,7 +65,88 @@ class PaymentController
         $this->loadView('../view/payment/index.php', $bookingInfo);
     }
 
-    // SỬA HÀM NÀY: Lấy thông tin khách hàng và CMND
+    public function processPayment()
+    {
+        // ĐẢM BẢO CHỈ TRẢ VỀ JSON
+        ob_clean(); // Xóa buffer output
+        header('Content-Type: application/json');
+        
+        try {
+            if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+                throw new Exception('Phương thức không hợp lệ');
+            }
+
+            // Nhận dữ liệu JSON từ request
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if (!$input || json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception('Dữ liệu JSON không hợp lệ');
+            }
+
+            // Validation cơ bản
+            $required = ['customerName', 'customerPhone', 'customerEmail', 'paymentMethod', 'roomId', 'checkin', 'checkout', 'adults'];
+            foreach ($required as $field) {
+                if (empty($input[$field])) {
+                    throw new Exception('Vui lòng điền đầy đủ thông tin: ' . $field);
+                }
+            }
+
+            // Thêm trường guestName, guestPhone, guestAddress nếu chưa có
+            if (!isset($input['guestName'])) {
+                $input['guestName'] = [];
+                $input['guestPhone'] = [];
+                $input['guestAddress'] = [];
+            }
+
+            $paymentData = [
+                'roomId' => $input['roomId'],
+                'checkin' => $input['checkin'],
+                'checkout' => $input['checkout'],
+                'adults' => $input['adults'],
+                'nights' => $input['nights'] ?? 1,
+                'services' => $input['services'] ?? '',
+                'customerName' => $input['customerName'],
+                'customerPhone' => $input['customerPhone'],
+                'customerEmail' => $input['customerEmail'],
+                'customerIdNumber' => $input['customerIdNumber'] ?? '',
+                'specialRequests' => $input['specialRequests'] ?? '',
+                'paymentMethod' => $input['paymentMethod'],
+                'totalAmount' => $input['totalAmount'] ?? 0,
+                'discountAmount' => $input['discountAmount'] ?? 0,
+                'finalAmount' => $input['finalAmount'] ?? ($input['totalAmount'] ?? 0),
+                'promotionId' => $input['promotionId'] ?? '',
+                'guests' => $input['guests'] ?? [],
+                'address' => $input['address'] ?? '',
+                'nonSmoking' => $input['nonSmoking'] ?? false,
+                'userId' => $_SESSION['user_id'],
+                'guestName' => $input['guestName'] ?? [],
+                'guestPhone' => $input['guestPhone'] ?? [],
+                'guestAddress' => $input['guestAddress'] ?? [],
+                'roomPrice' => $input['roomPrice'] ?? 0,
+                'servicesPrice' => $input['servicesPrice'] ?? 0
+            ];
+
+            if (!$this->paymentModel) {
+                throw new Exception('Không thể khởi tạo model');
+            }
+
+            $result = $this->paymentModel->processBooking($paymentData);
+            
+            echo json_encode($result);
+            
+        } catch (Exception $e) {
+            // Trả về lỗi dưới dạng JSON
+            error_log("Lỗi processPayment: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi đặt phòng: ' . $e->getMessage()
+            ]);
+        }
+        
+        exit;
+    }
+
+    // ... (giữ nguyên các hàm getCustomerInfo, getCustomerInfoFallback, getPromotionsFromDB, loadView)
     private function getCustomerInfo($userId)
     {
         try {
@@ -257,63 +350,7 @@ class PaymentController
             return [];
         }
     }
-
-    public function processPayment()
-    {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            // Nhận dữ liệu JSON từ request
-            $input = json_decode(file_get_contents('php://input'), true);
-            
-            if (!$input) {
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Dữ liệu không hợp lệ'
-                ]);
-                exit;
-            }
-
-            // Validation cơ bản
-            $required = ['customerName', 'customerPhone', 'customerEmail', 'paymentMethod', 'roomId', 'checkin', 'checkout', 'adults'];
-            foreach ($required as $field) {
-                if (empty($input[$field])) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Vui lòng điền đầy đủ thông tin: ' . $field
-                    ]);
-                    exit;
-                }
-            }
-
-            $paymentData = [
-                'roomId' => $input['roomId'],
-                'checkin' => $input['checkin'],
-                'checkout' => $input['checkout'],
-                'adults' => $input['adults'],
-                'nights' => $input['nights'] ?? 1,
-                'services' => $input['services'] ?? '',
-                'customerName' => $input['customerName'],
-                'customerPhone' => $input['customerPhone'],
-                'customerEmail' => $input['customerEmail'],
-                'customerIdNumber' => $input['customerIdNumber'] ?? '',
-                'specialRequests' => $input['specialRequests'] ?? '',
-                'paymentMethod' => $input['paymentMethod'],
-                'totalAmount' => $input['totalAmount'] ?? 0,
-                'discountAmount' => $input['discountAmount'] ?? 0,
-                'finalAmount' => $input['finalAmount'] ?? ($input['totalAmount'] ?? 0),
-                'promotionId' => $input['promotionId'] ?? '',
-                'guests' => $input['guests'] ?? [],
-                'address' => $input['address'] ?? '',
-                'nonSmoking' => $input['nonSmoking'] ?? false,
-                'userId' => $_SESSION['user_id']
-            ];
-
-            $result = $this->paymentModel->processBooking($paymentData);
-
-            echo json_encode($result);
-            exit;
-        }
-    }
-
+    
     private function loadView($viewPath, $data = [])
     {
         extract($data);
@@ -331,4 +368,5 @@ if ($action == 'processPayment') {
     $controller->index();
 }
 
-// KHÔNG CÓ CODE NÀO SAU DÒNG NÀY - XÓA HẾT MỌI THỨ SAU ĐÂY
+
+?>

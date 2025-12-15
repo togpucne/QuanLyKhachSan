@@ -53,6 +53,9 @@ class PaymentModel
             error_log("=== BẮT ĐẦU LƯU CSDL ===");
             error_log("Phương thức: " . $paymentData['paymentMethod']);
             error_log("User ID: " . $paymentData['userId']);
+            error_log("Kiểu dữ liệu roomId: " . gettype($paymentData['roomId']));
+
+
 
             // 1. LƯU THÔNG TIN KHÁCH HÀNG CHÍNH
             $maKhachHangChinh = $this->luuKhachHangChinh($paymentData);
@@ -68,7 +71,7 @@ class PaymentModel
                             'HoTen' => $tenKhach,
                             'SoDienThoai' => $paymentData['guestPhone'][$index] ?? '',
                             'DiaChi' => $paymentData['guestAddress'][$index] ?? '',
-                            'MaTaiKhoan' => $paymentData['userId']
+                            'MaTaiKhoan' => 0  // Luôn là 0 cho khách bổ sung
                         ];
 
                         $maKhachHang = $this->luuKhachHangBoSung($guestData);
@@ -99,25 +102,44 @@ class PaymentModel
             $maHoaDon = $this->luuHoaDonDatPhong($paymentData, $maKhachHangChinh, $danhSachKhach, $soDem);
             error_log("Mã hóa đơn: $maHoaDon");
 
-            // 7. CẬP NHẬT TRẠNG THÁI KHÁCH HÀNG THÀNH "Đang ở"
-            $this->capNhatTrangThaiKhachHang($danhSachKhach);
-
-            // 8. CẬP NHẬT TRẠNG THÁI PHÒNG THÀNH "Đang sử dụng"
+            // 7. CẬP NHẬT TRẠNG THÁI PHÒNG THÀNH "Đang sử dụng" NGAY KHI ĐẶT
             $this->capNhatTrangThaiPhong($paymentData['roomId']);
+            error_log("Đã cập nhật phòng {$paymentData['roomId']} thành 'Đang sử dụng'");
 
-            // 9. XỬ LÝ THEO PHƯƠNG THỨC THANH TOÁN
+
+            // 8. XỬ LÝ THEO PHƯƠNG THỨC THANH TOÁN
             $phuongThuc = ($paymentData['paymentMethod'] === 'bankTransfer') ? 'Momo' : 'TienMat';
             $trangThai = 'ChuaThanhToan';
 
             // Cập nhật phương thức thanh toán vào hóa đơn
             $this->capNhatPhuongThucThanhToan($maHoaDon, $phuongThuc);
 
+            // 9. NẾU LÀ TIỀN MẶT VÀ NGÀY CHECK-IN LÀ HÔM NAY -> XỬ LÝ THÊM
+            $ngayHienTai = date('Y-m-d');
+            $ngayNhan = $paymentData['checkin'];
+
+            if ($paymentData['paymentMethod'] === 'cash' && $ngayNhan <= $ngayHienTai) {
+                error_log("Check-in ngay: Tiền mặt và ngày nhận <= hôm nay");
+
+                // Cập nhật trạng thái thanh toán
+                $this->capNhatTrangThaiThanhToan($maHoaDon);
+
+                // Cập nhật khách hàng thành "Đang ở"
+                $this->capNhatTrangThaiKhachHang($danhSachKhach);
+
+                $trangThai = 'DaThanhToan';
+
+                error_log("Đã cập nhật khách hàng thành 'Đang ở' (check-in ngay)");
+            } else {
+                // Nếu chưa check-in, khách hàng vẫn là "Không ở"
+                error_log("Khách hàng giữ trạng thái 'Không ở' (check-in trong tương lai)");
+            }
+
             // Commit transaction
             $this->conn->commit();
 
             error_log("=== LƯU CSDL THÀNH CÔNG ===");
-            error_log("Đã cập nhật: " . count($danhSachKhach) . " khách hàng sang 'Đang ở'");
-            error_log("Đã cập nhật phòng " . $paymentData['roomId'] . " sang 'Đang sử dụng'");
+            error_log("Đã cập nhật: Phòng {$paymentData['roomId']} -> 'Đang sử dụng'");
 
             // TRẢ KẾT QUẢ
             if ($paymentData['paymentMethod'] === 'cash') {
@@ -153,7 +175,7 @@ class PaymentModel
             if (method_exists($this->conn, 'rollback')) {
                 $this->conn->rollback();
             }
-            error_log("❌ LỖI LƯU CSDL: " . $e->getMessage());
+            error_log("❌ LỐI LƯU CSDL: " . $e->getMessage());
             throw new Exception("Lỗi đặt phòng: " . $e->getMessage());
         }
     }
@@ -204,10 +226,12 @@ class PaymentModel
         throw new Exception("Không thể lưu thông tin khách hàng chính: " . $stmt->error);
     }
 
+
     // 2. LƯU KHÁCH HÀNG BỔ SUNG
     private function luuKhachHangBoSung($guestData)
     {
         $maKH = 'KH' . date('YmdHis') . rand(100, 999);
+        $maTaiKhoan   = 0;
 
         $sql = "INSERT INTO khachhang (
                     MaKH, HoTen, SoDienThoai, DiaChi, 
@@ -221,7 +245,7 @@ class PaymentModel
             $guestData['HoTen'],
             $guestData['SoDienThoai'],
             $guestData['DiaChi'],
-            $guestData['MaTaiKhoan']
+            $maTaiKhoan
         );
 
         if ($stmt->execute()) {
@@ -427,27 +451,7 @@ class PaymentModel
         }
     }
 
-    // 10. CẬP NHẬT TRẠNG THÁI PHÒNG THÀNH "Đang sử dụng"
-    private function capNhatTrangThaiPhong($maPhong)
-    {
-        try {
-            $sql = "UPDATE phong SET TrangThai = 'Đang sử dụng', updated_at = NOW() WHERE MaPhong = ?";
 
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("i", $maPhong);
-
-            if (!$stmt->execute()) {
-                error_log("Lỗi cập nhật trạng thái phòng: " . $stmt->error);
-                return false;
-            }
-
-            error_log("Đã cập nhật trạng thái phòng $maPhong thành 'Đang sử dụng'");
-            return true;
-        } catch (Exception $e) {
-            error_log("Lỗi trong capNhatTrangThaiPhong: " . $e->getMessage());
-            return false;
-        }
-    }
     // 7. LẤY THÔNG TIN KHÁCH HÀNG
     private function layThongTinKhachHang($maKH)
     {
@@ -549,5 +553,96 @@ class PaymentModel
             'totalAmount' => $totalAmount,
             'roomId' => $roomId
         ];
+    }
+    // 10. CẬP NHẬT TRẠNG THÁI PHÒNG THÀNH "Đang sử dụng"
+    private function capNhatTrangThaiPhong($maPhong)
+    {
+        error_log("=== CẬP NHẬT TRẠNG THÁI PHÒNG ===");
+        error_log("Mã phòng: $maPhong");
+
+        $maPhong = intval($maPhong);
+
+        if ($maPhong <= 0) {
+            error_log("❌ Mã phòng không hợp lệ");
+            return false;
+        }
+
+        // PHƯƠNG PHÁP ĐƠN GIẢN NHẤT: Query trực tiếp
+        try {
+            // Kiểm tra trước
+            $sqlCheck = "SELECT MaPhong, SoPhong, TrangThai FROM phong WHERE MaPhong = $maPhong";
+            $result = $this->conn->query($sqlCheck);
+
+            if ($result && $result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                error_log("Trạng thái trước: " . $row['TrangThai']);
+            }
+
+            // Cập nhật TRỰC TIẾP - không dùng prepare
+            $sql = "UPDATE phong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = $maPhong";
+            error_log("SQL: $sql");
+
+            if ($this->conn->query($sql)) {
+                error_log("✓ Query trực tiếp thành công");
+
+                // Kiểm tra lại
+                $result = $this->conn->query($sqlCheck);
+                if ($result && $row = $result->fetch_assoc()) {
+                    error_log("Trạng thái sau: " . $row['TrangThai']);
+
+                    if ($row['TrangThai'] == 'Đang sử dụng') {
+                        error_log("✅ THÀNH CÔNG");
+                        return true;
+                    }
+                }
+            } else {
+                error_log("❌ Lỗi query: " . $this->conn->error);
+            }
+
+            // Nếu không được, thử với prepared statement
+            error_log("--- Thử với prepared statement ---");
+            $stmt = $this->conn->prepare("UPDATE phong SET TrangThai = ? WHERE MaPhong = ?");
+            $trangThai = 'Đang sử dụng';
+            $stmt->bind_param("si", $trangThai, $maPhong);
+
+            if ($stmt->execute()) {
+                error_log("✓ Prepared statement thành công");
+                $stmt->close();
+                return true;
+            } else {
+                error_log("❌ Lỗi prepared: " . $stmt->error);
+                $stmt->close();
+            }
+
+            return false;
+        } catch (Exception $e) {
+            error_log("❌ Exception: " . $e->getMessage());
+            return false;
+        }
+    }
+    // 11. CẬP NHẬT TRẠNG THÁI THANH TOÁN
+    private function capNhatTrangThaiThanhToan($maHoaDon)
+    {
+        try {
+            $sql = "UPDATE hoadondatphong 
+                SET TrangThaiThanhToan = 'DaThanhToan',
+                    TrangThai = 'DaThanhToan',
+                    updated_at = NOW()
+                WHERE Id = ?";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $maHoaDon);
+
+            if (!$stmt->execute()) {
+                error_log("Lỗi cập nhật trạng thái thanh toán: " . $stmt->error);
+                return false;
+            }
+
+            error_log("Đã cập nhật hóa đơn $maHoaDon thành 'DaThanhToan'");
+            return true;
+        } catch (Exception $e) {
+            error_log("Lỗi trong capNhatTrangThaiThanhToan: " . $e->getMessage());
+            return false;
+        }
     }
 }

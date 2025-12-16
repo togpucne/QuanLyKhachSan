@@ -501,12 +501,7 @@ if (!isset($customerInfo)) {
                     <button type="button" class="btn btn-outline-secondary btn-sm" id="btnClearPromotion">
                         <i class="fas fa-times me-1"></i> Bỏ chọn khuyến mãi
                     </button>
-                    <form class="" method="POST" target="_blank" enctype="application/x-www-form-urlencoded"
-                        action="../controller/xulythanhtoanmomo_atm.php">
 
-                        <input type="submit" name="momo" value="Thanh toán MOMO QRcode" class="btn btn-danger">
-
-                    </form>
 
                 </div>
             </div>
@@ -1051,6 +1046,18 @@ if (!isset($customerInfo)) {
         const discountAmount = promotionCheckbox ?
             parseInt(document.getElementById('discountAmount').textContent.replace(/[^\d]/g, '')) || 0 : 0;
 
+        // DEBUG: Kiểm tra số tiền từ giao diện
+        console.log("=== DEBUG AMOUNT ===");
+        const finalTotalElement = document.getElementById('finalTotal');
+        const finalTotalText = finalTotalElement.textContent;
+        console.log("Final Total Text:", finalTotalText);
+
+        // Parse số tiền từ giao diện (loại bỏ " VND" và dấu phẩy)
+        const finalAmountFromUI = parseInt(finalTotalText.replace(/[^\d]/g, ''));
+        console.log("Final Amount from UI (parsed):", finalAmountFromUI);
+        console.log("Original Total:", originalTotal);
+        console.log("=== END DEBUG ===");
+
         // 4. CHUẨN BỊ DỮ LIỆU GỬI ĐI
         const paymentData = {
             roomId: <?php echo $room['MaPhong']; ?>,
@@ -1067,7 +1074,8 @@ if (!isset($customerInfo)) {
             paymentMethod: paymentMethod.value,
             totalAmount: originalTotal,
             discountAmount: discountAmount,
-            finalAmount: parseInt(document.getElementById('finalTotal').textContent.replace(/[^\d]/g, '')) || originalTotal,
+            // QUAN TRỌNG: Dùng số tiền TỪ GIAO DIỆN, không phải từ result
+            finalAmount: finalAmountFromUI,
             promotionId: promotionId,
             guests: guests,
             address: document.getElementById('contactAddress').value.trim(),
@@ -1082,6 +1090,9 @@ if (!isset($customerInfo)) {
             servicesPrice: <?php echo $servicesPrice; ?>
         };
 
+        console.log('Gửi payment data:', paymentData);
+        console.log('Amount trong paymentData:', paymentData.finalAmount);
+
         // 5. GỬI REQUEST ĐẾN SERVER
         try {
             // Hiển thị loading
@@ -1089,8 +1100,6 @@ if (!isset($customerInfo)) {
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             btn.disabled = true;
-
-            console.log('Gửi payment data:', paymentData);
 
             const response = await fetch('/ABC-Resort/client/controller/payment.controller.php?action=processPayment', {
                 method: 'POST',
@@ -1100,30 +1109,18 @@ if (!isset($customerInfo)) {
                 body: JSON.stringify(paymentData)
             });
 
-            // Lấy response text để debug
             const responseText = await response.text();
             console.log('Response text:', responseText);
 
-            // Kiểm tra xem có phải JSON không
             let result;
             try {
                 result = JSON.parse(responseText);
             } catch (jsonError) {
                 console.error('Không thể parse JSON:', jsonError);
-                console.error('Response text đầu tiên 500 ký tự:', responseText.substring(0, 500));
-
-                // Hiển thị lỗi chi tiết
-                alert('❌ Lỗi server: Server trả về dữ liệu không hợp lệ. Vui lòng kiểm tra console.');
-
-                // Khôi phục nút
+                alert('❌ Lỗi server: Dữ liệu không hợp lệ');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 return;
-            }
-
-            // Kiểm tra HTTP status
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             // Khôi phục nút
@@ -1134,14 +1131,13 @@ if (!isset($customerInfo)) {
                 if (paymentMethod.value === 'cash') {
                     // TIỀN MẶT: Hiển thị thông báo thành công
                     showSuccessModal(result);
-
-                    // Ghi log thành công
-                    console.log('🎉 Đặt phòng thành công! Mã đặt phòng:', result.bookingCode);
-
                 } else {
                     // MOMO: Chuyển hướng đến cổng thanh toán
+                    // QUAN TRỌNG: Dùng finalAmountFromUI thay vì result.finalAmount
+                    console.log("Chuyển hướng đến Momo với số tiền:", finalAmountFromUI);
+
                     window.location.href = '../controller/xulythanhtoanmomo_atm.php?' +
-                        'amount=' + result.finalAmount +
+                        'amount=' + finalAmountFromUI + // Dùng từ giao diện
                         '&bookingCode=' + result.bookingCode +
                         '&maHoaDon=' + result.maHoaDon;
                 }
@@ -1150,14 +1146,8 @@ if (!isset($customerInfo)) {
             }
         } catch (error) {
             console.error('❌ Lỗi kết nối server:', error);
+            alert('Lỗi kết nối server: ' + error.message);
 
-            // Hiển thị thông báo chi tiết hơn
-            let errorMessage = 'Lỗi kết nối server: ';
-            errorMessage += error.message;
-
-            alert(errorMessage);
-
-            // Khôi phục nút
             const btn = document.querySelector('.btn-primary');
             btn.innerHTML = 'THANH TOÁN NGAY';
             btn.disabled = false;
@@ -1301,7 +1291,18 @@ if (!isset($customerInfo)) {
 
         // CẬP NHẬT GIAO DIỆN
         updateDisplay(discountAmount, newTax, finalTotal);
+        updateDisplay(discountAmount, newTax, finalTotal);
 
+        console.log('Đã áp dụng khuyến mãi giảm:', discountAmount, 'VND');
+        console.log('Tổng mới:', finalTotal, 'VND');
+
+        // Debug: Kiểm tra số tiền trên giao diện sau khi cập nhật
+        setTimeout(() => {
+            const currentAmount = document.getElementById('finalTotal').textContent;
+            const parsedAmount = parseInt(currentAmount.replace(/[^\d]/g, ''));
+            console.log("Sau khuyến mãi - Số tiền trên UI:", currentAmount);
+            console.log("Sau khuyến mãi - Số tiền parsed:", parsedAmount);
+        }, 100);
         console.log('Đã áp dụng khuyến mãi giảm:', discountAmount, 'VND');
     }
 

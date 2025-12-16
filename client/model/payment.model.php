@@ -202,10 +202,11 @@ class PaymentModel
         // Nếu chưa có, tạo mới
         $maKH = 'KH' . date('YmdHis') . rand(100, 999);
 
+        // Bảng khachhang CÓ updated_at
         $sql = "INSERT INTO khachhang (
-                    MaKH, HoTen, SoDienThoai, DiaChi, CMND, Email, 
-                    TrangThai, MaTaiKhoan, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'Không ở', ?, NOW(), NOW())";
+                MaKH, HoTen, SoDienThoai, DiaChi, CMND, Email, 
+                TrangThai, MaTaiKhoan, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Không ở', ?, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
@@ -226,17 +227,17 @@ class PaymentModel
         throw new Exception("Không thể lưu thông tin khách hàng chính: " . $stmt->error);
     }
 
-
     // 2. LƯU KHÁCH HÀNG BỔ SUNG
     private function luuKhachHangBoSung($guestData)
     {
         $maKH = 'KH' . date('YmdHis') . rand(100, 999);
-        $maTaiKhoan   = 0;
+        $maTaiKhoan = 0;
 
+        // Bảng khachhang CÓ updated_at
         $sql = "INSERT INTO khachhang (
-                    MaKH, HoTen, SoDienThoai, DiaChi, 
-                    TrangThai, MaTaiKhoan, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'Không ở', ?, NOW(), NOW())";
+                MaKH, HoTen, SoDienThoai, DiaChi, 
+                TrangThai, MaTaiKhoan, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'Không ở', ?, NOW(), NOW())";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
@@ -317,7 +318,7 @@ class PaymentModel
         }
     }
 
-    // HÀM LƯU HÓA ĐƠN ĐẶT PHÒNG
+    // 6. HÀM LƯU HÓA ĐƠN ĐẶT PHÒNG
     private function luuHoaDonDatPhong($paymentData, $maKhachHang, $danhSachKhach, $soDem)
     {
         // Lấy thông tin khách hàng để lưu vào DanhSachKhach
@@ -423,33 +424,7 @@ class PaymentModel
 
         return $stmt->insert_id;
     }
-    // 9. CẬP NHẬT TRẠNG THÁI KHÁCH HÀNG THÀNH "Đang ở"
-    private function capNhatTrangThaiKhachHang($danhSachMaKH)
-    {
-        try {
-            $placeholders = str_repeat('?,', count($danhSachMaKH) - 1) . '?';
-            $sql = "UPDATE khachhang SET TrangThai = 'Đang ở', updated_at = NOW() WHERE MaKH IN ($placeholders)";
 
-            $stmt = $this->conn->prepare($sql);
-
-            // Tạo types string (tất cả đều là string)
-            $types = str_repeat('s', count($danhSachMaKH));
-
-            // Bind parameters
-            $stmt->bind_param($types, ...$danhSachMaKH);
-
-            if (!$stmt->execute()) {
-                error_log("Lỗi cập nhật trạng thái khách hàng: " . $stmt->error);
-                return false;
-            }
-
-            error_log("Đã cập nhật trạng thái " . count($danhSachMaKH) . " khách hàng thành 'Đang ở'");
-            return true;
-        } catch (Exception $e) {
-            error_log("Lỗi trong capNhatTrangThaiKhachHang: " . $e->getMessage());
-            return false;
-        }
-    }
 
 
     // 7. LẤY THÔNG TIN KHÁCH HÀNG
@@ -484,7 +459,7 @@ class PaymentModel
         $stmt->execute();
     }
 
-    // Hàm lấy thông tin đặt phòng (giữ nguyên từ code cũ)
+    // 9. Hàm lấy thông tin đặt phòng (giữ nguyên từ code cũ)
     public function getBookingInfo($roomId, $checkin, $checkout, $adults, $nights, $services)
     {
         // Lấy thông tin phòng
@@ -567,54 +542,32 @@ class PaymentModel
             return false;
         }
 
-        // PHƯƠNG PHÁP ĐƠN GIẢN NHẤT: Query trực tiếp
         try {
-            // Kiểm tra trước
-            $sqlCheck = "SELECT MaPhong, SoPhong, TrangThai FROM phong WHERE MaPhong = $maPhong";
-            $result = $this->conn->query($sqlCheck);
+            // KHÔNG CÓ updated_at - chỉ cập nhật TrangThai
+            $sql = "UPDATE phong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = ?";
 
-            if ($result && $result->num_rows > 0) {
-                $row = $result->fetch_assoc();
-                error_log("Trạng thái trước: " . $row['TrangThai']);
-            }
-
-            // Cập nhật TRỰC TIẾP - không dùng prepare
-            $sql = "UPDATE phong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = $maPhong";
-            error_log("SQL: $sql");
-
-            if ($this->conn->query($sql)) {
-                error_log("✓ Query trực tiếp thành công");
-
-                // Kiểm tra lại
-                $result = $this->conn->query($sqlCheck);
-                if ($result && $row = $result->fetch_assoc()) {
-                    error_log("Trạng thái sau: " . $row['TrangThai']);
-
-                    if ($row['TrangThai'] == 'Đang sử dụng') {
-                        error_log("✅ THÀNH CÔNG");
-                        return true;
-                    }
-                }
-            } else {
-                error_log("❌ Lỗi query: " . $this->conn->error);
-            }
-
-            // Nếu không được, thử với prepared statement
-            error_log("--- Thử với prepared statement ---");
-            $stmt = $this->conn->prepare("UPDATE phong SET TrangThai = ? WHERE MaPhong = ?");
-            $trangThai = 'Đang sử dụng';
-            $stmt->bind_param("si", $trangThai, $maPhong);
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $maPhong);
 
             if ($stmt->execute()) {
-                error_log("✓ Prepared statement thành công");
-                $stmt->close();
+                error_log("✓ Đã cập nhật phòng $maPhong thành 'Đang sử dụng'");
+
+                // Kiểm tra lại
+                $sqlCheck = "SELECT TrangThai FROM phong WHERE MaPhong = ?";
+                $stmtCheck = $this->conn->prepare($sqlCheck);
+                $stmtCheck->bind_param("i", $maPhong);
+                $stmtCheck->execute();
+                $result = $stmtCheck->get_result();
+
+                if ($row = $result->fetch_assoc()) {
+                    error_log("Trạng thái sau cập nhật: " . $row['TrangThai']);
+                }
+
                 return true;
             } else {
-                error_log("❌ Lỗi prepared: " . $stmt->error);
-                $stmt->close();
+                error_log("❌ Lỗi cập nhật phòng: " . $stmt->error);
+                return false;
             }
-
-            return false;
         } catch (Exception $e) {
             error_log("❌ Exception: " . $e->getMessage());
             return false;
@@ -624,10 +577,9 @@ class PaymentModel
     private function capNhatTrangThaiThanhToan($maHoaDon)
     {
         try {
+            // Bảng hoadondatphong KHÔNG CÓ updated_at
             $sql = "UPDATE hoadondatphong 
-                SET TrangThaiThanhToan = 'DaThanhToan',
-                    TrangThai = 'DaThanhToan',
-                    updated_at = NOW()
+                SET TrangThai = 'DaThanhToan'
                 WHERE Id = ?";
 
             $stmt = $this->conn->prepare($sql);
@@ -645,4 +597,61 @@ class PaymentModel
             return false;
         }
     }
+
+    // 12. CẬP NHẬT TRẠNG THÁI KHÁCH HÀNG THÀNH "Đang ở"
+    private function capNhatTrangThaiKhachHang($danhSachMaKH)
+    {
+        try {
+            $placeholders = str_repeat('?,', count($danhSachMaKH) - 1) . '?';
+            // Bảng khachhang CÓ updated_at
+            $sql = "UPDATE khachhang SET TrangThai = 'Đang ở', updated_at = NOW() WHERE MaKH IN ($placeholders)";
+
+            $stmt = $this->conn->prepare($sql);
+
+            // Tạo types string (tất cả đều là string)
+            $types = str_repeat('s', count($danhSachMaKH));
+
+            // Bind parameters
+            $stmt->bind_param($types, ...$danhSachMaKH);
+
+            if (!$stmt->execute()) {
+                error_log("Lỗi cập nhật trạng thái khách hàng: " . $stmt->error);
+                return false;
+            }
+
+            error_log("Đã cập nhật trạng thái " . count($danhSachMaKH) . " khách hàng thành 'Đang ở'");
+            return true;
+        } catch (Exception $e) {
+            error_log("Lỗi trong capNhatTrangThaiKhachHang: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // XÓA hàm này vì không dùng (hoặc sửa nếu cần)
+    private function capNhatTrangThaiHoaDon($maHoaDon, $trangThai)
+    {
+
+        try {
+            // Bảng hoadondatphong KHÔNG CÓ updated_at
+            $sql = "UPDATE hoadondatphong 
+                SET TrangThai = ?
+                WHERE Id = ?";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("si", $trangThai, $maHoaDon);
+
+            if (!$stmt->execute()) {
+                error_log("Lỗi cập nhật trạng thái hóa đơn: " . $stmt->error);
+                return false;
+            }
+
+            error_log("Đã cập nhật hóa đơn $maHoaDon thành '$trangThai'");
+            return true;
+        } catch (Exception $e) {
+            error_log("Lỗi trong capNhatTrangThaiHoaDon: " . $e->getMessage());
+            return false;
+        }
+    }
 }
+
+?>

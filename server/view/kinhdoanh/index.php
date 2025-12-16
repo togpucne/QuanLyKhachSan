@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['vaitro'])) {
 // Kiểm tra vai trò - chỉ cho phép kinhdoanh
 if ($_SESSION['vaitro'] !== 'kinhdoanh') {
     $_SESSION['error'] = "Bạn không có quyền truy cập!";
-    header('Location: ../home/dashboard.php');
+    header('Location: ../login/login.php');
     exit();
 }
 
@@ -315,7 +315,6 @@ require_once __DIR__ . '/../layouts/header.php';
 </script>
 
 <?php 
-// Đóng kết nối database
-$connect->closeConnect($conn);
+
 include_once __DIR__ . '/../layouts/footer.php'; 
 ?>

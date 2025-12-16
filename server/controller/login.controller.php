@@ -77,7 +77,7 @@ class LoginController
                 error_log("Login successful - Email: " . $user['Email'] . ", Role: " . $user['VaiTro']);
 
                 // Chuyển hướng đến dashboard
-                header('Location: ../view/home/dashboard.php');
+                header('Location: ../view/'.$user['VaiTro'] .'/index.php');
                 exit();
             } else {
                 $_SESSION['error'] = $result['error'];

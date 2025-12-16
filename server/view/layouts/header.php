@@ -323,25 +323,230 @@ $role = $_SESSION['vaitro'];
                 transform: none;
             }
         }
+
+        /* Dropdown styles */
+        .dropdown-toggle::after {
+            margin-left: 0.5em;
+            vertical-align: 0.15em;
+        }
+
+        .dropdown-menu {
+            border: 1px solid rgba(0, 0, 0, .15);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+            border-radius: 8px;
+            margin-top: 10px;
+            padding: 0.5rem 0;
+        }
+
+
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+
+
+        .dropdown-divider {
+            margin: 0.5rem 0;
+        }
+
+        /* Avatar icon */
+        .nav-link.dropdown-toggle .fa-user-circle {
+            color: white;
+        }
+
+
+
+        .dropdown-header small {
+            font-size: 0.85rem;
+        }
+
+        /* Icons in dropdown */
+        .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Active dropdown state */
+        .nav-link.dropdown-toggle.show {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
     </style>
 </head>
 
 <body>
+
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="../home/dashboard.php">
                 <i class="fas fa-hotel me-2"></i>Tỏa Sáng Resort
             </a>
+
             <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    <i class="fas fa-user me-1"></i>
-                    <?php echo isset($user['username']) ? $user['username'] : 'Guest'; ?>
-                    <span class="badge bg-warning role-badge"><?php echo isset($role) ? strtoupper($role) : 'USER'; ?></span>
-                </span>
-                <a href="../../../server/controller/login.controller.php?action=logout" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt me-1"></i>Đăng Xuất
-                </a>
+                <!-- Dropdown Tài khoản -->
+                <div class="nav-item dropdown">
+                    <?php
+                    // Lấy thêm thông tin nhân viên để hiển thị trong dropdown
+                    if (isset($_SESSION['user']['id'])) {
+                        require_once __DIR__ . '/../../model/connectDB.php';
+                        try {
+                            $connect = new Connect();
+                            $conn = $connect->openConnect();
+
+                            $sql = "SELECT nv.HoTen, nv.SDT, nv.PhongBan 
+                                FROM nhanvien nv
+                                WHERE nv.MaTaiKhoan = ?";
+                            $stmt = $conn->prepare($sql);
+                            $stmt->bind_param("i", $_SESSION['user']['id']);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+                            $employeeDetails = $result->fetch_assoc();
+
+                            $stmt->close();
+                            $connect->closeConnect($conn);
+                        } catch (Exception $e) {
+                            error_log("Database error: " . $e->getMessage());
+                            $employeeDetails = [];
+                        }
+                    }
+                    ?>
+
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                        <div class="me-2">
+                            <i class="fas fa-user-circle fa-lg"></i>
+                        </div>
+                        <div class="d-flex flex-column" style="color: white;">
+                            Xin chào, <?php echo isset($employeeDetails['HoTen']) ? htmlspecialchars($employeeDetails['HoTen']) : htmlspecialchars($user['username']); ?>
+                        </div>
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 250px;">
+                        <!-- Header với thông tin -->
+                        <li>
+                            <div class="dropdown-header">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-user-circle fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">
+                                            <?php echo isset($employeeDetails['HoTen']) ? htmlspecialchars($employeeDetails['HoTen']) : htmlspecialchars($user['username']); ?>
+                                        </div>
+                                        <small class="text-muted">
+                                            <?php
+                                            $role_names = [
+                                                'quanly' => 'Quản lý',
+                                                'ketoan' => 'Kế toán',
+                                                'letan' => 'Lễ tân',
+                                                'buongphong' => 'Buồng phòng',
+                                                'kinhdoanh' => 'Kinh doanh',
+                                                'thungan' => 'Thủ ngân'
+                                            ];
+                                            echo isset($role_names[$role]) ? $role_names[$role] : strtoupper($role);
+                                            ?>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+
+                        <!-- Thông tin chi tiết -->
+                        <?php if (isset($employeeDetails)): ?>
+                            <li>
+                                <div class="dropdown-item-text px-3 py-2">
+                                    <div class="small">
+                                        <?php if (isset($employeeDetails['PhongBan'])): ?>
+                                            <div class="mb-1">
+                                                <i class="fas fa-building me-2 text-muted"></i>
+                                                <span class="text-muted">Phòng ban:</span>
+                                                <span class="fw-medium"><?php echo htmlspecialchars($employeeDetails['PhongBan']); ?></span>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if (isset($employeeDetails['SDT'])): ?>
+                                            <div class="mb-1">
+                                                <i class="fas fa-phone me-2 text-muted"></i>
+                                                <span class="text-muted">SĐT:</span>
+                                                <span class="fw-medium"><?php echo htmlspecialchars($employeeDetails['SDT']); ?></span>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <div>
+                                            <i class="fas fa-envelope me-2 text-muted"></i>
+                                            <span class="text-muted">Email:</span>
+                                            <span class="fw-medium"><?php echo htmlspecialchars($user['email'] ?? 'Chưa cập nhật'); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                        <?php endif; ?>
+
+                        <!-- Menu chức năng -->
+                        <li>
+                            <a class="dropdown-item" href="../employee/profile.php">
+                                <i class="fas fa-id-card me-2"></i>Thông tin cá nhân
+                            </a>
+                        </li>
+
+                        <!-- Thêm các menu theo vai trò -->
+                        <?php if ($role === 'letan'): ?>
+                            <li>
+                                <a class="dropdown-item" href="../letan/dashboard.php">
+                                    <i class="fas fa-tachometer-alt me-2 text-success"></i>Bảng điều khiển
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="../letan/datphong.php">
+                                    <i class="fas fa-calendar-check me-2 text-info"></i>Đặt phòng
+                                </a>
+                            </li>
+                        <?php elseif ($role === 'ketoan'): ?>
+                            <li>
+                                <a class="dropdown-item" href="../ketoan/quanlydoanhthu.php">
+                                    <i class="fas fa-chart-line me-2 text-success"></i>Doanh thu
+                                </a>
+                            </li>
+                        <?php elseif ($role === 'buongphong'): ?>
+                            <li>
+                                <a class="dropdown-item" href="../buongphong/quanlyphong.php">
+                                    <i class="fas fa-bed me-2 text-info"></i>Quản lý phòng
+                                </a>
+                            </li>
+                        <?php endif; ?>
+
+
+                        <!-- Đổi mật khẩu -->
+                        <li>
+                            <a class="dropdown-item" href="../employee/profile.php#password-section">
+                                <i class="fas fa-key me-2"></i>Đổi mật khẩu
+                            </a>
+                        </li>
+
+
+
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+
+                        <!-- Đăng xuất -->
+                        <li>
+                            <a class="dropdown-item text-danger" href="../../../server/controller/login.controller.php?action=logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -386,7 +591,7 @@ $role = $_SESSION['vaitro'];
                         ],
                         'buongphong' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],        
+                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],
                             ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ],

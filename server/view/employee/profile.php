@@ -3,13 +3,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
 // SỬA: Dùng ABC-Resort thay vì Toa-Sang-Resort
 $project_path = '/ABC-Resort';
 $base_url = $protocol . '://' . $host . $project_path;
 
+// --- ĐƯA TẤT CẢ KIỂM TRA ĐĂNG NHẬP LÊN ĐẦU ---
 if (!isset($_SESSION['user']) || !isset($_SESSION['vaitro'])) {
     header("Location: " . $base_url . "/client/controller/user.controller.php?action=login");
     exit();
@@ -18,7 +18,12 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['vaitro'])) {
 // SỬA: Cho phép TẤT CẢ vai trò nhân viên
 $allowed_roles = ['letan', 'buongphong', 'ketoan', 'kinhdoanh', 'thungan', 'quanly'];
 if (!in_array($_SESSION['vaitro'], $allowed_roles)) {
-    header("Location: " . $base_url . "/client/index.php");
+    // Nếu là quản lý, chuyển về dashboard server
+    if ($_SESSION['vaitro'] === 'quanly') {
+        header("Location: " . $base_url . "/server/home/dashboard.php");
+    } else {
+        header("Location: " . $base_url . "/client/index.php");
+    }
     exit();
 }
 
@@ -26,11 +31,10 @@ if (!in_array($_SESSION['vaitro'], $allowed_roles)) {
 $user_id = $_SESSION['user']['id'] ?? 0;
 $vai_tro = $_SESSION['vaitro'];
 
-// Debug đường dẫn header
+// --- TÌM VÀ INCLUDE HEADER SAU KHI ĐÃ KIỂM TRA XONG ---
 $header_path1 = __DIR__ . '/../../layouts/header.php';
 $header_path2 = __DIR__ . '/../layouts/header.php';
 $header_path3 = dirname(__DIR__, 2) . '/layouts/header.php';
-
 
 $header_path = '';
 if (file_exists($header_path1)) {
@@ -47,32 +51,6 @@ if (empty($header_path) || !file_exists($header_path)) {
 
 // Include header
 include $header_path;
-$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-$host = $_SERVER['HTTP_HOST'];
-$project_path = '/Toa-Sang-Resort';
-$base_url = $protocol . '://' . $host . $project_path;
-
-// Kiểm tra đăng nhập
-if (!isset($_SESSION['user']) || !isset($_SESSION['vaitro'])) {
-    header("Location: " . $base_url . "/client/controller/user.controller.php?action=login");
-    exit();
-}
-
-// SỬA: Cho phép TẤT CẢ vai trò nhân viên (giống header.php)
-$allowed_roles = ['letan', 'buongphong', 'ketoan', 'kinhdoanh', 'thungan'];
-if (!in_array($_SESSION['vaitro'], $allowed_roles)) {
-    // Nếu là quản lý, chuyển về dashboard server
-    if ($_SESSION['vaitro'] === 'quanly') {
-        header("Location: " . $base_url . "/server/home/dashboard.php");
-    } else {
-        header("Location: " . $base_url . "/client/index.php");
-    }
-    exit();
-}
-
-// Lấy user_id từ $_SESSION['user']
-$user_id = $_SESSION['user']['id'] ?? 0;
-$vai_tro = $_SESSION['vaitro'];
 
 // Hiển thị lỗi đổi mật khẩu nếu có
 if (isset($_SESSION['password_errors'])) {
@@ -85,8 +63,6 @@ if (isset($_SESSION['success_message'])) {
     $success_message = $_SESSION['success_message'];
     unset($_SESSION['success_message']);
 }
-
-
 
 // SỬA: Dùng $user_id thay vì $_SESSION['user_id']
 $employeeInfo = getEmployeeInfo($user_id);
@@ -119,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
 
 function getEmployeeInfo($userId)
 {
@@ -313,8 +288,7 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                                 <small class="text-muted">Sử dụng form bên dưới để đổi mật khẩu</small>
                             </div>
                         </div>
-                        <!-- THIẾU ĐÓNG </div> ở đây -->
-                        <div class="col-md-6"> <!-- THÊM DÒNG NÀY -->
+                        <div class="col-md-6">
                             <div class="mb-2">
                                 <strong>Vai trò:</strong>
                                 <div class="text-muted">
@@ -331,7 +305,6 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                                     ?>
                                 </div>
                             </div>
-                            <!-- THÊM PHẦN NÀY -->
                             <div class="mb-2">
                                 <strong>Ngày tạo tài khoản:</strong>
                                 <div class="text-muted"><?php echo date('d/m/Y H:i', strtotime($employeeInfo['created_at'] ?? '')); ?></div>
@@ -342,8 +315,8 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                                     <?php echo $employeeInfo['TrangThai'] == 1 ? 'Hoạt động' : 'Đã khóa'; ?>
                                 </span>
                             </div>
-                        </div> <!-- ĐÓNG col-md-6 -->
-                    </div> <!-- ĐÓNG row -->
+                        </div>
+                    </div>
                 </div>
             </div>
 

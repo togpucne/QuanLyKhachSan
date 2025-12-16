@@ -526,13 +526,7 @@ $role = $_SESSION['vaitro'];
                         <?php endif; ?>
 
 
-                        <!-- Đổi mật khẩu -->
-                        <li>
-                            <a class="dropdown-item" href="../employee/profile.php#password-section">
-                                <i class="fas fa-key me-2"></i>Đổi mật khẩu
-                            </a>
-                        </li>
-
+                      
 
 
                         <li>

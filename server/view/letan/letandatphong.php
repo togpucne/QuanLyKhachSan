@@ -1,5 +1,5 @@
 <?php
-// server/view/quanly/quanlyhoadondatphong.php
+// server/view/letan/letandatphong.php
 session_start();
 
 // Kiểm tra quyền truy cập
@@ -8,205 +8,212 @@ if (!isset($_SESSION['vaitro']) || $_SESSION['vaitro'] !== 'letan') {
     exit();
 }
 
-include_once '../layouts/header.php';
+require_once __DIR__ . '/../../model/letandatphong.model.php';
 
-require_once __DIR__ . '/../../model/quanlyhoadondatphong.model.php';
-
-// Lấy dữ liệu hóa đơn
-$model = new QuanLyHoaDonDatPhongModel();
-
-// Xử lý lọc nếu có tham số
-$tuNgayFilter = isset($_GET['tu_ngay']) ? $_GET['tu_ngay'] : null;
-$denNgayFilter = isset($_GET['den_ngay']) ? $_GET['den_ngay'] : null;
-$tuKhoaFilter = isset($_GET['tu_khoa']) ? $_GET['tu_khoa'] : null;
-
-// Lấy dữ liệu theo bộ lọc
-if (!empty($tuKhoaFilter)) {
-    $hoadon = $model->searchHoaDon($tuKhoaFilter);
-    $filterType = 'search';
-    $filterValue = $tuKhoaFilter;
-} elseif ($tuNgayFilter && $denNgayFilter) {
-    $hoadon = $model->filterHoaDonByDate($tuNgayFilter, $denNgayFilter);
-    $filterType = 'date';
-    $filterValue = "$tuNgayFilter đến $denNgayFilter";
-} else {
-    $hoadon = $model->getAllHoaDon();
-    $filterType = 'all';
+// Xử lý cập nhật trạng thái (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && isset($_POST['trangthai'])) {
+    $id = intval($_POST['id']);
+    $trangthai = $_POST['trangthai'];
+    
+    $model = new LetanDatPhongModel();
+    $result = $model->updateTrangThai($id, $trangthai);
+    
+    if ($result) {
+        $_SESSION['success'] = "Cập nhật trạng thái thành công!";
+    } else {
+        $_SESSION['error'] = "Cập nhật trạng thái thất bại!";
+    }
+    
+    header('Location: letandatphong.php');
+    exit();
 }
 
-// Lấy thống kê tổng quan
-$tongDoanhThuData = $model->getTongDoanhThu();
+// Lấy danh sách hóa đơn
+$model = new LetanDatPhongModel();
 
-// Tính thống kê nhanh
-$tongHoaDon = count($hoadon);
-$daThanhToan = 0;
-$tongTien = 0;
+// Xử lý tìm kiếm
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status = isset($_GET['status']) ? $_GET['status'] : '';
+
+if (!empty($search)) {
+    $hoadon = $model->searchHoaDon($search);
+} else {
+    $hoadon = $model->getAllHoaDon();
+}
+
+// Lọc theo trạng thái nếu có
+if (!empty($status)) {
+    $hoadon = array_filter($hoadon, function($item) use ($status) {
+        return $item['TrangThai'] == $status;
+    });
+    $hoadon = array_values($hoadon); // Reset keys
+}
+
+$total = count($hoadon);
+$paid = 0;
+$totalRevenue = 0;
 
 foreach ($hoadon as $hd) {
     if ($hd['TrangThai'] == 'DaThanhToan') {
-        $daThanhToan++;
-        $tongTien += $hd['TongTien'];
+        $paid++;
+        $totalRevenue += floatval($hd['TongTien']);
     }
 }
-$chuaThanhToan = $tongHoaDon - $daThanhToan;
-$trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
+
+$unpaid = $total - $paid;
+$paymentRate = $total > 0 ? round(($paid / $total) * 100) : 0;
+
+// Include header
+include_once '../layouts/header.php';
 ?>
 
-<!-- CSS đơn giản -->
+<!-- CSS riêng cho trang -->
 <style>
-    .card {
-        border: 1px solid #dee2e6;
-        margin-bottom: 20px;
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.9em;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
     }
-
-    .table th {
+    .status-paid {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+    }
+    .status-unpaid {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #f59e0b;
+    }
+    .table-hover tbody tr:hover {
         background-color: #f8f9fa;
-        font-weight: 600;
     }
-
-    .badge {
-        font-size: 0.85em;
-        padding: 4px 8px;
+    .btn-toggle {
+        min-width: 90px;
     }
-
-    .total-amount {
-        font-weight: 600;
+    .stat-card {
+        transition: transform 0.2s;
     }
-
-    .filter-active {
-        background-color: #e7f1ff !important;
-        border-left: 3px solid #0d6efd !important;
-    }
-
-    .stat-number {
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-
-    .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 </style>
 
-<div class="py-4">
-    <!-- Tiêu đề -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">
-            Quản lý đặt phòng
-        </h4>
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0"><i class="fas fa-file-invoice me-2 text-primary"></i> Quản lý hóa đơn</h3>
+        <span class="badge bg-light text-dark fs-6">
+            <i class="fas fa-list me-1"></i>Tổng: <?php echo $total; ?> hóa đơn
+        </span>
     </div>
-
-
-    <!-- Thống kê nhanh -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-number text-primary"><?php echo $tongHoaDon; ?></div>
-                    <div class="stat-label">Tổng hóa đơn</div>
-                </div>
-            </div>
+    
+    <!-- Thông báo -->
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <div class="col-md-2">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-number text-success"><?php echo $daThanhToan; ?></div>
-                    <div class="stat-label">Đã thanh toán</div>
-                </div>
-            </div>
+    <?php endif; ?>
+    
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <div class="col-md-2">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-number text-warning"><?php echo $chuaThanhToan; ?></div>
-                    <div class="stat-label">Chưa thanh toán</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-number text-info"><?php echo number_format($tongTien, 0, ',', '.') . ' đ'; ?></div>
-                    <div class="stat-label">Tổng doanh thu</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-number text-secondary"><?php echo number_format($trungBinh, 0, ',', '.') . ' đ'; ?></div>
-                    <div class="stat-label">Trung bình/hóa đơn</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bộ lọc và tìm kiếm -->
-    <div class="card mb-4">
+    <?php endif; ?>
+    
+    <!-- Bộ lọc -->
+    <div class="card mb-3 border-0 shadow-sm">
         <div class="card-body">
-            <h6 class="mb-3"><i class="fas fa-filter me-2"></i>Bộ lọc</h6>
-            <form method="GET" action="" id="filterForm">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Từ ngày</label>
-                        <input type="date" name="tu_ngay" class="form-control"
-                            value="<?php echo $tuNgayFilter ? htmlspecialchars($tuNgayFilter) : date('Y-m-01'); ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Đến ngày</label>
-                        <input type="date" name="den_ngay" class="form-control"
-                            value="<?php echo $denNgayFilter ? htmlspecialchars($denNgayFilter) : date('Y-m-d'); ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Tìm kiếm</label>
-                        <div class="input-group">
-                            <input type="text" name="tu_khoa" class="form-control"
-                                placeholder="Mã KH, mã phòng, dịch vụ..."
-                                value="<?php echo $tuKhoaFilter ? htmlspecialchars($tuKhoaFilter) : ''; ?>">
-                            <button class="btn btn-outline-secondary" type="button" onclick="resetFilter()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search me-1"></i>Tìm kiếm
-                        </button>
+            <form method="GET" class="row g-2">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Tìm mã KH, mã phòng, ID..." 
+                               value="<?php echo htmlspecialchars($search); ?>">
                     </div>
                 </div>
-
-                <!-- Hiển thị thông tin lọc đang áp dụng -->
-                <?php if ($filterType != 'all'): ?>
-                    <div class="mt-3">
-                        <span class="badge bg-light text-dark border">
-                            <i class="fas fa-info-circle me-1"></i>
-                            <?php if ($filterType == 'search'): ?>
-                                Đang tìm: "<?php echo htmlspecialchars($filterValue); ?>"
-                            <?php elseif ($filterType == 'date'): ?>
-                                Từ <?php echo date('d/m/Y', strtotime($tuNgayFilter)); ?> đến <?php echo date('d/m/Y', strtotime($denNgayFilter)); ?>
-                            <?php endif; ?>
-                            <a href="?" class="text-danger ms-2"><i class="fas fa-times"></i></a>
-                        </span>
-                    </div>
-                <?php endif; ?>
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="DaThanhToan" <?php echo $status == 'DaThanhToan' ? 'selected' : ''; ?>>Đã thanh toán</option>
+                        <option value="ChuaThanhToan" <?php echo $status == 'ChuaThanhToan' ? 'selected' : ''; ?>>Chưa thanh toán</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Tìm
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="letandatphong.php" class="btn btn-secondary w-100">
+                        <i class="fas fa-times me-1"></i>Xóa lọc
+                    </a>
+                </div>
             </form>
         </div>
     </div>
-
-    <!-- Bảng danh sách hóa đơn -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="fas fa-list me-2"></i>Danh sách Hóa đơn</h6>
-            <span class="badge bg-light text-dark">
-                <?php echo count($hoadon); ?> hóa đơn
-            </span>
+    
+    <!-- Thống kê -->
+    <div class="row mb-3 g-3">
+        <div class="col-md-3">
+            <div class="card border-primary stat-card">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-file-invoice fa-2x"></i>
+                    </div>
+                    <h4 class="text-primary mb-1"><?php echo $total; ?></h4>
+                    <p class="text-muted mb-0">Tổng hóa đơn</p>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
+        <div class="col-md-3">
+            <div class="card border-success stat-card">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                    <h4 class="text-success mb-1"><?php echo $paid; ?></h4>
+                    <p class="text-muted mb-0">Đã thanh toán</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning stat-card">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h4 class="text-warning mb-1"><?php echo $unpaid; ?></h4>
+                    <p class="text-muted mb-0">Chưa thanh toán</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info stat-card">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="fas fa-percentage fa-2x"></i>
+                    </div>
+                    <h4 class="text-info mb-1"><?php echo $paymentRate; ?>%</h4>
+                    <p class="text-muted mb-0">Tỷ lệ thanh toán</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bảng hóa đơn -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
                         <tr>
                             <th>ID</th>
                             <th>Mã KH</th>
@@ -216,78 +223,114 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                             <th>Tổng tiền</th>
                             <th>Phương thức TT</th>
                             <th>Trạng thái</th>
-                            <th>Ngày tạo</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (count($hoadon) > 0): ?>
+                        <?php if (empty($hoadon)): ?>
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i><br>
+                                    Không tìm thấy hóa đơn nào
+                                    <?php if (!empty($search) || !empty($status)): ?>
+                                        <div class="mt-2">
+                                            <a href="letandatphong.php" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-redo me-1"></i>Hiển thị tất cả
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php else: ?>
                             <?php foreach ($hoadon as $hd): ?>
+                                <?php
+                                // Parse danh sách khách
+                                $danhSachKhach = json_decode($hd['DanhSachKhach'] ?? '[]', true);
+                                $soKhach = is_array($danhSachKhach) ? count($danhSachKhach) : 0;
+                                ?>
                                 <tr>
-                                    <td><strong>#<?php echo htmlspecialchars($hd['Id']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($hd['MaKhachHang']); ?></td>
+                                    <td><strong class="text-primary">#<?php echo $hd['Id']; ?></strong></td>
                                     <td>
-                                        <span class="badge bg-light text-dark border">
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                                            <?php echo htmlspecialchars($hd['MaKhachHang']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
                                             <?php echo htmlspecialchars($hd['MaPhong']); ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <small class="text-muted d-block">Nhận:</small>
+                                        <small class="d-block text-muted">Nhận:</small>
                                         <?php echo date('d/m/Y', strtotime($hd['NgayNhan'])); ?>
                                         <br>
-                                        <small class="text-muted d-block">Trả:</small>
+                                        <small class="d-block text-muted">Trả:</small>
                                         <?php echo date('d/m/Y', strtotime($hd['NgayTra'])); ?>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-light text-dark">
-                                            <?php echo htmlspecialchars($hd['SoDem']); ?> đêm
+                                            <?php echo $hd['SoDem']; ?> đêm
                                         </span>
-                                    </td>
-                                    <td class="total-amount">
-                                        <?php echo number_format($hd['TongTien'], 0, ',', '.') . ' đ'; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            <?php echo htmlspecialchars($hd['PhuongThucThanhToan']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        $statusClass = $hd['TrangThai'] == 'DaThanhToan' ? 'bg-success text-white' : 'bg-warning text-dark';
-                                        ?>
-                                        <span class="badge <?php echo $statusClass; ?>">
-                                            <?php echo htmlspecialchars($hd['TrangThai']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <small><?php echo date('d/m/Y', strtotime($hd['NgayTao'])); ?></small>
                                         <br>
-                                        <small class="text-muted"><?php echo date('H:i', strtotime($hd['NgayTao'])); ?></small>
+                                        <small class="text-muted"><?php echo $soKhach; ?> người</small>
+                                    </td>
+                                    <td class="fw-bold text-success">
+                                        <?php echo number_format($hd['TongTien'], 0, ',', '.'); ?> đ
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="xemChiTiet(<?php echo $hd['Id']; ?>)">
+                                        <?php 
+                                        $pttt = $hd['PhuongThucThanhToan'] ?? '';
+                                        if ($pttt == 'TienMat'): ?>
+                                            <span class="badge bg-success">Tiền mặt</span>
+                                        <?php elseif ($pttt == 'Momo'): ?>
+                                            <span class="badge bg-purple" style="background-color: #b200ff;">Momo</span>
+                                        <?php elseif ($pttt == 'TheNganHang'): ?>
+                                            <span class="badge bg-primary">Thẻ NH</span>
+                                        <?php elseif ($pttt == 'ChuyenKhoan'): ?>
+                                            <span class="badge bg-info">Chuyển khoản</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary"><?php echo htmlspecialchars($pttt); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($hd['TrangThai'] == 'DaThanhToan'): ?>
+                                            <span class="status-badge status-paid">
+                                                <i class="fas fa-check-circle me-1"></i>Đã TT
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="status-badge status-unpaid">
+                                                <i class="fas fa-clock me-1"></i>Chưa TT
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <!-- Nút xem chi tiết -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    onclick="viewDetail(<?php echo $hd['Id']; ?>)"
+                                                    title="Xem chi tiết">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="xoaHoaDon(<?php echo $hd['Id']; ?>)">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            
+                                            <!-- Nút chuyển trạng thái -->
+                                            <form method="POST" action="" class="d-inline">
+                                                <input type="hidden" name="id" value="<?php echo $hd['Id']; ?>">
+                                                <input type="hidden" name="trangthai" 
+                                                       value="<?php echo $hd['TrangThai'] == 'DaThanhToan' ? 'ChuaThanhToan' : 'DaThanhToan'; ?>">
+                                                <button type="submit" 
+                                                        class="btn btn-sm <?php echo $hd['TrangThai'] == 'DaThanhToan' ? 'btn-warning' : 'btn-success'; ?> btn-toggle"
+                                                        title="<?php echo $hd['TrangThai'] == 'DaThanhToan' ? 'Hủy thanh toán' : 'Xác nhận thanh toán'; ?>">
+                                                    <?php if ($hd['TrangThai'] == 'DaThanhToan'): ?>
+                                                        <i class="fas fa-times-circle me-1"></i>Hủy TT
+                                                    <?php else: ?>
+                                                        <i class="fas fa-check-circle me-1"></i>Đã TT
+                                                    <?php endif; ?>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="10" class="text-center py-4">
-                                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
-                                    <p class="text-muted mb-0">Không tìm thấy hóa đơn nào</p>
-                                    <?php if ($filterType != 'all'): ?>
-                                        <a href="?" class="btn btn-sm btn-outline-primary mt-2">
-                                            <i class="fas fa-times me-1"></i>Xóa bộ lọc
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -296,27 +339,22 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
     </div>
 </div>
 
-<!-- Modal chi tiết -->
-<div class="modal fade" id="modalChiTiet" tabindex="-1" aria-hidden="true">
+<!-- Modal xem chi tiết -->
+<div class="modal fade" id="detailModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-file-invoice me-2"></i>Chi tiết Hóa đơn
+                    <i class="fas fa-file-invoice me-2"></i>Chi tiết hóa đơn
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="modalChiTietBody">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Đang tải dữ liệu...</p>
-                </div>
+            <div class="modal-body" id="detailContent">
+                <!-- Nội dung sẽ được load ở đây -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="inHoaDon()">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" onclick="printInvoice()">
                     <i class="fas fa-print me-1"></i>In hóa đơn
                 </button>
             </div>
@@ -324,291 +362,317 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
     </div>
 </div>
 
-<!-- JavaScript FIXED VERSION -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- JavaScript -->
 <script>
-    $(document).ready(function() {
-        console.log('jQuery loaded:', typeof $ !== 'undefined');
-    });
-
-    function xemChiTiet(id) {
-        console.log('Đang xem chi tiết hóa đơn ID:', id);
-
-        // Kiểm tra jQuery
-        if (typeof $ === 'undefined') {
-            alert('jQuery chưa được tải! Vui lòng kiểm tra kết nối internet.');
-            return;
-        }
-
-        // Kiểm tra bootstrap
-        if (typeof bootstrap === 'undefined' || typeof bootstrap.Modal === 'undefined') {
-            alert('Bootstrap chưa được tải! Vui lòng kiểm tra kết nối internet.');
-            return;
-        }
-
-        // Hiển thị modal
-        var modalElement = document.getElementById('modalChiTiet');
-        if (!modalElement) {
-            alert('Không tìm thấy modal!');
-            return;
-        }
-
-        var modal = new bootstrap.Modal(modalElement);
-        modal.show();
-
-        // Tạo URL đúng - KIỂM TRA ĐƯỜNG DẪN
-        var baseUrl = window.location.origin;
-        var pathArray = window.location.pathname.split('/');
-        var controllerPath = '';
-
-        // Xác định đường dẫn controller
-        if (pathArray.includes('ABC-Resort')) {
-            controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php';
-        } else {
-            controllerPath = '../../controller/quanlyhoadondatphong.controller.php';
-        }
-
-        var url = controllerPath + '?action=chiTiet&id=' + id;
-        console.log('Request URL:', url);
-
-        // Load dữ liệu chi tiết
-        $.ajax({
-            url: url,
-            type: 'GET',
-            dataType: 'json',
-            timeout: 10000, // 10 giây timeout
-            beforeSend: function() {
-                $('#modalChiTietBody').html(`
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Đang tải dữ liệu...</p>
+// Hàm xem chi tiết hóa đơn
+async function viewDetail(id) {
+    try {
+        console.log('Đang tải chi tiết hóa đơn ID:', id);
+        
+        // Hiển thị loading
+        document.getElementById('detailContent').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-            `);
-            },
-            success: function(response) {
-                console.log('Response received:', response);
-
-                if (response && response.success) {
-                    var hd = response.data;
-                    console.log('Data:', hd);
-
-                    // Kiểm tra dữ liệu
-                    if (!hd) {
-                        $('#modalChiTietBody').html(`
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Không tìm thấy dữ liệu hóa đơn
-                        </div>
-                    `);
-                        return;
-                    }
-
-                    // Xử lý DanhSachKhach nếu có
-                    var danhSachKhachHtml = '';
-                    try {
-                        var danhSachKhach = hd.DanhSachKhach ? JSON.parse(hd.DanhSachKhach) : [];
-                        if (Array.isArray(danhSachKhach) && danhSachKhach.length > 0) {
-                            danhSachKhachHtml = `
-                            <div class="mt-3">
-                                <h6>Danh sách khách</h6>
-                                <table class="table table-sm table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Họ tên</th>
-                                            <th>Số điện thoại</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-                            danhSachKhach.forEach(function(khach) {
-                                danhSachKhachHtml += `
-                                <tr>
-                                    <td>${khach.HoTen || ''}</td>
-                                    <td>${khach.SoDienThoai || ''}</td>
-                                </tr>`;
-                            });
-                            danhSachKhachHtml += `</tbody></table></div>`;
-                        }
-                    } catch (e) {
-                        console.log('Error parsing DanhSachKhach:', e);
-                    }
-
-                    var html = `
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6>Thông tin hóa đơn #${hd.Id}</h6>
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <td width="40%"><strong>Mã khách hàng:</strong></td>
-                                    <td>${hd.MaKhachHang || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Mã phòng:</strong></td>
-                                    <td>${hd.MaPhong || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Số người:</strong></td>
-                                    <td>${hd.SoNguoi || '0'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Ngày nhận:</strong></td>
-                                    <td>${formatDate(hd.NgayNhan)}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Ngày trả:</strong></td>
-                                    <td>${formatDate(hd.NgayTra)}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Số đêm:</strong></td>
-                                    <td>${hd.SoDem || '0'}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Thanh toán</h6>
-                                    <p><strong>Tổng tiền:</strong><br>
-                                    <span class="text-success fw-bold">${formatCurrency(hd.TongTien)}</span></p>
-                                    <p><strong>Phương thức:</strong><br>
-                                    <span class="badge bg-light text-dark">${hd.PhuongThucThanhToan || 'N/A'}</span></p>
-                                    <p><strong>Trạng thái:</strong><br>
-                                    <span class="badge ${hd.TrangThai == 'DaThanhToan' ? 'bg-success text-white' : 'bg-warning text-dark'}">
-                                        ${hd.TrangThai || 'N/A'}
-                                    </span></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-3">
-                        <h6>Chi tiết dịch vụ</h6>
-                        <table class="table table-sm table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Dịch vụ</th>
-                                    <th>Giá phòng</th>
-                                    <th>Tiền dịch vụ</th>
-                                    <th>Khuyến mãi</th>
-                                    <th>Thuế</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>${hd.TenDichVu || 'Không có'}</td>
-                                    <td class="text-end">${formatCurrency(hd.GiaPhong)}</td>
-                                    <td class="text-end">${formatCurrency(hd.TienDichVu)}</td>
-                                    <td class="text-end">${formatCurrency(hd.TienKhuyenMai)}</td>
-                                    <td class="text-end">${formatCurrency(hd.TienThue)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    ${danhSachKhachHtml}
-                    
-                    <div class="mt-3">
-                        <p><strong>Yêu cầu đặc biệt:</strong> ${hd.YeuCauDacBiet || 'Không có'}</p>
-                        <p><strong>Ngày tạo:</strong> ${formatDateTime(hd.NgayTao)}</p>
-                    </div>
-                `;
-
-                    $('#modalChiTietBody').html(html);
-                } else {
-                    var errorMsg = response && response.error ? response.error : 'Có lỗi xảy ra!';
-                    $('#modalChiTietBody').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        ${errorMsg}
-                    </div>
-                `);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.log('AJAX Error:', status, error);
-                console.log('XHR:', xhr);
-
-                var errorMsg = '';
-                if (status === 'timeout') {
-                    errorMsg = 'Request timeout! Kiểm tra kết nối mạng.';
-                } else if (status === 'error') {
-                    errorMsg = 'Lỗi kết nối đến server!';
-                } else {
-                    errorMsg = 'Lỗi: ' + status;
-                }
-
-                $('#modalChiTietBody').html(`
+                <p class="mt-2">Đang tải dữ liệu hóa đơn...</p>
+            </div>
+        `;
+        
+        // Hiển thị modal
+        const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+        modal.show();
+        
+        // Tạo URL API (điều chỉnh đường dẫn nếu cần)
+        const url = `../../controller/letandatphong.controller.php?action=chitiet&id=${id}`;
+        console.log('API URL:', url);
+        
+        // Gọi API lấy chi tiết
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        if (data.error) {
+            document.getElementById('detailContent').innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    ${errorMsg}
+                    ${data.error}
                 </div>
-            `);
+            `;
+            return;
+        }
+        
+        // Parse danh sách khách
+        let guestList = '';
+        try {
+            const guests = JSON.parse(data.DanhSachKhach || '[]');
+            if (Array.isArray(guests) && guests.length > 0) {
+                guestList = `
+                    <div class="mt-3">
+                        <h6><i class="fas fa-users me-2"></i>Danh sách khách (${data.SoNguoi || guests.length} người)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr><th>Tên</th><th>Điện thoại</th><th>CMND</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${guests.map(g => `<tr>
+                                        <td>${g.HoTen || ''}</td>
+                                        <td>${g.SoDienThoai || ''}</td>
+                                        <td>${g.CMND || ''}</td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
             }
-        });
+        } catch (e) {
+            console.log('Lỗi parse danh sách khách:', e);
+        }
+        
+        // Format tiền
+        const formatMoney = (amount) => {
+            if (amount === null || amount === undefined || isNaN(amount)) return '0 đ';
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+        };
+        
+        // Format ngày
+        const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                return date.toLocaleDateString('vi-VN');
+            } catch (e) {
+                return dateString;
+            }
+        };
+        
+        // Format ngày giờ
+        const formatDateTime = (dateTimeString) => {
+            if (!dateTimeString) return 'N/A';
+            try {
+                const date = new Date(dateTimeString);
+                if (isNaN(date.getTime())) return dateTimeString;
+                return date.toLocaleString('vi-VN');
+            } catch (e) {
+                return dateTimeString;
+            }
+        };
+        
+        // Tạo nội dung chi tiết
+        document.getElementById('detailContent').innerHTML = `
+            <div class="invoice-details">
+                <div class="text-center mb-4">
+                    <h5 class="text-primary">ABC RESORT</h5>
+                    <h6>HÓA ĐƠN THANH TOÁN</h6>
+                    <p class="text-muted">Mã hóa đơn: <strong>#${data.Id || ''}</strong></p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-hotel me-2"></i>Thông tin đặt phòng</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td width="40%"><strong>Mã khách hàng:</strong></td>
+                                <td>${data.MaKhachHang || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Mã phòng:</strong></td>
+                                <td><span class="badge bg-secondary">${data.MaPhong || 'N/A'}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Số đêm:</strong></td>
+                                <td>${data.SoDem || 0} đêm</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Số người:</strong></td>
+                                <td>${data.SoNguoi || 0} người</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calendar-alt me-2"></i>Thời gian</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td width="40%"><strong>Ngày nhận:</strong></td>
+                                <td>${formatDate(data.NgayNhan)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ngày trả:</strong></td>
+                                <td>${formatDate(data.NgayTra)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ngày tạo:</strong></td>
+                                <td>${formatDateTime(data.NgayTao)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-concierge-bell me-2"></i>Yêu cầu đặc biệt</h6>
+                        <div class="p-3 bg-light rounded">
+                            ${data.YeuCauDacBiet || '<em class="text-muted">Không có yêu cầu đặc biệt</em>'}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-utensils me-2"></i>Dịch vụ sử dụng</h6>
+                        <div class="p-3 bg-light rounded">
+                            ${data.TenDichVu || '<em class="text-muted">Không sử dụng dịch vụ</em>'}
+                        </div>
+                    </div>
+                </div>
+                
+                ${guestList}
+                
+                <div class="mt-3">
+                    <h6><i class="fas fa-money-bill-wave me-2"></i>Chi tiết thanh toán</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Giá phòng:</strong></td>
+                            <td class="text-end">${formatMoney(parseFloat(data.GiaPhong || 0))}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tiền dịch vụ:</strong></td>
+                            <td class="text-end">${formatMoney(parseFloat(data.TienDichVu || 0))}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tiền khuyến mãi:</strong></td>
+                            <td class="text-end text-danger">-${formatMoney(parseFloat(data.TienKhuyenMai || 0))}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tiền thuế:</strong></td>
+                            <td class="text-end">${formatMoney(parseFloat(data.TienThue || 0))}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><strong>TỔNG TIỀN:</strong></td>
+                            <td class="text-end"><h5 class="mb-0">${formatMoney(parseFloat(data.TongTien || 0))}</h5></td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p><strong>Phương thức thanh toán:</strong><br>
+                        <span class="badge bg-primary">${data.PhuongThucThanhToan || 'N/A'}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Trạng thái:</strong><br>
+                        <span class="badge ${data.TrangThai == 'DaThanhToan' ? 'bg-success' : 'bg-warning'}">
+                            ${data.TrangThai || 'N/A'}
+                        </span></p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Lỗi:', error);
+        document.getElementById('detailContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Lỗi tải dữ liệu: ${error.message}
+                <br><small>Vui lòng kiểm tra console để biết chi tiết</small>
+            </div>
+        `;
     }
+}
 
-    function xoaHoaDon(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa hóa đơn #' + id + '?')) {
-            $.ajax({
-                url: '../../controller/quanlyhoadondatphong.controller.php',
-                type: 'POST',
-                data: JSON.stringify({
-                    action: 'xoa',
-                    id: id
-                }),
-                contentType: 'application/json',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        alert('Đã xóa hóa đơn thành công!');
-                        location.reload();
-                    } else {
-                        alert('Lỗi: ' + (response.error || 'Không thể xóa hóa đơn'));
-                    }
-                },
-                error: function() {
-                    alert('Lỗi kết nối đến server!');
+// Hàm in hóa đơn
+function printInvoice() {
+    const printContent = document.querySelector('.invoice-details');
+    if (!printContent) {
+        alert('Không có nội dung để in!');
+        return;
+    }
+    
+    const originalContent = document.body.innerHTML;
+    
+    document.body.innerHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Hóa đơn</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                @media print {
+                    body { padding: 20px; font-size: 14px; }
+                    .no-print { display: none !important; }
                 }
-            });
+                .invoice-header {
+                    border-bottom: 2px solid #007bff;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="invoice-header text-center">
+                    <h3 class="text-primary">ABC RESORT</h3>
+                    <h5>HÓA ĐƠN THANH TOÁN</h5>
+                    <p class="text-muted">Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
+                </div>
+                ${printContent.innerHTML}
+                <div class="text-center mt-4 pt-3 border-top">
+                    <p><strong>Cảm ơn quý khách đã sử dụng dịch vụ!</strong></p>
+                    <p><small>Hóa đơn này có giá trị thanh toán và xuất hóa đơn</small></p>
+                </div>
+                <div class="text-center no-print mt-3">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> In hóa đơn
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.close()">Đóng</button>
+                </div>
+            </div>
+            <script>
+                window.onload = function() { window.print(); }
+            <\/script>
+        </body>
+        </html>
+    `;
+    
+    window.print();
+    setTimeout(() => {
+        document.body.innerHTML = originalContent;
+    }, 100);
+}
+
+// Tự động ẩn alert sau 5 giây
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+
+// Thêm confirm cho nút chuyển trạng thái
+document.addEventListener('submit', function(e) {
+    if (e.target.tagName === 'FORM' && e.target.querySelector('input[name="trangthai"]')) {
+        const form = e.target;
+        const id = form.querySelector('input[name="id"]').value;
+        const trangthai = form.querySelector('input[name="trangthai"]').value;
+        const action = trangthai === 'DaThanhToan' ? 'xác nhận thanh toán' : 'hủy thanh toán';
+        
+        if (!confirm(`Bạn có chắc muốn ${action} hóa đơn #${id}?`)) {
+            e.preventDefault();
         }
     }
-
-    function resetFilter() {
-        window.location.href = '?';
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            var date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'N/A';
-            return date.toLocaleDateString('vi-VN');
-        } catch (e) {
-            return 'N/A';
-        }
-    }
-
-    function formatDateTime(dateTimeString) {
-        if (!dateTimeString) return 'N/A';
-        try {
-            var date = new Date(dateTimeString);
-            if (isNaN(date.getTime())) return 'N/A';
-            return date.toLocaleString('vi-VN');
-        } catch (e) {
-            return 'N/A';
-        }
-    }
-
-    function formatCurrency(amount) {
-        if (!amount || isNaN(amount)) return '0 đ';
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(amount).replace('₫', 'đ');
-    }
+});
 </script>
 
 <?php
+// Include footer
 include_once '../layouts/footer.php';
 ?>

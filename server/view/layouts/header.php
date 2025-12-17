@@ -543,12 +543,9 @@ $role = $_SESSION['vaitro'];
                         ],
                         'letan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/letan/index.php'],
-                            ['icon' => 'fas fa-calendar-check', 'text' => 'Quản lý đặt phòng', 'link' => '/ABC-Resort/server/view/letan/datphong.php'],
+                            ['icon' => 'fas fa-calendar-check', 'text' => 'Quản lý đặt phòng', 'link' => '/ABC-Resort/server/view/letan/letandatphong.php'],
                             ['icon' => 'fas fa-user-plus', 'text' => 'Đăng ký tài khoản', 'link' => '/ABC-Resort/server/view/letan/logon.php'],
                             ['icon' => 'fas fa-cash-register', 'text' => 'Thanh toán', 'link' => '/ABC-Resort/server/view/letan/thanhtoan.php'],
-                            ['icon' => 'fas fa-user-check', 'text' => 'Check-in/Check-out', 'link' => '/ABC-Resort/server/view/letan/checkinout.php'],
-                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Dịch vụ khách hàng', 'link' => '/ABC-Resort/server/view/letan/dichvukhachhang.php'],
-                            ['icon' => 'fas fa-users', 'text' => 'Quản lý khách hàng', 'link' => '/ABC-Resort/server/view/letan/quanlyKH.php'],
                         ],
                         'buongphong' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/buongphong/index.php'],

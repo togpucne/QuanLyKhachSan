@@ -577,19 +577,19 @@ if ($action === 'taikhoan') {
                                     <tr>
                                         <td><?php echo $stt++; ?></td>
                                         <td>
-    <div>
-        <span class="badge bg-success"><?php echo htmlspecialchars($kh['MaKH']); ?></span>
-    </div>
-    <div class="mt-1">
-        <?php if (!empty($kh['MaTaiKhoan'])): ?>
-            <i class="fas fa-check-circle text-success me-1"></i>
-            <small class="text-success">Đã có tài khoản</small>
-        <?php else: ?>
-            <i class="fas fa-times-circle text-secondary me-1"></i>
-            <small class="text-secondary">Chưa có tài khoản</small>
-        <?php endif; ?>
-    </div>
-</td>
+                                            <div>
+                                                <span class="badge bg-success"><?php echo htmlspecialchars($kh['MaKH']); ?></span>
+                                            </div>
+                                            <div class="mt-1">
+                                                <?php if (!empty($kh['MaTaiKhoan'])): ?>
+                                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                                    <small class="text-success">Đã có tài khoản</small>
+                                                <?php else: ?>
+                                                    <i class="fas fa-times-circle text-secondary me-1"></i>
+                                                    <small class="text-secondary">Chưa có tài khoản</small>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
                                         <td>
                                             <strong><?php echo htmlspecialchars($kh['HoTen']); ?></strong>
                                         </td>

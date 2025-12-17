@@ -526,88 +526,99 @@ include_once '../layouts/header.php';
 
       const nv = dataNV.data;
 
+      // Trong hàm showSuaNhanVienModal, sửa phần form HTML:
+
       const formHTML = `
-        <div class="row">
-          <div class="col-md-6 mb-3">
+    <div class="row">
+        <div class="col-md-6 mb-3">
             <label class="form-label">Họ Tên <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="ho_ten" required value="${nv.HoTen || ''}">
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="sdt" required value="${nv.SDT || ''}">
-          </div>
-          <div class="col-12 mb-3">
+        </div>
+        <div class="col-12 mb-3">
             <label class="form-label">Địa Chỉ</label>
             <textarea class="form-control" name="dia_chi" rows="2">${nv.DiaChi || ''}</textarea>
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Ngày Vào Làm <span class="text-danger">*</span></label>
             <input type="date" class="form-control" name="ngay_vao_lam" required value="${nv.NgayVaoLam || ''}">
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Ngày Nghỉ Việc</label>
             <input type="date" class="form-control" name="ngay_nghi_viec" value="${nv.NgayNghiViec || ''}">
             <small class="text-muted">Chỉ điền nếu nhân viên đã nghỉ</small>
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Phòng Ban <span class="text-danger">*</span></label>
             <select class="form-control" name="phong_ban" required>
-              <option value="">-- Chọn phòng ban --</option>
-              <option value="Kinh Doanh" ${nv.PhongBan === 'Kinh Doanh' ? 'selected' : ''}>Kinh Doanh</option>
-              <option value="Lễ Tân" ${nv.PhongBan === 'Lễ Tân' ? 'selected' : ''}>Lễ Tân</option>
-              <option value="Buồng Phòng" ${nv.PhongBan === 'Buồng Phòng' ? 'selected' : ''}>Buồng Phòng</option>
-              <option value="Kế Toán" ${nv.PhongBan === 'Kế Toán' ? 'selected' : ''}>Kế Toán</option>
-              <option value="Quản Lý" ${nv.PhongBan === 'Quản Lý' ? 'selected' : ''}>Quản Lý</option>
+                <option value="">-- Chọn phòng ban --</option>
+                <option value="Kinh Doanh" ${nv.PhongBan === 'Kinh Doanh' ? 'selected' : ''}>Kinh Doanh</option>
+                <option value="Lễ Tân" ${nv.PhongBan === 'Lễ Tân' ? 'selected' : ''}>Lễ Tân</option>
+                <option value="Buồng Phòng" ${nv.PhongBan === 'Buồng Phòng' ? 'selected' : ''}>Buồng Phòng</option>
+                <option value="Kế Toán" ${nv.PhongBan === 'Kế Toán' ? 'selected' : ''}>Kế Toán</option>
+                <option value="Quản Lý" ${nv.PhongBan === 'Quản Lý' ? 'selected' : ''}>Quản Lý</option>
             </select>
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
             <input type="number" class="form-control" name="luong_co_ban" required min="0" step="100000" value="${nv.LuongCoBan || 0}">
-          </div>
-          <div class="col-md-6 mb-3">
+        </div>
+        <div class="col-md-6 mb-3">
             <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
             <select class="form-control" name="trang_thai" required>
-              <option value="Đang làm" ${nv.TrangThai === 'Đang làm' ? 'selected' : ''}>Đang làm</option>
-              <option value="Đã nghỉ" ${nv.TrangThai === 'Đã nghỉ' ? 'selected' : ''}>Đã nghỉ</option>
+                <option value="Đang làm" ${nv.TrangThai === 'Đang làm' ? 'selected' : ''}>Đang làm</option>
+                <option value="Đã nghỉ" ${nv.TrangThai === 'Đã nghỉ' ? 'selected' : ''}>Đã nghỉ</option>
             </select>
-          </div>
-          
-          ${nv.Email ? `
-          <div class="col-12 mb-3">
-            <div class="border p-3 rounded">
-              <h6>Quản lý tài khoản</h6>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-2">
-                    <div>Tài khoản hiện tại:</div>
-                    <div><strong>${nv.Email}</strong> (${nv.VaiTro})</div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" name="reset_mat_khau" value="1" id="resetPassword">
-                    <label class="form-check-label" for="resetPassword">
-                      Reset mật khẩu
-                    </label>
-                  </div>
-                  <div id="passwordField" style="display: none;">
-                    <input type="text" class="form-control mb-2" name="mat_khau_moi" value="123456">
-                    <small class="text-muted">Để trống sẽ reset về: 123456</small>
-                  </div>
-                  <input type="hidden" name="ma_tai_khoan" value="${nv.MaTaiKhoan}">
-                </div>
-              </div>
-            </div>
-          </div>
-          ` : `
-          <div class="col-12 mb-3">
-            <div class="alert alert-warning">
-              Nhân viên chưa có tài khoản hệ thống
-            </div>
-          </div>
-          `}
         </div>
-      `;
+        
+        ${nv.Email ? `
+        <div class="col-12 mb-3">
+            <div class="border p-3 rounded">
+                <h6>Thông tin tài khoản</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" 
+                               value="${nv.Email || ''}" required
+                               placeholder="example@gmail.com">
+                        <small class="text-muted">Phải có định dạng @gmail.com</small>
+                        <div id="email-error" class="invalid-feedback" style="display: none;"></div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">CMND/CCCD</label>
+                        <input type="text" class="form-control" name="cmnd" 
+                               value="${nv.CMND || ''}"
+                               placeholder="Nhập số CMND/CCCD" maxlength="12">
+                        <small class="text-muted">9-12 chữ số</small>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="reset_mat_khau" value="1" id="resetPassword">
+                            <label class="form-check-label" for="resetPassword">
+                                Reset mật khẩu
+                            </label>
+                        </div>
+                        <div id="passwordField" style="display: none;">
+                            <input type="text" class="form-control mb-2" name="mat_khau_moi" value="123456">
+                            <small class="text-muted">Để trống sẽ reset về: 123456</small>
+                        </div>
+                        <input type="hidden" name="ma_tai_khoan" value="${nv.MaTaiKhoan}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        ` : `
+        <div class="col-12 mb-3">
+            <div class="alert alert-warning">
+                Nhân viên chưa có tài khoản hệ thống
+            </div>
+        </div>
+        `}
+    </div>
+`;
 
       document.getElementById('suaFormContent').innerHTML = formHTML;
 
@@ -841,6 +852,125 @@ include_once '../layouts/header.php';
         e.target.closest('#suaFormContent')) {
         kiemTraNgayNghiVaThongBao();
       }
+    });
+    // Validate email khi submit form
+    document.getElementById('formSuaNhanVien').addEventListener('submit', function(e) {
+      const emailInput = document.querySelector('#suaFormContent input[name="email"]');
+      const cmndInput = document.querySelector('#suaFormContent input[name="cmnd"]');
+
+      if (emailInput) {
+        const email = emailInput.value.trim();
+
+        // Kiểm tra email không trống
+        if (!email) {
+          alert('Vui lòng nhập email!');
+          e.preventDefault();
+          return false;
+        }
+
+        // Kiểm tra định dạng email
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          alert('Email không hợp lệ!');
+          e.preventDefault();
+          return false;
+        }
+
+        // Kiểm tra phải là @gmail.com
+        if (!email.endsWith('@gmail.com')) {
+          alert('Email phải có định dạng @gmail.com!');
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      if (cmndInput && cmndInput.value) {
+        const cmnd = cmndInput.value.trim();
+        if (!/^\d{9,12}$/.test(cmnd)) {
+          alert('CMND phải có 9-12 chữ số!');
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      // Kiểm tra các validation khác
+      const luong = document.querySelector('#suaFormContent input[name="luong_co_ban"]').value;
+      if (luong < 0) {
+        alert('Lương cơ bản không được âm!');
+        e.preventDefault();
+        return false;
+      }
+
+      // Confirm trước khi update
+      if (!confirm('Bạn có chắc muốn cập nhật thông tin nhân viên này?')) {
+        e.preventDefault();
+        return false;
+      }
+
+      return true;
+    });
+
+    // Kiểm tra email real-time (tùy chọn)
+    function setupEmailValidation() {
+      const emailInput = document.querySelector('#suaFormContent input[name="email"]');
+      if (!emailInput) return;
+
+      emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        const emailInput = this;
+        const taiKhoanID = <?php echo $nhanVien['MaTaiKhoan'] ?? 0; ?>;
+
+        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          // Kiểm tra định dạng @gmail.com
+          if (!email.endsWith('@gmail.com')) {
+            showEmailError(emailInput, 'Email phải có định dạng @gmail.com');
+            return;
+          }
+
+          // Gửi AJAX để kiểm tra email trùng
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', 'check_email_nhanvien.php', true);
+          xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+          xhr.onload = function() {
+            if (xhr.status === 200) {
+              const response = JSON.parse(xhr.responseText);
+              if (response.exists) {
+                showEmailError(emailInput, 'Email đã tồn tại trong hệ thống!');
+              } else {
+                showEmailSuccess(emailInput);
+              }
+            }
+          };
+
+          xhr.send(`email=${encodeURIComponent(email)}&id=${taiKhoanID}`);
+        } else if (email) {
+          showEmailError(emailInput, 'Email không hợp lệ!');
+        }
+      });
+    }
+
+    function showEmailError(input, message) {
+      input.classList.remove('is-valid');
+      input.classList.add('is-invalid');
+      const errorDiv = input.parentNode.querySelector('#email-error');
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    function showEmailSuccess(input) {
+      input.classList.remove('is-invalid');
+      input.classList.add('is-valid');
+      const errorDiv = input.parentNode.querySelector('#email-error');
+      if (errorDiv) {
+        errorDiv.style.display = 'none';
+      }
+    }
+
+    // Gọi setupEmailValidation khi modal hiển thị
+    document.getElementById('suaNhanVienModal').addEventListener('shown.bs.modal', function() {
+      setTimeout(setupEmailValidation, 500);
     });
 
     // Form submit validation

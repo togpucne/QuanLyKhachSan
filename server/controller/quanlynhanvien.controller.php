@@ -209,6 +209,8 @@ function themPOST($model)
     exit();
 }
 
+// Thêm vào phần xử lý POST action, trong function suaPOST()
+
 function suaPOST($model) {
     if (!isset($_POST['ma_nhan_vien'])) {
         $_SESSION['error'] = "Thiếu mã nhân viên";
@@ -228,6 +230,32 @@ function suaPOST($model) {
         'TrangThai' => $_POST['trang_thai']
     ];
     
+    // ========== THÊM PHẦN XỬ LÝ EMAIL ==========
+    $email = $_POST['email'] ?? '';
+    $cmnd = $_POST['cmnd'] ?? '';
+    
+    // Lấy thông tin tài khoản hiện tại
+    $nhanVien = $model->getChiTietNhanVien($maNhanVien);
+    $taiKhoanID = $nhanVien['tai_khoan_id'] ?? null;
+    
+    // Xử lý cập nhật email nếu có
+    if ($taiKhoanID && ($email || $cmnd)) {
+        $tkData = [];
+        if ($email) {
+            $tkData['email'] = $email;
+        }
+        if ($cmnd) {
+            $tkData['cmnd'] = $cmnd;
+        }
+        
+        $resultTK = $model->capNhatThongTinTaiKhoan($taiKhoanID, $tkData);
+        if (!$resultTK['success']) {
+            $_SESSION['error'] = "Lỗi cập nhật tài khoản: " . $resultTK['error'];
+            header('Location: quanlynhanvien.controller.php');
+            exit();
+        }
+    }
+    
     // Kiểm tra nếu có yêu cầu reset mật khẩu
     if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
         $data['reset_mat_khau'] = '1';
@@ -238,6 +266,16 @@ function suaPOST($model) {
     
     if ($result['success']) {
         $message = "✅ Cập nhật nhân viên thành công!<br>";
+        
+        // Thông báo cập nhật email nếu có
+        if ($email && $taiKhoanID) {
+            $message .= "📧 Email đã được cập nhật: <strong>$email</strong><br>";
+        }
+        
+        // Thông báo cập nhật CMND nếu có
+        if ($cmnd && $taiKhoanID) {
+            $message .= "🆔 CMND đã được cập nhật: <strong>$cmnd</strong><br>";
+        }
         
         // Thêm thông báo nếu đã tự động cập nhật
         if (isset($result['auto_updated']) && $result['auto_updated']) {
@@ -275,3 +313,4 @@ function suaPOST($model) {
     header('Location: quanlynhanvien.controller.php');
     exit();
 }
+?>

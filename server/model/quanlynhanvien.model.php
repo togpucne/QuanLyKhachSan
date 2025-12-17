@@ -582,4 +582,142 @@ class QuanLyNhanVienModel
         $this->db->closeConnect($conn);
         return $thongKe;
     }
+    // Thêm vào class QuanLyNhanVienModel, sau phương thức getChiTietNhanVien()
+
+    /**
+     * Kiểm tra email trùng trong hệ thống (trừ chính tài khoản đó)
+     */
+    public function kiemTraEmailTrung($email, $taiKhoanID = '')
+    {
+        $conn = $this->db->openConnect();
+
+        $sql = "SELECT COUNT(*) as count FROM tai_khoan WHERE Email = ?";
+        if (!empty($taiKhoanID)) {
+            $sql .= " AND id != ?";
+        }
+
+        $stmt = $conn->prepare($sql);
+        if (!empty($taiKhoanID)) {
+            $stmt->bind_param("si", $email, $taiKhoanID);
+        } else {
+            $stmt->bind_param("s", $email);
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        $this->db->closeConnect($conn);
+        return $row['count'] > 0;
+    }
+
+    /**
+     * Cập nhật email cho tài khoản nhân viên
+     */
+    public function capNhatEmailNhanVien($taiKhoanID, $email)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            // Validate email
+            if (empty($email)) {
+                return ['success' => false, 'error' => 'Email không được để trống'];
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return ['success' => false, 'error' => 'Email không hợp lệ'];
+            }
+
+            // Kiểm tra email phải kết thúc bằng @gmail.com
+            if (!preg_match('/@gmail\.com$/', $email)) {
+                return ['success' => false, 'error' => 'Email phải có định dạng @gmail.com'];
+            }
+
+            // Kiểm tra email trùng
+            if ($this->kiemTraEmailTrung($email, $taiKhoanID)) {
+                return ['success' => false, 'error' => 'Email đã tồn tại trong hệ thống'];
+            }
+
+            // Cập nhật email
+            $sql = "UPDATE tai_khoan SET Email = ?, updated_at = NOW() WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("si", $email, $taiKhoanID);
+
+            $result = $stmt->execute();
+
+            if ($result) {
+                return ['success' => true, 'message' => 'Cập nhật email thành công'];
+            } else {
+                return ['success' => false, 'error' => 'Lỗi cập nhật email: ' . $stmt->error];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => 'Lỗi hệ thống: ' . $e->getMessage()];
+        } finally {
+            $this->db->closeConnect($conn);
+        }
+    }
+
+    /**
+     * Cập nhật thông tin tài khoản (email và CMND)
+     */
+    public function capNhatThongTinTaiKhoan($taiKhoanID, $data)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            // Validate email nếu có
+            if (!empty($data['email'])) {
+                if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                    throw new Exception("Email không hợp lệ");
+                }
+
+                // Kiểm tra email phải @gmail.com
+                if (!preg_match('/@gmail\.com$/', $data['email'])) {
+                    throw new Exception("Email phải có định dạng @gmail.com");
+                }
+
+                // Kiểm tra email trùng
+                if ($this->kiemTraEmailTrung($data['email'], $taiKhoanID)) {
+                    throw new Exception("Email đã tồn tại trong hệ thống");
+                }
+            }
+
+            // Xây dựng câu lệnh SQL động
+            $sql = "UPDATE tai_khoan SET updated_at = NOW()";
+            $params = [];
+            $types = "";
+
+            if (!empty($data['email'])) {
+                $sql .= ", Email = ?";
+                $params[] = $data['email'];
+                $types .= "s";
+            }
+
+            if (!empty($data['cmnd'])) {
+                $sql .= ", CMND = ?";
+                $params[] = $data['cmnd'];
+                $types .= "s";
+            }
+
+            $sql .= " WHERE id = ?";
+            $params[] = $taiKhoanID;
+            $types .= "i";
+
+            $stmt = $conn->prepare($sql);
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+
+            if (!$stmt->execute()) {
+                throw new Exception("Lỗi cập nhật thông tin tài khoản: " . $stmt->error);
+            }
+
+            return ['success' => true, 'message' => 'Cập nhật thành công'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        } finally {
+            $this->db->closeConnect($conn);
+        }
+    }
 }
+?>

@@ -497,34 +497,9 @@ $role = $_SESSION['vaitro'];
                             </a>
                         </li>
 
-                        <!-- Thêm các menu theo vai trò -->
-                        <?php if ($role === 'letan'): ?>
-                            <li>
-                                <a class="dropdown-item" href="../letan/dashboard.php">
-                                    <i class="fas fa-tachometer-alt me-2 text-success"></i>Bảng điều khiển
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="../letan/datphong.php">
-                                    <i class="fas fa-calendar-check me-2 text-info"></i>Đặt phòng
-                                </a>
-                            </li>
-                        <?php elseif ($role === 'ketoan'): ?>
-                            <li>
-                                <a class="dropdown-item" href="../ketoan/quanlydoanhthu.php">
-                                    <i class="fas fa-chart-line me-2 text-success"></i>Doanh thu
-                                </a>
-                            </li>
-                        <?php elseif ($role === 'buongphong'): ?>
-                            <li>
-                                <a class="dropdown-item" href="../buongphong/quanlyphong.php">
-                                    <i class="fas fa-bed me-2 text-info"></i>Quản lý phòng
-                                </a>
-                            </li>
-                        <?php endif; ?>
 
 
-                      
+
 
 
                         <li>
@@ -556,46 +531,44 @@ $role = $_SESSION['vaitro'];
                     // Menu cho từng vai trò
                     $menus = [
                         'quanly' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
-                            ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '../quanly/quanlynhanvien.php'],
-                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '../quanly/quanlyKH.php'],
-                            ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '../quanly/quanlydoan.php'],
-                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '../quanly/quanlydichvu.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '../quanly/quanlyphong.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/quanly/index.php'],
+                            ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '/ABC-Resort/server/view/quanly/quanlynhanvien.php'],
+                            ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '/ABC-Resort/server/view/quanly/quanlyKH.php'],
+                            ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '/ABC-Resort/server/view/quanly/quanlydoan.php'],
+                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '/ABC-Resort/server/view/quanly/quanlydichvu.php'],
+                            ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '/ABC-Resort/server/view/quanly/quanlyphong.php'],
+                            ['icon' => 'fas fa-receipt', 'text' => 'Quản lý hóa đơn', 'link' => '/ABC-Resort/server/view/quanly/quanlyhoadon.php'],
                         ],
                         'ketoan' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '../home/dashboard.php'],
-                            ['icon' => 'fas fa-money-bill-wave', 'text' => 'Quản lý doanh thu', 'link' => 'quanlydoanhthu.php'],
-                            ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn & Thanh toán', 'link' => 'hoadon.php'],
-                            ['icon' => 'fas fa-chart-pie', 'text' => 'Báo cáo tài chính', 'link' => 'baocaotaichinh.php'],
-                            ['icon' => 'fas fa-calculator', 'text' => 'Kế toán tổng hợp', 'link' => 'ketoan.php']
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/ketoan/index.php'],
+                            ['icon' => 'fas fa-money-bill-wave', 'text' => 'Quản lý doanh thu', 'link' => '/ABC-Resort/server/view/ketoan/quanlydoanhthu.php'],
+                            ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn & Thanh toán', 'link' => '/ABC-Resort/server/view/ketoan/hoadon.php'],
+                            ['icon' => 'fas fa-chart-pie', 'text' => 'Báo cáo tài chính', 'link' => '/ABC-Resort/server/view/ketoan/baocaotaichinh.php'],
+                            ['icon' => 'fas fa-calculator', 'text' => 'Kế toán tổng hợp', 'link' => '/ABC-Resort/server/view/ketoan/ketoan.php']
                         ],
                         'letan' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-calendar-check', 'text' => 'Quản lý đặt phòng', 'link' => 'datphong.php'],
-                            ['icon' => 'fas fa-user-plus', 'text' => 'Đăng ký tài khoản', 'link' => 'logon.php'],
-                            ['icon' => 'fas fa-cash-register', 'text' => 'Thanh toán', 'link' => 'thanhtoan.php'],
-                            ['icon' => 'fas fa-user-check', 'text' => 'Check-in/Check-out', 'link' => 'checkinout.php'],
-                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Dịch vụ khách hàng', 'link' => 'dichvukhachhang.php'],
-
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/letan/index.php'],
+                            ['icon' => 'fas fa-calendar-check', 'text' => 'Quản lý đặt phòng', 'link' => '/ABC-Resort/server/view/letan/datphong.php'],
+                            ['icon' => 'fas fa-user-plus', 'text' => 'Đăng ký tài khoản', 'link' => '/ABC-Resort/server/view/letan/logon.php'],
+                            ['icon' => 'fas fa-cash-register', 'text' => 'Thanh toán', 'link' => '/ABC-Resort/server/view/letan/thanhtoan.php'],
+                            ['icon' => 'fas fa-user-check', 'text' => 'Check-in/Check-out', 'link' => '/ABC-Resort/server/view/letan/checkinout.php'],
+                            ['icon' => 'fas fa-concierge-bell', 'text' => 'Dịch vụ khách hàng', 'link' => '/ABC-Resort/server/view/letan/dichvukhachhang.php'],
+                            ['icon' => 'fas fa-users', 'text' => 'Quản lý khách hàng', 'link' => '/ABC-Resort/server/view/letan/quanlyKH.php'],
                         ],
                         'buongphong' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
-                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '../buongphong/quanlyphong.php'],
-                            ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
-
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/buongphong/index.php'],
+                            ['icon' => 'fas fa-bed', 'text' => 'Danh sách phòng', 'link' => '/ABC-Resort/server/view/buongphong/quanlyphong.php'],
                         ],
                         'kinhdoanh' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
-                            ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => '../kinhdoanh/khuyenmai.php'],
-
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/kinhdoanh/index.php'],
+                            ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => '/ABC-Resort/server/view/kinhdoanh/khuyenmai.php'],
                         ],
                         'thungan' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'dashboard.php'],
-                            ['icon' => 'fas fa-file-invoice-dollar', 'text' => 'Lập báo cáo', 'link' => 'lapbaocao.php'],
-                            ['icon' => 'fas fa-cash-register', 'text' => 'Quản lý thu chi', 'link' => 'thuchi.php'],
-                            ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn điện tử', 'link' => 'hoadondientu.php'],
-
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/thungan/index.php'],
+                            ['icon' => 'fas fa-file-invoice-dollar', 'text' => 'Lập báo cáo', 'link' => '/ABC-Resort/server/view/thungan/lapbaocao.php'],
+                            ['icon' => 'fas fa-cash-register', 'text' => 'Quản lý thu chi', 'link' => '/ABC-Resort/server/view/thungan/thuchi.php'],
+                            ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn điện tử', 'link' => '/ABC-Resort/server/view/thungan/hoadondientu.php'],
+                            ['icon' => 'fas fa-exchange-alt', 'text' => 'Giao dịch', 'link' => '/ABC-Resort/server/view/thungan/giaodich.php'],
                         ]
                     ];
 

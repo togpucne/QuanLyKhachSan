@@ -20,7 +20,7 @@ $allowed_roles = ['letan', 'buongphong', 'ketoan', 'kinhdoanh', 'thungan', 'quan
 if (!in_array($_SESSION['vaitro'], $allowed_roles)) {
     // Nếu là quản lý, chuyển về dashboard server
     if ($_SESSION['vaitro'] === 'quanly') {
-        header("Location: " . $base_url . "/server/home/dashboard.php");
+        header("Location: " . $base_url . "/server/quanly/index.php");
     } else {
         header("Location: " . $base_url . "/client/index.php");
     }
@@ -254,7 +254,35 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                             </div>
 
                             <div class="d-flex justify-content-end gap-2">
-                                <a href="<?php echo $base_url; ?>/server/index.php" class="btn btn-outline-secondary">
+                                <?php
+                                // Xác định link quay lại dựa trên vai trò
+                                $back_link = '/ABC-Resort/client/index.php'; // Mặc định
+
+                                switch ($vai_tro) {
+                                    case 'quanly':
+                                        $back_link = '/ABC-Resort/server/view/quanly/index.php';
+                                        break;
+                                    case 'letan':
+                                        $back_link = '/ABC-Resort/server/view/letan/index.php';
+                                        break;
+                                    case 'buongphong':
+                                        $back_link = '/ABC-Resort/server/view/buongphong/index.php';
+                                        break;
+                                    case 'ketoan':
+                                        $back_link = '/ABC-Resort/server/view/ketoan/index.php';
+                                        break;
+                                    case 'kinhdoanh':
+                                        $back_link = '/ABC-Resort/server/view/kinhdoanh/index.php';
+                                        break;
+                                    case 'thungan':
+                                        $back_link = '/ABC-Resort/server/view/thungan/index.php';
+                                        break;
+                                    default:
+                                        $back_link = '/ABC-Resort/server/view/employee/index.php';
+                                }
+                                ?>
+
+                                <a href="<?php echo $back_link; ?>" class="btn btn-outline-secondary">
                                     <i class="fas fa-arrow-left me-1"></i>Quay lại
                                 </a>
                                 <button type="submit" class="btn btn-primary">
@@ -327,10 +355,15 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                 </div>
                 <div class="card-body">
                     <?php if (isset($success_message)): ?>
-                        <div class="alert alert-success"><?php echo $success_message; ?></div>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check me-2"></i>
+                            <?php echo $success_message; ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="<?php echo $base_url; ?>/server/controller/employee.controller.php?action=changePassword">
+                    <!-- SỬA: Form action -->
+                    <form method="POST" action="/ABC-Resort/server/controller/employee.controller.php?action=changePassword">
                         <div class="mb-3">
                             <label class="form-label">Mật khẩu hiện tại *</label>
                             <input type="password" class="form-control <?php echo isset($password_errors['current_password']) ? 'is-invalid' : ''; ?>"
@@ -360,7 +393,11 @@ function updateEmployeeInfo($userId, $fullname, $phone, $address)
                         </div>
 
                         <?php if (isset($password_errors['general'])): ?>
-                            <div class="alert alert-danger"><?php echo $password_errors['general']; ?></div>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <?php echo $password_errors['general']; ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
                         <?php endif; ?>
 
                         <div class="d-flex justify-content-end">

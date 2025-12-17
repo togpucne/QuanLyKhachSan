@@ -276,15 +276,7 @@ $thongKe = $model->thongKeDoan();
 include_once '../layouts/header.php';
 ?>
 
-<!-- DEBUG BUTTON (có thể xóa khi deploy) -->
-<div class="mt-3 mb-3">
-    <button class="btn btn-warning btn-sm" onclick="testEverything()">
-        <i class="fas fa-bug me-1"></i>Debug Test
-    </button>
-    <button class="btn btn-info btn-sm" onclick="testModalThem()">
-        <i class="fas fa-plus me-1"></i>Test Modal Thêm
-    </button>
-</div>
+
 
 <div class="container-fluid">
     <!-- Page Header -->

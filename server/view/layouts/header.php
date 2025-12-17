@@ -16,7 +16,7 @@ $role = $_SESSION['vaitro'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống quản ly Tỏa Sáng Resort</title>
+    <title>Hệ thống quản lý Tỏa Sáng Resort</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Favicon -->
@@ -497,11 +497,6 @@ $role = $_SESSION['vaitro'];
                             </a>
                         </li>
 
-
-
-
-
-
                         <li>
                             <hr class="dropdown-divider">
                         </li>
@@ -537,7 +532,7 @@ $role = $_SESSION['vaitro'];
                             ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '/ABC-Resort/server/view/quanly/quanlydoan.php'],
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '/ABC-Resort/server/view/quanly/quanlydichvu.php'],
                             ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '/ABC-Resort/server/view/quanly/quanlyphong.php'],
-                            ['icon' => 'fas fa-receipt', 'text' => 'Quản lý hóa đơn', 'link' => '/ABC-Resort/server/view/quanly/quanlyhoadon.php'],
+                            ['icon' => 'fas fa-receipt', 'text' => 'Quản lý hóa đơn', 'link' => '/ABC-Resort/server/view/quanly/quanlyhoadondatphong.php'],
                         ],
                         'ketoan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/ketoan/index.php'],

@@ -590,16 +590,7 @@ if (!$data) {
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon">
-                <i class="fas fa-chart-bar"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-title">Phòng sử dụng</div>
-                <div class="stat-value"><?php echo number_format($data['phongDangSuDung']); ?></div>
-                <div class="stat-subtitle">Đang được sử dụng</div>
-            </div>
-        </div>
+        
     </div>
 
     <!-- Biểu đồ -->

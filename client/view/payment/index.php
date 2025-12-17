@@ -1168,47 +1168,66 @@ if (!isset($customerInfo)) {
 
     // Hàm hiển thị modal thành công
     function showSuccessModal(result) {
+        // TÍNH GIỜ NHẬN PHÒNG
+        const now = new Date();
+        const checkinTime = new Date(now);
+        checkinTime.setHours(checkinTime.getHours() + 2); // Thêm 2 giờ
+
+        const formattedTime = checkinTime.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const formattedDate = checkinTime.toLocaleDateString('vi-VN');
+
         const modalHTML = `
-        <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">🎉 Đặt phòng thành công!</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">🎉 Đặt phòng thành công!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h4 class="text-success">${result.message}</h4>
                     </div>
-                    <div class="modal-body text-center">
-                        <div class="mb-4">
-                            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                            <h4 class="text-success">${result.message}</h4>
-                        </div>
-                        
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">Thông tin đặt phòng</h5>
-                                <p class="card-text">
-                                    <strong>Mã đặt phòng:</strong> ${result.bookingCode}<br>
-                                    <strong>Trạng thái:</strong> Chưa thanh toán<br>
-                                    <strong>Phương thức:</strong> Thanh toán tại quầy
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            Vui lòng đến quầy lễ tân của Tỏa Sáng Resort để thanh toán và nhận phòng.
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Thông tin đặt phòng</h5>
+                            <p class="card-text">
+                                <strong>Mã đặt phòng:</strong> ${result.bookingCode}<br>
+                                <strong>Trạng thái:</strong> Chưa thanh toán<br>
+                                <strong>Phương thức:</strong> Thanh toán tại quầy<br>
+                                <strong>Ngày check-in:</strong> ${formattedDate}<br>
+                                <strong>Giờ nhận phòng:</strong> ${formattedTime}
+                            </p>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" onclick="window.location.href='/ABC-Resort/client/'">
-                            <i class="fas fa-home"></i> Về trang chủ
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" onclick="window.location.href='/ABC-Resort/client/view/booking/history.php'">
-                            <i class="fas fa-history"></i> Xem lịch sử đặt phòng
-                        </button>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Lưu ý:</strong> Vui lòng đến quầy lễ tân trước ${formattedTime} ngày ${formattedDate} để thanh toán và nhận phòng.
                     </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock"></i>
+                        <strong>Đến trước ${formattedTime} để nhận phòng</strong><br>
+                        Nếu quá giờ, phòng có thể được bán cho khách hàng khác.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='/ABC-Resort/client/'">
+                        <i class="fas fa-home"></i> Về trang chủ
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="window.location.href='/ABC-Resort/client/view/booking/history.php'">
+                        <i class="fas fa-history"></i> Xem lịch sử đặt phòng
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
     `;
 
         // Thêm modal vào body

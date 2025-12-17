@@ -119,17 +119,8 @@ class PaymentModel
             $ngayNhan = $paymentData['checkin'];
 
             if ($paymentData['paymentMethod'] === 'cash' && $ngayNhan <= $ngayHienTai) {
-                error_log("Check-in ngay: Tiền mặt và ngày nhận <= hôm nay");
-
-                // Cập nhật trạng thái thanh toán
-                $this->capNhatTrangThaiThanhToan($maHoaDon);
-
-                // Cập nhật khách hàng thành "Đang ở"
-                $this->capNhatTrangThaiKhachHang($danhSachKhach);
-
-                $trangThai = 'DaThanhToan';
-
-                error_log("Đã cập nhật khách hàng thành 'Đang ở' (check-in ngay)");
+                $trangThai = 'ChuaThanhToan';
+                error_log("Thanh toán tiền mặt -> Trạng thái: Chưa thanh toán");
             } else {
                 // Nếu chưa check-in, khách hàng vẫn là "Không ở"
                 error_log("Khách hàng giữ trạng thái 'Không ở' (check-in trong tương lai)");
@@ -653,5 +644,3 @@ class PaymentModel
         }
     }
 }
-
-?>

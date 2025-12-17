@@ -8,7 +8,7 @@
         <div class="container-fluid" style="color: #292d33;">
             <div class="row">
                 <div class="col-md-6">
-                    <p class="mb-0">&copy; 2025 - Nhóm Tỏa Sáng | ABC Resort Management System</p>
+                    <p class="mb-0">&copy; 2025 - TỎA SÁNG Resort Management System - Copyright TỎA SÁNG </p>
                 </div>
                 <div class="col-md-6 text-end">
                     <p class="mb-0">User: <?php echo $user['username']; ?> | Role: <?php echo $role; ?></p>

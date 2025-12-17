@@ -77,7 +77,6 @@ $role = $_SESSION['vaitro'];
 
         .navbar {
             background: linear-gradient(135deg, #292D33 0%, #292D33 100%) !important;
-            border-bottom: 3px solid #e9dfcb;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
         }
 
@@ -227,7 +226,6 @@ $role = $_SESSION['vaitro'];
         footer {
             background: linear-gradient(135deg, #292D33 0%, #292D33 100%);
             color: white;
-            border-top: 3px solid #43a047;
 
         }
 
@@ -558,13 +556,12 @@ $role = $_SESSION['vaitro'];
                     // Menu cho từng vai trò
                     $menus = [
                         'quanly' => [
-                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '../home/dashboard.php'],
+                            ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
                             ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '../quanly/quanlynhanvien.php'],
                             ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '../quanly/quanlyKH.php'],
                             ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '../quanly/quanlydoan.php'],
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '../quanly/quanlydichvu.php'],
                             ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '../quanly/quanlyphong.php'],
-                            ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
                         ],
                         'ketoan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '../home/dashboard.php'],
@@ -580,7 +577,6 @@ $role = $_SESSION['vaitro'];
                             ['icon' => 'fas fa-cash-register', 'text' => 'Thanh toán', 'link' => 'thanhtoan.php'],
                             ['icon' => 'fas fa-user-check', 'text' => 'Check-in/Check-out', 'link' => 'checkinout.php'],
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Dịch vụ khách hàng', 'link' => 'dichvukhachhang.php'],
-                            ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ],
                         'buongphong' => [
@@ -592,7 +588,6 @@ $role = $_SESSION['vaitro'];
                         'kinhdoanh' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => 'index.php'],
                             ['icon' => 'fas fa-gift', 'text' => 'Quản lý khuyến mãi', 'link' => '../kinhdoanh/khuyenmai.php'],
-                            ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ],
                         'thungan' => [
@@ -600,7 +595,6 @@ $role = $_SESSION['vaitro'];
                             ['icon' => 'fas fa-file-invoice-dollar', 'text' => 'Lập báo cáo', 'link' => 'lapbaocao.php'],
                             ['icon' => 'fas fa-cash-register', 'text' => 'Quản lý thu chi', 'link' => 'thuchi.php'],
                             ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn điện tử', 'link' => 'hoadondientu.php'],
-                            ['icon' => 'fas fa-cog', 'text' => 'Cài đặt hệ thống', 'link' => 'caidat.php']
 
                         ]
                     ];

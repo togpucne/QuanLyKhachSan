@@ -45,7 +45,138 @@ $connect->closeConnect($conn);
 
 require_once '../layouts/header.php';
 ?>
+<style>
+    /* Validation styles - chỉ show sau khi validate */
+    .was-validated .form-control:valid,
+    .was-validated .form-select:valid {
+        border-color: #28a745 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
 
+    .was-validated .form-control:invalid,
+    .was-validated .form-select:invalid {
+        border-color: #dc3545 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+
+    /* Ẩn validation khi chưa có was-validated */
+    .form-control,
+    .form-select {
+        background-image: none !important;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+
+    /* Hiển thị feedback */
+ 
+
+    .valid-feedback {
+        display: none;
+    }
+
+    .was-validated .form-control:valid ~ .valid-feedback {
+        display: block;
+    }
+</style>
+<style>
+    /* Thêm vào phần <style> */
+    .required-label {
+        color: #dc3545 !important;
+        font-weight: bold;
+    }
+
+    .real-time-error {
+        color: #dc3545;
+        font-size: 0.875em;
+        display: block;
+        margin-top: 0.25rem;
+    }
+
+    .input-with-icon {
+        position: relative;
+    }
+
+    .input-with-icon .status-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2em;
+    }
+
+    .status-valid {
+        color: #28a745;
+    }
+
+    .status-invalid {
+        color: #dc3545;
+    }
+
+    /* Style cho testcase button */
+    #runTestCases {
+        margin-left: 10px;
+        font-size: 0.8rem;
+    }
+
+    /* Highlight cho input đang focus với lỗi */
+    input:focus.is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    /* Real-time validation message */
+    .realtime-feedback {
+        display: block;
+        min-height: 24px;
+        font-size: 0.875em;
+    }
+
+    /* Validation styles */
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+
+    .is-invalid:focus {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    
+
+    /* Highlight search results */
+    mark {
+        background-color: #ffc107;
+        padding: 0.1em 0.2em;
+        border-radius: 0.2em;
+    }
+
+    /* Filter section */
+    .filter-section {
+        transition: all 0.3s ease;
+    }
+
+    /* Responsive table */
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
 <div class="container-fluid">
     <div class="row">
         <!-- Main content -->
@@ -125,7 +256,59 @@ require_once '../layouts/header.php';
                     </div>
                 </div>
             </div>
-
+            <!-- Thanh tìm kiếm và lọc nhanh -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-0"><i class="fas fa-filter"></i> Tìm kiếm & Lọc nhanh</h6>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="resetFilter()">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="filterKeyword"
+                                placeholder="Tìm theo tên, SĐT, mã...">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="filterStatus">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="Đang ở">Đang ở</option>
+                                <option value="Không ở">Không ở</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="filterAccount">
+                                <option value="">Tất cả tài khoản</option>
+                                <option value="1">Có tài khoản</option>
+                                <option value="0">Không có tài khoản</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="filterSort">
+                                <option value="newest">Mới nhất</option>
+                                <option value="oldest">Cũ nhất</option>
+                                <option value="name_asc">Tên A-Z</option>
+                                <option value="name_desc">Tên Z-A</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="filterDate">
+                                <button class="btn btn-primary" onclick="filterTable()">
+                                    <i class="fas fa-search"></i> Lọc
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Bảng danh sách khách hàng -->
             <div class="card">
                 <div class="card-header">
@@ -201,12 +384,14 @@ require_once '../layouts/header.php';
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
+                                            <!-- Trong phần tbody, sửa cột Hành động -->
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <button class="btn btn-warning btn-edit" title="Chỉnh sửa"
                                                         onclick="editKhachHang('<?php echo $kh['MaKH']; ?>')">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
+
                                                     <button class="btn btn-danger" title="Xóa"
                                                         onclick="deleteKhachHang('<?php echo $kh['MaKH']; ?>', '<?php echo htmlspecialchars(addslashes($kh['HoTen'])); ?>')">
                                                         <i class="fas fa-trash"></i>
@@ -285,8 +470,13 @@ require_once '../layouts/header.php';
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Mật khẩu</label>
-                                <input type="password" class="form-control" id="editMatKhau" name="matkhau">
-                                <div class="form-text">Để trống nếu không đổi</div>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="editMatKhau" name="matkhau" placeholder="Để trống nếu không đổi">
+                                    <button type="button" class="btn btn-outline-warning" onclick="resetEditPassword()" id="btnResetPassword">
+                                        <i class="fas fa-redo"></i> Reset
+                                    </button>
+                                </div>
+                                <div class="form-text">Để trống nếu không đổi. Reset về: 123456</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -311,6 +501,7 @@ require_once '../layouts/header.php';
         </div>
     </div>
 </div>
+
 <!-- Modal thêm khách hàng -->
 <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -320,34 +511,35 @@ require_once '../layouts/header.php';
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
-            <form id="addCustomerForm">
+            <form id="addCustomerForm" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i> <strong>Mã KH</strong> sẽ được tạo tự động (KH1, KH2, KH3,...)
                     </div>
 
-                    <h6 class="border-bottom pb-2 mb-3">Thông tin cá nhân</h6>
+                    <h6 class="border-bottom pb-2 mb-3">Thông tin cá nhân <span class="required-label">*</span></h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Họ tên *</label>
+                                <label class="form-label">Họ tên <span class="required-label">*</span></label>
                                 <input type="text" class="form-control" name="hoten" required
                                     placeholder="Nhập họ tên đầy đủ">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Số điện thoại *</label>
-                                <input type="tel" class="form-control" name="sodienthoai" required
-                                    placeholder="Nhập số điện thoại" pattern="[0-9]{9,11}">
-                                <div class="form-text">Ví dụ: 0909123456</div>
+                                <label class="form-label">Số điện thoại <span class="required-label">*</span></label>
+                                <input type="text" class="form-control" name="sodienthoai" pattern="^0[0-9]{9}$" required
+                                    placeholder="Nhập số điện thoại 10 số">
+                                <div class="form-text">Ví dụ: 0909123456 - Phải có 10 số</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Trạng thái *</label>
+                                <label class="form-label">Trạng thái <span class="required-label">*</span></label>
                                 <select class="form-select" name="trangthai" required>
-                                    <option value="Không ở" selected>Không ở</option>
+                                    <option value="" selected disabled>Chọn trạng thái</option>
+                                    <option value="Không ở">Không ở</option>
                                     <option value="Đang ở">Đang ở</option>
                                 </select>
                             </div>
@@ -361,38 +553,41 @@ require_once '../layouts/header.php';
                         </div>
                     </div>
 
-                    <h6 class="border-bottom pb-2 mb-3 mt-4">Thông tin tài khoản (tùy chọn)</h6>
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Thông tin tài khoản <span class="required-label">*</span></h6>
                     <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-circle"></i> Chỉ điền thông tin nếu muốn tạo/liên kết tài khoản cho khách hàng
+                        <i class="fas fa-exclamation-triangle"></i> <strong>TẤT CẢ</strong> thông tin tài khoản là bắt buộc
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Tên đăng nhập</label>
-                                <input type="text" class="form-control" name="tendangnhap"
-                                    placeholder="Tên đăng nhập (nếu tạo TK)">
-                                <div class="form-text">Dùng để đăng nhập hệ thống</div>
+                                <label class="form-label">Tên đăng nhập <span class="required-label">*</span></label>
+                                <input type="text" class="form-control" name="tendangnhap" id="tendangnhapInput"
+                                    pattern="^[a-z0-9_]{3,20}$" required
+                                    placeholder="Sẽ tự động tạo từ Họ tên">
+                                <div class="form-text">Tự động tạo từ Họ tên</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Mật khẩu</label>
-                                <input type="password" class="form-control" name="matkhau"
-                                    placeholder="Mật khẩu (nếu tạo TK)" minlength="6">
-                                <div class="form-text">Ít nhất 6 ký tự</div>
+                                <label class="form-label">Mật khẩu <span class="required-label">*</span></label>
+                                <input type="password" class="form-control" name="matkhau" id="matkhauInput"
+                                    minlength="6" required value="123456">
+                                <div class="form-text">Mật khẩu mặc định: 123456</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" name="email"
+                                <label class="form-label">Email <span class="required-label">*</span></label>
+                                <input type="email" class="form-control" name="email" id="emailInput"
+                                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" required
                                     placeholder="Email">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">CMND/CCCD</label>
-                                <input type="text" class="form-control" name="cmnd"
+                                <label class="form-label">CMND/CCCD <span class="required-label">*</span></label>
+                                <input type="text" class="form-control" name="cmnd" id="cmndInput"
+                                    pattern="^[0-9]{9,12}$" required
                                     placeholder="Số CMND/CCCD">
                             </div>
                         </div>
@@ -408,335 +603,630 @@ require_once '../layouts/header.php';
 </div>
 
 <script>
-    // Xử lý form thêm khách hàng
-    document.getElementById('addCustomerForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+// ==================== GLOBAL UTILITY FUNCTIONS ====================
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+}
 
-        // Validate
-        const sodienthoai = this.sodienthoai.value.trim();
-        const tendangnhap = this.tendangnhap.value.trim();
-        const matkhau = this.matkhau.value.trim();
-        const email = this.email.value.trim();
-        const cmnd = this.cmnd.value.trim();
+function validateVietnamesePhone(phone) {
+    return /^0[0-9]{9}$/.test(phone);
+}
 
-        // Validate số điện thoại
-        if (!/^[0-9]{9,11}$/.test(sodienthoai)) {
-            alert('Số điện thoại phải có 9-11 chữ số');
-            this.sodienthoai.focus();
-            return;
-        }
+function validateCMND(cmnd) {
+    return /^[0-9]{9,12}$/.test(cmnd);
+}
 
-        // Validate CMND
-        if (cmnd && !/^[0-9]{9,12}$/.test(cmnd)) {
-            alert('CMND/CCCD phải có 9-12 chữ số');
-            this.cmnd.focus();
-            return;
-        }
+function validatePassword(password) {
+    return password.length >= 6;
+}
 
-        // Validate email
-        if (email && !validateEmail(email)) {
-            alert('Email không hợp lệ');
-            this.email.focus();
-            return;
-        }
+function generateUsernameFromName(fullName) {
+    if (!fullName) return '';
+    
+    let username = fullName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim();
 
-        // Validate tên đăng nhập và mật khẩu
-        if ((tendangnhap && !matkhau) || (!tendangnhap && matkhau)) {
-            alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
-            return;
-        }
-
-        if (matkhau && matkhau.length < 6) {
-            alert('Mật khẩu phải có ít nhất 6 ký tự');
-            this.matkhau.focus();
-            return;
-        }
-
-        // Lấy dữ liệu form
-        const formData = new FormData(this);
-
-        // Hiển thị loading
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-        submitBtn.disabled = true;
-
-        // Gọi AJAX đến controller
-        fetch('../../controller/letanlogon.controller.php?action=add', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text()) // Dùng .text() trước để debug
-            .then(text => {
-                console.log('Raw response:', text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.success) {
-                        alert('✅ Thêm khách hàng thành công! Mã KH: ' + data.maKH);
-                        // Đóng modal và reload trang
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
-                        modal.hide();
-                        setTimeout(() => location.reload(), 500);
-                    } else {
-                        alert('❌ ' + data.message);
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                    }
-                } catch (e) {
-                    console.error('Parse error:', e);
-                    alert('⚠️ Lỗi server: ' + text.substring(0, 100));
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('⚠️ Có lỗi xảy ra, vui lòng thử lại');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
-    });
-
-    // Validate email function
-    function validateEmail(email) {
-        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-        return re.test(String(email).toLowerCase());
+    const words = username.split(/\s+/);
+    if (words.length === 1) {
+        username = words[0];
+    } else {
+        const firstWord = words[0];
+        const lastWord = words[words.length - 1];
+        username = firstWord + lastWord.charAt(0);
     }
 
-    // Xử lý xóa khách hàng
-    function deleteKhachHang(maKH, hoten) {
-        if (!confirm(`Bạn có chắc chắn muốn xóa khách hàng "${hoten}" (${maKH})?\n\n⚠️ Hành động này sẽ xóa cả thông tin tài khoản liên quan!`)) {
-            return;
-        }
+    return username.substring(0, 15);
+}
 
+async function checkDuplicate(type, value) {
+    if (!value) return false;
+    
+    try {
         const formData = new FormData();
-        formData.append('maKH', maKH);
-
-        fetch('../../controller/letanlogon.controller.php?action=delete', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ Xóa khách hàng thành công!');
-                    location.reload();
-                } else {
-                    alert('❌ ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('⚠️ Có lỗi xảy ra khi xóa khách hàng');
-            });
+        formData.append('type', type);
+        formData.append('value', value);
+        
+        const response = await fetch('../../controller/letanlogon.controller.php?action=check', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        return data.exists || false;
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+        return false;
     }
+}
 
-    // Reset form khi modal đóng
-    document.getElementById('addCustomerModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('addCustomerForm').reset();
-    });
-    // Hàm mở modal sửa
-    function editKhachHang(maKH) {
-        // Hiển thị loading
-        const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
-        modal.show();
+function showFieldError(field, message) {
+    if (!field) return;
+    
+    field.classList.add('is-invalid');
+    let feedback = field.nextElementSibling;
+    
+    while (feedback && !feedback.classList.contains('invalid-feedback')) {
+        feedback = feedback.nextElementSibling;
+    }
+    
+    if (feedback && feedback.classList.contains('invalid-feedback')) {
+        feedback.textContent = message;
+    }
+}
 
-        document.getElementById('editMaKHText').textContent = maKH;
-        document.getElementById('editMaKH').value = maKH;
+function resetEditPassword() {
+    const passwordInput = document.getElementById('editMatKhau');
+    if (passwordInput) {
+        passwordInput.value = '123456';
+        alert('Đã reset mật khẩu về 123456');
+    }
+}
 
-        // Lấy thông tin khách hàng
-        fetch(`../../controller/letanlogon.controller.php?action=get&maKH=${encodeURIComponent(maKH)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const kh = data.data;
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
-                    // Điền thông tin vào form
-                    document.getElementById('editHoTen').value = kh.HoTen || '';
-                    document.getElementById('editSoDienThoai').value = kh.SoDienThoai || '';
-                    document.getElementById('editDiaChi').value = kh.DiaChi || '';
-                    document.getElementById('editTrangThai').value = kh.TrangThai || 'Không ở';
-                    document.getElementById('editTenDangNhap').value = kh.TenDangNhap || '';
-                    document.getElementById('editEmail').value = kh.Email || '';
-                    document.getElementById('editCMND').value = kh.CMND || '';
+// ==================== ADD CUSTOMER FORM ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-generate username from name
+    const hotenInput = document.querySelector('#addCustomerForm input[name="hoten"]');
+    if (hotenInput) {
+        hotenInput.addEventListener('input', function() {
+            const usernameInput = document.getElementById('tendangnhapInput');
+            if (usernameInput && !usernameInput.dataset.manual) {
+                usernameInput.value = generateUsernameFromName(this.value);
+            }
+        });
+    }
+    
+    // Mark username as manual when user types
+    const usernameInput = document.getElementById('tendangnhapInput');
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            this.dataset.manual = 'true';
+        });
+    }
+    
+    // Form submission
+    const addForm = document.getElementById('addCustomerForm');
+    if (addForm) {
+        addForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!await validateAddForm(this)) {
+                return;
+            }
+            
+            await submitAddForm(this);
+        });
+    }
+});
 
-                    // Clear password field
-                    document.getElementById('editMatKhau').value = '';
-                } else {
-                    alert('Không thể lấy thông tin khách hàng: ' + data.message);
-                    modal.hide();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra khi lấy thông tin khách hàng');
+async function validateAddForm(form) {
+    // Reset validation
+    form.classList.remove('was-validated');
+    
+    // Required fields
+    const requiredFields = [
+        { name: 'hoten', message: 'Vui lòng nhập họ tên' },
+        { name: 'sodienthoai', message: 'Vui lòng nhập số điện thoại' },
+        { name: 'trangthai', message: 'Vui lòng chọn trạng thái' },
+        { name: 'tendangnhap', message: 'Vui lòng nhập tên đăng nhập' },
+        { name: 'matkhau', message: 'Vui lòng nhập mật khẩu' },
+        { name: 'email', message: 'Vui lòng nhập email' },
+        { name: 'cmnd', message: 'Vui lòng nhập CMND/CCCD' }
+    ];
+    
+    let isValid = true;
+    let firstInvalidField = null;
+    
+    // Check required fields
+    for (const field of requiredFields) {
+        const element = form.elements[field.name];
+        if (!element || !element.value.trim()) {
+            showFieldError(element, field.message);
+            isValid = false;
+            if (!firstInvalidField) firstInvalidField = element;
+        } else {
+            element.classList.remove('is-invalid');
+        }
+    }
+    
+    // Validate specific fields
+    const phone = form.sodienthoai?.value.trim();
+    if (phone && !validateVietnamesePhone(phone)) {
+        showFieldError(form.sodienthoai, 'Số điện thoại phải có 10 số và bắt đầu bằng 0');
+        isValid = false;
+        if (!firstInvalidField) firstInvalidField = form.sodienthoai;
+    }
+    
+    const email = form.email?.value.trim();
+    if (email && !validateEmail(email)) {
+        showFieldError(form.email, 'Email không hợp lệ');
+        isValid = false;
+        if (!firstInvalidField) firstInvalidField = form.email;
+    }
+    
+    const cmnd = form.cmnd?.value.trim();
+    if (cmnd && !validateCMND(cmnd)) {
+        showFieldError(form.cmnd, 'CMND phải có 9-12 chữ số');
+        isValid = false;
+        if (!firstInvalidField) firstInvalidField = form.cmnd;
+    }
+    
+    const password = form.matkhau?.value.trim();
+    if (password && !validatePassword(password)) {
+        showFieldError(form.matkhau, 'Mật khẩu phải có ít nhất 6 ký tự');
+        isValid = false;
+        if (!firstInvalidField) firstInvalidField = form.matkhau;
+    }
+    
+    if (!isValid) {
+        form.classList.add('was-validated');
+        alert('Vui lòng nhập đầy đủ và chính xác tất cả thông tin!');
+        if (firstInvalidField) {
+            firstInvalidField.focus();
+        }
+        return false;
+    }
+    
+    // Check duplicates
+    const duplicates = await Promise.all([
+        checkDuplicate('phone', phone),
+        checkDuplicate('username', form.tendangnhap.value.trim()),
+        checkDuplicate('email', email),
+        checkDuplicate('cmnd', cmnd)
+    ]);
+    
+    const [phoneDup, userDup, emailDup, cmndDup] = duplicates;
+    
+    if (phoneDup) {
+        alert('❌ Số điện thoại đã tồn tại trong hệ thống!');
+        form.sodienthoai.focus();
+        return false;
+    }
+    if (userDup) {
+        alert('❌ Tên đăng nhập đã được sử dụng!');
+        form.tendangnhap.focus();
+        return false;
+    }
+    if (emailDup) {
+        alert('❌ Email đã được đăng ký!');
+        form.email.focus();
+        return false;
+    }
+    if (cmndDup) {
+        alert('❌ CMND/CCCD đã tồn tại!');
+        form.cmnd.focus();
+        return false;
+    }
+    
+    return true;
+}
+
+async function submitAddForm(form) {
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('../../controller/letanlogon.controller.php?action=add', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            let message = '✅ Thêm khách hàng thành công!\n';
+            message += 'Mã KH: ' + data.maKH + '\n\n';
+            message += '📋 Thông tin tài khoản:\n';
+            message += '👤 Tên đăng nhập: ' + form.tendangnhap.value + '\n';
+            message += '🔐 Mật khẩu: ' + form.matkhau.value + '\n';
+            message += '📧 Email: ' + form.email.value + '\n';
+            message += '🆔 CMND: ' + form.cmnd.value;
+            
+            alert(message);
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+            if (modal) modal.hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert('❌ ' + data.message);
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('⚠️ Có lỗi xảy ra, vui lòng thử lại');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// ==================== EDIT CUSTOMER FORM ====================
+function editKhachHang(maKH) {
+    const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
+    modal.show();
+    
+    document.getElementById('editMaKHText').textContent = maKH;
+    document.getElementById('editMaKH').value = maKH;
+    
+    fetch(`../../controller/letanlogon.controller.php?action=get&maKH=${encodeURIComponent(maKH)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const kh = data.data;
+                document.getElementById('editHoTen').value = kh.HoTen || '';
+                document.getElementById('editSoDienThoai').value = kh.SoDienThoai || '';
+                document.getElementById('editDiaChi').value = kh.DiaChi || '';
+                document.getElementById('editTrangThai').value = kh.TrangThai || 'Không ở';
+                document.getElementById('editTenDangNhap').value = kh.TenDangNhap || '';
+                document.getElementById('editEmail').value = kh.Email || '';
+                document.getElementById('editCMND').value = kh.CMND || '';
+                document.getElementById('editMatKhau').value = '';
+            } else {
+                alert('Không thể lấy thông tin khách hàng: ' + data.message);
                 modal.hide();
-            });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi lấy thông tin khách hàng');
+            modal.hide();
+        });
+}
+
+document.getElementById('editCustomerForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!await validateEditForm(this)) {
+        return;
     }
+    
+    await submitEditForm(this);
+});
 
-    // Xử lý form sửa
-    document.getElementById('editCustomerForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+async function validateEditForm(form) {
+    const phone = form.sodienthoai?.value.trim();
+    const email = form.email?.value.trim();
+    const cmnd = form.cmnd?.value.trim();
+    const password = form.matkhau?.value.trim();
+    const username = form.tendangnhap?.value.trim();
+    
+    // Phone validation
+    if (phone && !validateVietnamesePhone(phone)) {
+        alert('Số điện thoại phải có 10 số và bắt đầu bằng 0');
+        form.sodienthoai.focus();
+        return false;
+    }
+    
+    // Email validation
+    if (email && !validateEmail(email)) {
+        alert('Email không hợp lệ');
+        form.email.focus();
+        return false;
+    }
+    
+    // CMND validation
+    if (cmnd && !validateCMND(cmnd)) {
+        alert('CMND/CCCD phải có 9-12 chữ số');
+        form.cmnd.focus();
+        return false;
+    }
+    
+    // Password validation
+    if (password && password.length < 6) {
+        alert('Mật khẩu phải có ít nhất 6 ký tự');
+        form.matkhau.focus();
+        return false;
+    }
+    
+    // Username and password validation
+    if (username && !password) {
+        alert('Vui lòng nhập mật khẩu nếu đổi tên đăng nhập');
+        form.matkhau.focus();
+        return false;
+    }
+    
+    return true;
+}
 
-        // Validate
-        const sodienthoai = this.sodienthoai.value.trim();
-        const tendangnhap = this.tendangnhap.value.trim();
-        const matkhau = this.matkhau.value.trim();
-        const email = this.email.value.trim();
-        const cmnd = this.cmnd.value.trim();
-
-        // Validate số điện thoại
-        if (!/^[0-9]{9,11}$/.test(sodienthoai)) {
-            alert('Số điện thoại phải có 9-11 chữ số');
-            this.sodienthoai.focus();
-            return;
+async function submitEditForm(form) {
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('../../controller/letanlogon.controller.php?action=edit', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Cập nhật khách hàng thành công!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+            if (modal) modal.hide();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('❌ ' + data.message);
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('⚠️ Có lỗi xảy ra khi cập nhật');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
 
-        // Validate CMND
-        if (cmnd && !/^[0-9]{9,12}$/.test(cmnd)) {
-            alert('CMND/CCCD phải có 9-12 chữ số');
-            this.cmnd.focus();
-            return;
-        }
+// ==================== DELETE FUNCTIONS ====================
+function deleteKhachHang(maKH, hoten) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa khách hàng "${hoten}" (${maKH})?\n\n⚠️ Hành động này sẽ xóa cả thông tin tài khoản liên quan!`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('maKH', maKH);
+    
+    fetch('../../controller/letanlogon.controller.php?action=delete', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Xóa khách hàng thành công!');
+                location.reload();
+            } else {
+                alert('❌ ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('⚠️ Có lỗi xảy ra khi xóa khách hàng');
+        });
+}
 
-        // Validate email
-        if (email && !validateEmail(email)) {
-            alert('Email không hợp lệ');
-            this.email.focus();
-            return;
-        }
-
-        // Validate tên đăng nhập và mật khẩu
-        if (tendangnhap && !matkhau) {
-            alert('Vui lòng nhập mật khẩu nếu đổi tên đăng nhập');
-            this.matkhau.focus();
-            return;
-        }
-
-        if (matkhau && matkhau.length < 6) {
-            alert('Mật khẩu phải có ít nhất 6 ký tự');
-            this.matkhau.focus();
-            return;
-        }
-
-        // Lấy dữ liệu form
-        const formData = new FormData(this);
-
-        // Hiển thị loading
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-        submitBtn.disabled = true;
-
-        // Gọi AJAX để cập nhật
-        fetch('../../controller/letanlogon.controller.php?action=edit', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ Cập nhật khách hàng thành công!');
-                    // Đóng modal và reload trang
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
-                    modal.hide();
-                    setTimeout(() => location.reload(), 500);
-                } else {
-                    alert('❌ ' + data.message);
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('⚠️ Có lỗi xảy ra khi cập nhật');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
-    });
-
-    // Xử lý chọn tất cả
-    document.getElementById('selectAll').addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.select-customer');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
+// ==================== BULK DELETE ====================
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'selectAll') {
+        document.querySelectorAll('.select-customer').forEach(checkbox => {
+            checkbox.checked = e.target.checked;
         });
         updateDeleteButton();
-    });
-
-    // Xử lý chọn từng cái
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('select-customer')) {
-            updateDeleteButton();
-        }
-    });
-
-    // Cập nhật trạng thái nút xóa nhiều
-    function updateDeleteButton() {
-        const checkedBoxes = document.querySelectorAll('.select-customer:checked');
-        const deleteBtn = document.getElementById('btnDeleteMultiple');
-
-        if (checkedBoxes.length > 0) {
-            deleteBtn.disabled = false;
-            deleteBtn.textContent = `Xóa đã chọn (${checkedBoxes.length})`;
-        } else {
-            deleteBtn.disabled = true;
-            deleteBtn.textContent = 'Xóa đã chọn';
-        }
+    } else if (e.target.classList.contains('select-customer')) {
+        updateDeleteButton();
     }
+});
 
-    // Xóa nhiều khách hàng
-    document.getElementById('btnDeleteMultiple').addEventListener('click', function() {
-        const checkedBoxes = document.querySelectorAll('.select-customer:checked');
-        const listMaKH = Array.from(checkedBoxes).map(cb => cb.value);
+function updateDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.select-customer:checked');
+    const deleteBtn = document.getElementById('btnDeleteMultiple');
+    
+    if (checkedBoxes.length > 0) {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = `Xóa đã chọn (${checkedBoxes.length})`;
+    } else {
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Xóa đã chọn';
+    }
+}
 
-        if (listMaKH.length === 0) {
-            alert('Vui lòng chọn ít nhất một khách hàng để xóa');
-            return;
-        }
-
-        if (!confirm(`Bạn có chắc chắn muốn xóa ${listMaKH.length} khách hàng đã chọn?\n\n⚠️ Hành động này không thể hoàn tác!`)) {
-            return;
-        }
-
-        const formData = new FormData();
-        listMaKH.forEach(maKH => {
-            formData.append('listMaKH[]', maKH);
-        });
-
-        // Hiển thị loading
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
-        this.disabled = true;
-
-        fetch('../../controller/letanlogon.controller.php?action=delete-multiple', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    location.reload();
-                } else {
-                    let errorMsg = '❌ ' + data.message;
-                    if (data.errors && data.errors.length > 0) {
-                        errorMsg += '\n\nChi tiết lỗi:\n' + data.errors.join('\n');
-                    }
-                    alert(errorMsg);
-                    this.innerHTML = originalText;
-                    this.disabled = false;
+document.getElementById('btnDeleteMultiple')?.addEventListener('click', function() {
+    const checkedBoxes = document.querySelectorAll('.select-customer:checked');
+    const listMaKH = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (listMaKH.length === 0) {
+        alert('Vui lòng chọn ít nhất một khách hàng để xóa');
+        return;
+    }
+    
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${listMaKH.length} khách hàng đã chọn?\n\n⚠️ Hành động này không thể hoàn tác!`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    listMaKH.forEach(maKH => {
+        formData.append('listMaKH[]', maKH);
+    });
+    
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
+    this.disabled = true;
+    
+    fetch('../../controller/letanlogon.controller.php?action=delete-multiple', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                let errorMsg = '❌ ' + data.message;
+                if (data.errors?.length > 0) {
+                    errorMsg += '\n\nChi tiết lỗi:\n' + data.errors.join('\n');
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('⚠️ Có lỗi xảy ra khi xóa nhiều khách hàng');
+                alert(errorMsg);
                 this.innerHTML = originalText;
                 this.disabled = false;
-            });
-    });
-</script>
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('⚠️ Có lỗi xảy ra khi xóa nhiều khách hàng');
+            this.innerHTML = originalText;
+            this.disabled = false;
+        });
+});
 
+// ==================== FILTER FUNCTIONS ====================
+function filterTable() {
+    const keyword = document.getElementById('filterKeyword')?.value.toLowerCase() || '';
+    const status = document.getElementById('filterStatus')?.value || '';
+    const account = document.getElementById('filterAccount')?.value || '';
+    
+    const rows = document.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        if (row.classList.contains('text-muted')) return;
+        
+        const maKH = row.cells[2]?.textContent.toLowerCase() || '';
+        const hoTen = row.cells[3]?.textContent.toLowerCase() || '';
+        const sdt = row.cells[4]?.textContent || '';
+        const trangThai = row.cells[7]?.querySelector('.badge')?.textContent || '';
+        const hasAccount = row.cells[8]?.querySelector('.badge')?.classList.contains('bg-success') || false;
+        
+        let match = true;
+        
+        // Keyword filter
+        if (keyword && !maKH.includes(keyword) && !hoTen.includes(keyword) && !sdt.includes(keyword)) {
+            match = false;
+        }
+        
+        // Status filter
+        if (status && trangThai !== status) {
+            match = false;
+        }
+        
+        // Account filter
+        if (account !== '') {
+            const hasAccountBool = account === '1';
+            if (hasAccount !== hasAccountBool) {
+                match = false;
+            }
+        }
+        
+        if (match) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    showFilterResults(visibleCount);
+}
+
+function showFilterResults(count) {
+    const total = <?php echo count($dsKhachHang); ?>;
+    const cardText = document.querySelector('.card.bg-primary .card-text');
+    if (cardText) {
+        cardText.textContent = count;
+    }
+}
+
+function resetFilter() {
+    ['filterKeyword', 'filterStatus', 'filterAccount', 'filterSort', 'filterDate'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.value = '';
+    });
+    
+    document.querySelectorAll('tbody tr').forEach(row => {
+        if (!row.classList.contains('text-muted')) {
+            row.style.display = '';
+        }
+    });
+    
+    showFilterResults(<?php echo count($dsKhachHang); ?>);
+}
+
+// ==================== EVENT LISTENERS ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter events
+    const filterInputs = ['filterKeyword', 'filterStatus', 'filterAccount', 'filterSort'];
+    filterInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', filterTable);
+        }
+    });
+    
+    // Filter keyword input event
+    const filterKeyword = document.getElementById('filterKeyword');
+    if (filterKeyword) {
+        filterKeyword.addEventListener('input', debounce(filterTable, 300));
+        filterKeyword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') filterTable();
+        });
+    }
+    
+    // Modal reset events
+    const addModal = document.getElementById('addCustomerModal');
+    const editModal = document.getElementById('editCustomerModal');
+    
+    if (addModal) {
+        addModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('addCustomerForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(field => {
+                    field.classList.remove('is-invalid');
+                });
+                
+                // Reset manual flag
+                const usernameInput = document.getElementById('tendangnhapInput');
+                if (usernameInput) {
+                    delete usernameInput.dataset.manual;
+                }
+            }
+        });
+    }
+    
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('editCustomerForm');
+            if (form) form.reset();
+        });
+    }
+});
+</script>
 <?php
 require_once '../layouts/footer.php';
 ?>

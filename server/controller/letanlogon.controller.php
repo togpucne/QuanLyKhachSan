@@ -60,34 +60,60 @@ function addKhachHang($model) {
             'cmnd' => trim($_POST['cmnd'] ?? '')
         ];
         
-        // Validate dữ liệu bắt buộc
-        if (empty($data['hoten']) || empty($data['sodienthoai'])) {
-            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập đầy đủ thông tin bắt buộc']);
+        // Validate tất cả trường bắt buộc
+        $requiredFields = ['hoten', 'sodienthoai', 'trangthai', 'tendangnhap', 'matkhau', 'email', 'cmnd'];
+        foreach ($requiredFields as $field) {
+            if (empty($data[$field])) {
+                echo json_encode(['success' => false, 'message' => ucfirst($field) . ' là bắt buộc']);
+                return;
+            }
+        }
+        
+        // Validate định dạng
+        if (!preg_match('/^0[0-9]{9}$/', $data['sodienthoai'])) {
+            echo json_encode(['success' => false, 'message' => 'Số điện thoại phải có 10 số và bắt đầu bằng 0']);
             return;
         }
         
-        // Kiểm tra trùng số điện thoại
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'Email không hợp lệ']);
+            return;
+        }
+        
+        if (!preg_match('/^[0-9]{9,12}$/', $data['cmnd'])) {
+            echo json_encode(['success' => false, 'message' => 'CMND phải có 9-12 chữ số']);
+            return;
+        }
+        
+        if (strlen($data['matkhau']) < 6) {
+            echo json_encode(['success' => false, 'message' => 'Mật khẩu phải có ít nhất 6 ký tự']);
+            return;
+        }
+        
+        if (strlen($data['tendangnhap']) < 3) {
+            echo json_encode(['success' => false, 'message' => 'Tên đăng nhập phải có ít nhất 3 ký tự']);
+            return;
+        }
+        
+        // Kiểm tra trùng
         if ($model->checkDuplicatePhone($data['sodienthoai'])) {
             echo json_encode(['success' => false, 'message' => 'Số điện thoại đã tồn tại']);
             return;
         }
         
-        // Nếu có tạo tài khoản thì kiểm tra thêm
-        if (!empty($data['tendangnhap']) && !empty($data['matkhau'])) {
-            if ($model->checkDuplicateUsername($data['tendangnhap'])) {
-                echo json_encode(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại']);
-                return;
-            }
-            
-            if (!empty($data['email']) && $model->checkDuplicateEmail($data['email'])) {
-                echo json_encode(['success' => false, 'message' => 'Email đã tồn tại']);
-                return;
-            }
-            
-            if (!empty($data['cmnd']) && $model->checkDuplicateCMND($data['cmnd'])) {
-                echo json_encode(['success' => false, 'message' => 'CMND đã tồn tại']);
-                return;
-            }
+        if ($model->checkDuplicateUsername($data['tendangnhap'])) {
+            echo json_encode(['success' => false, 'message' => 'Tên đăng nhập đã tồn tại']);
+            return;
+        }
+        
+        if ($model->checkDuplicateEmail($data['email'])) {
+            echo json_encode(['success' => false, 'message' => 'Email đã tồn tại']);
+            return;
+        }
+        
+        if ($model->checkDuplicateCMND($data['cmnd'])) {
+            echo json_encode(['success' => false, 'message' => 'CMND đã tồn tại']);
+            return;
         }
         
         // Thêm khách hàng
@@ -95,7 +121,7 @@ function addKhachHang($model) {
         echo json_encode($result);
         
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()]);
     }
 }
 

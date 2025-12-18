@@ -1,847 +1,742 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+session_start();
 
-// XỬ LÝ POST TRƯỚC KHI CÓ BẤT KỲ OUTPUT NÀO
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    // Start output buffering để tránh lỗi header
-    ob_start();
-    
-    require_once __DIR__ . '/../../controller/letanlogon.controller.php';
-    
-    $controller = new LetanLogonController();
-    $redirect = false;
-    $redirectUrl = '';
-    
-    switch ($_POST['action']) {
-        case 'register':
-            $actionResult = $controller->handleRegister();
-            break;
-        case 'update':
-            $actionResult = $controller->handleUpdate();
-            break;
-        case 'reset_password':
-            $actionResult = $controller->handleResetPassword();
-            // Sau khi reset password thành công, chuyển hướng
-            if ($actionResult && $actionResult['success']) {
-                $redirect = true;
-                $redirectUrl = 'letanlogon.php?reset_success=' . urlencode($actionResult['message']);
-            }
-            break;
-        case 'delete':
-            $actionResult = $controller->handleDelete();
-            // Sau khi xóa thành công, chuyển hướng về trang danh sách
-            if ($actionResult && $actionResult['success']) {
-                $redirect = true;
-                $redirectUrl = 'letanlogon.php?success=' . urlencode($actionResult['message']);
-            }
-            break;
-    }
-    
-    // Nếu cần redirect, thực hiện ngay
-    if ($redirect) {
-        ob_end_clean(); // Xóa buffer
-        header('Location: ' . $redirectUrl);
-        exit();
-    } else {
-        // Lưu kết quả vào session để hiển thị
-        if (isset($actionResult)) {
-            
-            $_SESSION['action_result'] = $actionResult;
-            // Nếu có lỗi, lưu cả POST data để hiển thị lại
-            if (!$actionResult['success']) {
-                $_SESSION['post_data'] = $_POST;
-            }
-        }
-        ob_end_flush();
+// Kiểm tra đăng nhập theo hệ thống của bạn
+if (!isset($_SESSION['user']) || !isset($_SESSION['vaitro']) || $_SESSION['vaitro'] !== 'letan') {
+    header('Location: ../../../client/view/login.php?error=Vui lòng đăng nhập với vai trò lễ tân');
+    exit;
+}
+
+// Lấy thông tin user
+$user = $_SESSION['user'];
+$role = $_SESSION['vaitro'];
+
+// Kết nối database và lấy danh sách khách hàng
+require_once '../../model/connectDB.php';
+
+$connect = new Connect();
+$conn = $connect->openConnect();
+
+$query = "SELECT 
+            kh.MaKH,
+            kh.HoTen,
+            kh.SoDienThoai,
+            kh.DiaChi,
+            kh.TrangThai,
+            kh.created_at,
+            kh.updated_at,
+            kh.MaTaiKhoan,
+            tk.Email,
+            tk.CMND
+          FROM khachhang kh
+          LEFT JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id
+          ORDER BY kh.created_at DESC";
+
+$result = mysqli_query($conn, $query);
+$dsKhachHang = [];
+
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $dsKhachHang[] = $row;
     }
 }
 
-// BẮT ĐẦU OUTPUT
+$connect->closeConnect($conn);
+
 require_once '../layouts/header.php';
-
-// Lấy thông báo từ session
-
-$actionResult = isset($_SESSION['action_result']) ? $_SESSION['action_result'] : null;
-$postData = isset($_SESSION['post_data']) ? $_SESSION['post_data'] : [];
-
-// Xóa session sau khi lấy
-unset($_SESSION['action_result']);
-unset($_SESSION['post_data']);
-
-// Lấy thông báo thành công từ URL
-$successMessage = isset($_GET['success']) ? urldecode($_GET['success']) : null;
-$resetSuccessMessage = isset($_GET['reset_success']) ? urldecode($_GET['reset_success']) : null;
-
-// Khởi tạo controller để lấy dữ liệu
-require_once __DIR__ . '/../../controller/letanlogon.controller.php';
-$controller = new LetanLogonController();
-
-// Lấy danh sách khách hàng
-$customers = $controller->getAllCustomers();
-
-// Lấy thông tin khách hàng để chỉnh sửa (nếu có)
-$editData = null;
-if (isset($_GET['edit'])) {
-    $editData = $controller->getCustomer($_GET['edit']);
-}
 ?>
 
-<div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-users me-2"></i>
-            QUẢN LÝ KHÁCH HÀNG
-        </h1>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
-            <i class="fas fa-plus-circle me-2"></i>Thêm Khách Hàng
-        </button>
-    </div>
-
-    <!-- Hiển thị thông báo -->
-    <?php if ($successMessage): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <?php echo htmlspecialchars($successMessage); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($resetSuccessMessage): ?>
-        <div class="alert alert-info alert-dismissible fade show" role="alert">
-            <i class="fas fa-key me-2"></i>
-            <?php echo htmlspecialchars($resetSuccessMessage); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($actionResult && !$actionResult['success']): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            <?php 
-            if (isset($actionResult['errors']['system'])) {
-                echo htmlspecialchars($actionResult['errors']['system']);
-            } else {
-                echo 'Vui lòng kiểm tra lại thông tin!';
-            }
-            ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Thông tin thành công -->
-    <?php if ($actionResult && $actionResult['success'] && isset($actionResult['data'])): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <?php echo htmlspecialchars($actionResult['message']); ?>
-            <div class="mt-2">
-                <small class="text-muted">Mã khách hàng: <strong><?php echo htmlspecialchars($actionResult['data']['maKH']); ?></strong></small><br>
-                <small class="text-muted">Tên đăng nhập: <strong><?php echo htmlspecialchars($actionResult['data']['username']); ?></strong></small><br>
-                <small class="text-muted">Mật khẩu mặc định: <strong><?php echo htmlspecialchars($actionResult['data']['password']); ?></strong></small>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Modal Thêm Khách Hàng -->
-    <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addCustomerModalLabel">
-                        <i class="fas fa-user-plus me-2"></i>ĐĂNG KÝ TÀI KHOẢN
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST" action="" id="registrationForm">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="register">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <!-- Tên đăng nhập -->
-                                <div class="mb-3">
-                                    <label for="username" class="form-label">
-                                        <i class="fas fa-user me-1 text-primary"></i>
-                                        Tên đăng nhập <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['username']) ? 'is-invalid' : ''; ?>"
-                                           id="username" 
-                                           name="username" 
-                                           value="<?php echo isset($postData['username']) ? htmlspecialchars($postData['username']) : ''; ?>"
-                                           placeholder="Nhập tên đăng nhập"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['username'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['username']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="form-text">Tối thiểu 4 ký tự (chữ, số, _)</div>
-                                </div>
-
-                                <!-- Họ và tên -->
-                                <div class="mb-3">
-                                    <label for="fullname" class="form-label">
-                                        <i class="fas fa-id-card me-1 text-primary"></i>
-                                        Họ và tên <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['fullname']) ? 'is-invalid' : ''; ?>"
-                                           id="fullname" 
-                                           name="fullname" 
-                                           value="<?php echo isset($postData['fullname']) ? htmlspecialchars($postData['fullname']) : ''; ?>"
-                                           placeholder="Nhập họ và tên đầy đủ"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['fullname'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['fullname']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="form-text">Nhập họ và tên đầy đủ (không chứa số)</div>
-                                </div>
-
-                                <!-- CMND/CCCD -->
-                                <div class="mb-3">
-                                    <label for="cmnd" class="form-label">
-                                        <i class="fas fa-id-card me-1 text-primary"></i>
-                                        CMND/CCCD <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['cmnd']) ? 'is-invalid' : ''; ?>"
-                                           id="cmnd" 
-                                           name="cmnd" 
-                                           value="<?php echo isset($postData['cmnd']) ? htmlspecialchars($postData['cmnd']) : ''; ?>"
-                                           placeholder="Nhập 9-12 số"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['cmnd'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['cmnd']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="form-text">Nhập số CMND/CCCD (9-12 số)</div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <!-- Số điện thoại -->
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">
-                                        <i class="fas fa-phone me-1 text-primary"></i>
-                                        Số điện thoại <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="tel" 
-                                           class="form-control <?php echo isset($actionResult['errors']['phone']) ? 'is-invalid' : ''; ?>"
-                                           id="phone" 
-                                           name="phone" 
-                                           value="<?php echo isset($postData['phone']) ? htmlspecialchars($postData['phone']) : ''; ?>"
-                                           placeholder="Nhập 10-11 số"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['phone'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['phone']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="form-text">Nhập số điện thoại (10-11 số)</div>
-                                </div>
-
-                                <!-- Email -->
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">
-                                        <i class="fas fa-envelope me-1 text-primary"></i>
-                                        Email
-                                    </label>
-                                    <input type="email" 
-                                           class="form-control <?php echo isset($actionResult['errors']['email']) ? 'is-invalid' : ''; ?>"
-                                           id="email" 
-                                           name="email" 
-                                           value="<?php echo isset($postData['email']) ? htmlspecialchars($postData['email']) : ''; ?>"
-                                           placeholder="Nhập email của bạn">
-                                    <?php if (isset($actionResult['errors']['email'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['email']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="form-text">Nhập email của bạn</div>
-                                </div>
-
-                                <!-- Thông báo mật khẩu mặc định -->
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Lưu ý:</strong> Mật khẩu mặc định sẽ là <strong>123456</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Địa chỉ -->
-                        <div class="mb-3">
-                            <label for="address" class="form-label">
-                                <i class="fas fa-home me-1 text-primary"></i>
-                                Địa chỉ
-                            </label>
-                            <textarea class="form-control" 
-                                      id="address" 
-                                      name="address" 
-                                      rows="2"
-                                      placeholder="Nhập địa chỉ (nếu có)"><?php echo isset($postData['address']) ? htmlspecialchars($postData['address']) : ''; ?></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>Hủy
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Đăng ký
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Quản lý khách hàng</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button class="btn btn-danger" id="btnDeleteMultiple" disabled>
+                            <i class="fas fa-trash-alt"></i> Xóa đã chọn
                         </button>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Chỉnh Sửa Khách Hàng -->
-    <?php if ($editData): ?>
-    <div class="modal fade show" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="false" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editCustomerModalLabel">
-                        <i class="fas fa-edit me-2"></i>CHỈNH SỬA THÔNG TIN KHÁCH HÀNG: <?php echo htmlspecialchars($editData['MaKH']); ?>
-                    </h5>
-                    <a href="letanlogon.php" class="btn-close"></a>
-                </div>
-                <form method="POST" action="" id="updateForm">
-                    <div class="modal-body">
-                        <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="maKH" value="<?php echo htmlspecialchars($editData['MaKH']); ?>">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <!-- Tên đăng nhập -->
-                                <div class="mb-3">
-                                    <label for="edit_username" class="form-label">
-                                        <i class="fas fa-user me-1 text-primary"></i>
-                                        Tên đăng nhập <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['username']) ? 'is-invalid' : ''; ?>"
-                                           id="edit_username" 
-                                           name="username" 
-                                           value="<?php echo htmlspecialchars($editData['TenDangNhap']); ?>"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['username'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['username']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <!-- Họ và tên -->
-                                <div class="mb-3">
-                                    <label for="edit_fullname" class="form-label">
-                                        <i class="fas fa-id-card me-1 text-primary"></i>
-                                        Họ và tên <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['fullname']) ? 'is-invalid' : ''; ?>"
-                                           id="edit_fullname" 
-                                           name="fullname" 
-                                           value="<?php echo htmlspecialchars($editData['HoTen']); ?>"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['fullname'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['fullname']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <!-- CMND/CCCD -->
-                                <div class="mb-3">
-                                    <label for="edit_cmnd" class="form-label">
-                                        <i class="fas fa-id-card me-1 text-primary"></i>
-                                        CMND/CCCD <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" 
-                                           class="form-control <?php echo isset($actionResult['errors']['cmnd']) ? 'is-invalid' : ''; ?>"
-                                           id="edit_cmnd" 
-                                           name="cmnd" 
-                                           value="<?php echo htmlspecialchars($editData['CMND']); ?>"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['cmnd'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['cmnd']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <!-- Số điện thoại -->
-                                <div class="mb-3">
-                                    <label for="edit_phone" class="form-label">
-                                        <i class="fas fa-phone me-1 text-primary"></i>
-                                        Số điện thoại <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="tel" 
-                                           class="form-control <?php echo isset($actionResult['errors']['phone']) ? 'is-invalid' : ''; ?>"
-                                           id="edit_phone" 
-                                           name="phone" 
-                                           value="<?php echo htmlspecialchars($editData['SoDienThoai']); ?>"
-                                           required>
-                                    <?php if (isset($actionResult['errors']['phone'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['phone']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <!-- Email -->
-                                <div class="mb-3">
-                                    <label for="edit_email" class="form-label">
-                                        <i class="fas fa-envelope me-1 text-primary"></i>
-                                        Email
-                                    </label>
-                                    <input type="email" 
-                                           class="form-control <?php echo isset($actionResult['errors']['email']) ? 'is-invalid' : ''; ?>"
-                                           id="edit_email" 
-                                           name="email" 
-                                           value="<?php echo htmlspecialchars($editData['Email']); ?>">
-                                    <?php if (isset($actionResult['errors']['email'])): ?>
-                                        <div class="invalid-feedback">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <?php echo htmlspecialchars($actionResult['errors']['email']); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <!-- Trạng thái tài khoản -->
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        <i class="fas fa-power-off me-1 text-primary"></i>
-                                        Trạng thái tài khoản
-                                    </label>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" 
-                                               id="tai_khoan_trangthai" name="tai_khoan_trangthai" 
-                                               value="1" <?php echo $editData['tai_khoan_trangthai'] == 1 ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="tai_khoan_trangthai">
-                                            Tài khoản đang hoạt động
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Trạng thái khách hàng -->
-                                <div class="mb-3">
-                                    <label for="edit_trangthai" class="form-label">
-                                        <i class="fas fa-bed me-1 text-primary"></i>
-                                        Trạng thái lưu trú
-                                    </label>
-                                    <select class="form-select" id="edit_trangthai" name="trangthai">
-                                        <option value="Không ở" <?php echo $editData['TrangThai'] == 'Không ở' ? 'selected' : ''; ?>>Không ở</option>
-                                        <option value="Đang ở" <?php echo $editData['TrangThai'] == 'Đang ở' ? 'selected' : ''; ?>>Đang ở</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Địa chỉ -->
-                        <div class="mb-3">
-                            <label for="edit_address" class="form-label">
-                                <i class="fas fa-home me-1 text-primary"></i>
-                                Địa chỉ
-                            </label>
-                            <textarea class="form-control" 
-                                      id="edit_address" 
-                                      name="address" 
-                                      rows="2"><?php echo htmlspecialchars($editData['DiaChi']); ?></textarea>
-                        </div>
-
-                        <!-- Mật khẩu mới (chỉ khi cần thay đổi) -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-key me-1"></i>Thay đổi mật khẩu
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Lưu ý:</strong> Để trống nếu không muốn thay đổi mật khẩu
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="edit_password" class="form-label">Mật khẩu mới</label>
-                                            <input type="password" 
-                                                   class="form-control <?php echo isset($actionResult['errors']['password']) ? 'is-invalid' : ''; ?>"
-                                                   id="edit_password" 
-                                                   name="password" 
-                                                   placeholder="Nhập mật khẩu (ít nhất 6 ký tự)">
-                                            <?php if (isset($actionResult['errors']['password'])): ?>
-                                                <div class="invalid-feedback">
-                                                    <i class="fas fa-exclamation-circle me-1"></i>
-                                                    <?php echo htmlspecialchars($actionResult['errors']['password']); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="edit_confirm_password" class="form-label">Nhập lại mật khẩu</label>
-                                            <input type="password" 
-                                                   class="form-control <?php echo isset($actionResult['errors']['confirm_password']) ? 'is-invalid' : ''; ?>"
-                                                   id="edit_confirm_password" 
-                                                   name="confirm_password" 
-                                                   placeholder="Nhập lại mật khẩu">
-                                            <?php if (isset($actionResult['errors']['confirm_password'])): ?>
-                                                <div class="invalid-feedback">
-                                                    <i class="fas fa-exclamation-circle me-1"></i>
-                                                    <?php echo htmlspecialchars($actionResult['errors']['confirm_password']); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-info" onclick="confirmResetPassword('<?php echo htmlspecialchars($editData['MaKH']); ?>')">
-                            <i class="fas fa-redo me-2"></i>Reset Mật Khẩu
-                        </button>
-                        <button type="button" class="btn btn-danger" onclick="confirmDelete('<?php echo htmlspecialchars($editData['MaKH']); ?>')">
-                            <i class="fas fa-trash me-2"></i>Xóa
-                        </button>
-                        <a href="letanlogon.php" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Hủy
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Cập nhật
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Danh sách khách hàng -->
-    <div class="card shadow">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list me-1"></i>DANH SÁCH KHÁCH HÀNG
-            </h6>
-        </div>
-        <div class="card-body">
-            <?php if (!empty($customers)): ?>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Mã KH</th>
-                                <th>Tên đăng nhập</th>
-                                <th>Họ và tên</th>
-                                <th>Số điện thoại</th>
-                                <th>CMND/CCCD</th>
-                                <th>Email</th>
-                                <th>Trạng thái TK</th>
-                                <th>Trạng thái</th>
-                                <th>Ngày tạo</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($customers as $customer): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($customer['MaKH']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($customer['TenDangNhap']); ?></td>
-                                    <td><?php echo htmlspecialchars($customer['HoTen']); ?></td>
-                                    <td><?php echo htmlspecialchars($customer['SoDienThoai']); ?></td>
-                                    <td><?php echo htmlspecialchars($customer['CMND']); ?></td>
-                                    <td><?php echo htmlspecialchars($customer['Email']); ?></td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $customer['tai_khoan_trangthai'] == 1 ? 'success' : 'danger'; ?>">
-                                            <?php echo $customer['tai_khoan_trangthai'] == 1 ? 'Hoạt động' : 'Vô hiệu'; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $customer['TrangThai'] == 'Đang ở' ? 'success' : 'secondary'; ?>">
-                                            <?php echo htmlspecialchars($customer['TrangThai']); ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($customer['created_at'])); ?></td>
-                                    <td>
-                                        <a href="letanlogon.php?edit=<?php echo urlencode($customer['MaKH']); ?>" 
-                                           class="btn btn-sm btn-warning mb-1">
-                                            <i class="fas fa-edit"></i> Sửa
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-info mb-1" 
-                                                onclick="confirmResetPassword('<?php echo htmlspecialchars($customer['MaKH']); ?>')">
-                                            <i class="fas fa-redo"></i> Reset
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <div class="text-center py-5">
-                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
-                    <p class="text-muted">Chưa có khách hàng nào</p>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
-                        <i class="fas fa-plus-circle me-2"></i>Thêm Khách Hàng Đầu Tiên
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                        <i class="fas fa-user-plus"></i> Đăng ký tài khoản
                     </button>
                 </div>
-            <?php endif; ?>
+
+            </div>
+
+
+            <!-- Thống kê nhanh -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">Tổng khách hàng</h6>
+                            <h3 class="card-text"><?php echo count($dsKhachHang); ?></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">Có tài khoản</h6>
+                            <h3 class="card-text">
+                                <?php
+                                $coTaiKhoan = 0;
+                                foreach ($dsKhachHang as $kh) {
+                                    if ($kh['MaTaiKhoan'] != 0) $coTaiKhoan++;
+                                }
+                                echo $coTaiKhoan;
+                                ?>
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">Đang ở</h6>
+                            <h3 class="card-text">
+                                <?php
+                                $dangO = 0;
+                                foreach ($dsKhachHang as $kh) {
+                                    if ($kh['TrangThai'] == 'Đang ở') $dangO++;
+                                }
+                                echo $dangO;
+                                ?>
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">Không ở</h6>
+                            <h3 class="card-text">
+                                <?php
+                                $khongO = 0;
+                                foreach ($dsKhachHang as $kh) {
+                                    if ($kh['TrangThai'] == 'Không ở') $khongO++;
+                                }
+                                echo $khongO;
+                                ?>
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng danh sách khách hàng -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Danh sách khách hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered">
+                            <!-- Trong phần thead -->
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="30">
+                                        <input type="checkbox" id="selectAll">
+                                    </th>
+                                    <th width="50">STT</th>
+                                    <th>Mã KH</th>
+                                    <th>Họ tên</th>
+                                    <th>SĐT</th>
+                                    <th>Email/CMND</th>
+                                    <th>Địa chỉ</th>
+                                    <th>Trạng thái</th>
+                                    <th width="120">Tài khoản</th>
+                                    <th width="200">Hành động</th>
+                                </tr>
+                            </thead>
+
+                            <!-- Trong phần tbody -->
+                            <tbody>
+                                <?php if (empty($dsKhachHang)): ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted py-3">
+                                            <i class="fas fa-users-slash fa-2x mb-2"></i><br>
+                                            Chưa có khách hàng nào
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php $stt = 1; ?>
+                                    <?php foreach ($dsKhachHang as $kh): ?>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="select-customer" value="<?php echo htmlspecialchars($kh['MaKH']); ?>">
+                                            </td>
+                                            <td class="text-center"><?php echo $stt++; ?></td>
+                                            <td><strong><?php echo htmlspecialchars($kh['MaKH']); ?></strong></td>
+                                            <td><?php echo htmlspecialchars($kh['HoTen']); ?></td>
+                                            <td><?php echo htmlspecialchars($kh['SoDienThoai']); ?></td>
+                                            <td>
+                                                <?php if ($kh['Email']): ?>
+                                                    <div><small class="text-primary"><?php echo htmlspecialchars($kh['Email']); ?></small></div>
+                                                <?php endif; ?>
+                                                <?php if ($kh['CMND']): ?>
+                                                    <div><small class="text-muted">CMND: <?php echo htmlspecialchars($kh['CMND']); ?></small></div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <small><?php echo htmlspecialchars(mb_strlen($kh['DiaChi']) > 30 ? mb_substr($kh['DiaChi'], 0, 30) . '...' : $kh['DiaChi']); ?></small>
+                                            </td>
+                                            <td>
+                                                <?php if ($kh['TrangThai'] == 'Đang ở'): ?>
+                                                    <span class="badge bg-success">Đang ở</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Không ở</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <?php if ($kh['MaTaiKhoan'] != 0): ?>
+                                                    <span class="badge bg-success" title="Đã có tài khoản">
+                                                        <i class="fas fa-check-circle"></i> Có TK
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning" title="Chưa có tài khoản">
+                                                        <i class="fas fa-times-circle"></i> Chưa có
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button class="btn btn-warning btn-edit" title="Chỉnh sửa"
+                                                        onclick="editKhachHang('<?php echo $kh['MaKH']; ?>')">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger" title="Xóa"
+                                                        onclick="deleteKhachHang('<?php echo $kh['MaKH']; ?>', '<?php echo htmlspecialchars(addslashes($kh['HoTen'])); ?>')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<!-- Modal sửa khách hàng -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title"><i class="fas fa-user-edit"></i> Chỉnh sửa Khách Hàng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editCustomerForm">
+                <input type="hidden" id="editMaKH" name="maKH">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Đang chỉnh sửa khách hàng: <strong id="editMaKHText"></strong>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">Thông tin cá nhân</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Họ tên *</label>
+                                <input type="text" class="form-control" id="editHoTen" name="hoten" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Số điện thoại *</label>
+                                <input type="tel" class="form-control" id="editSoDienThoai" name="sodienthoai" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Trạng thái *</label>
+                                <select class="form-select" id="editTrangThai" name="trangthai" required>
+                                    <option value="Không ở">Không ở</option>
+                                    <option value="Đang ở">Đang ở</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Địa chỉ</label>
+                                <input type="text" class="form-control" id="editDiaChi" name="diachi">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Thông tin tài khoản</h6>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle"></i> Để trống nếu không muốn thay đổi tài khoản
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tên đăng nhập</label>
+                                <input type="text" class="form-control" id="editTenDangNhap" name="tendangnhap">
+                                <div class="form-text">Để trống nếu không đổi</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Mật khẩu</label>
+                                <input type="password" class="form-control" id="editMatKhau" name="matkhau">
+                                <div class="form-text">Để trống nếu không đổi</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="editEmail" name="email">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">CMND/CCCD</label>
+                                <input type="text" class="form-control" id="editCMND" name="cmnd">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modal thêm khách hàng -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-user-plus"></i> Thêm Khách Hàng Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="addCustomerForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> <strong>Mã KH</strong> sẽ được tạo tự động (KH1, KH2, KH3,...)
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">Thông tin cá nhân</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Họ tên *</label>
+                                <input type="text" class="form-control" name="hoten" required
+                                    placeholder="Nhập họ tên đầy đủ">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Số điện thoại *</label>
+                                <input type="tel" class="form-control" name="sodienthoai" required
+                                    placeholder="Nhập số điện thoại" pattern="[0-9]{9,11}">
+                                <div class="form-text">Ví dụ: 0909123456</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Trạng thái *</label>
+                                <select class="form-select" name="trangthai" required>
+                                    <option value="Không ở" selected>Không ở</option>
+                                    <option value="Đang ở">Đang ở</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Địa chỉ</label>
+                                <input type="text" class="form-control" name="diachi"
+                                    placeholder="Nhập địa chỉ đầy đủ">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Thông tin tài khoản (tùy chọn)</h6>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle"></i> Chỉ điền thông tin nếu muốn tạo/liên kết tài khoản cho khách hàng
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tên đăng nhập</label>
+                                <input type="text" class="form-control" name="tendangnhap"
+                                    placeholder="Tên đăng nhập (nếu tạo TK)">
+                                <div class="form-text">Dùng để đăng nhập hệ thống</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Mật khẩu</label>
+                                <input type="password" class="form-control" name="matkhau"
+                                    placeholder="Mật khẩu (nếu tạo TK)" minlength="6">
+                                <div class="form-text">Ít nhất 6 ký tự</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email"
+                                    placeholder="Email">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">CMND/CCCD</label>
+                                <input type="text" class="form-control" name="cmnd"
+                                    placeholder="Số CMND/CCCD">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">Thêm khách hàng</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Form reset password ẩn -->
-<form method="POST" action="" id="resetPasswordForm">
-    <input type="hidden" name="action" value="reset_password">
-    <input type="hidden" name="maKH" id="resetMaKH">
-</form>
-
-<!-- Form xóa ẩn -->
-<form method="POST" action="" id="deleteForm">
-    <input type="hidden" name="action" value="delete">
-    <input type="hidden" name="maKH" id="deleteMaKH">
-</form>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Xác nhận xóa
-function confirmDelete(maKH) {
-    console.log('Xóa khách hàng:', maKH);
-    Swal.fire({
-        title: 'Xác nhận xóa',
-        text: 'Bạn có chắc chắn muốn xóa khách hàng ' + maKH + '?\nThao tác này sẽ xóa cả tài khoản và không thể hoàn tác!',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            console.log('Đã xác nhận xóa:', maKH);
-            document.getElementById('deleteMaKH').value = maKH;
-            document.getElementById('deleteForm').submit();
-        }
-    });
-}
+    // Xử lý form thêm khách hàng
+    document.getElementById('addCustomerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
 
-// Xác nhận reset password
-function confirmResetPassword(maKH) {
-    console.log('Reset password khách hàng:', maKH);
-    Swal.fire({
-        title: 'Reset mật khẩu',
-        text: 'Bạn có chắc chắn muốn reset mật khẩu của khách hàng ' + maKH + ' về 123456?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#17a2b8',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Reset',
-        cancelButtonText: 'Hủy'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            console.log('Đã xác nhận reset:', maKH);
-            document.getElementById('resetMaKH').value = maKH;
-            document.getElementById('resetPasswordForm').submit();
-        }
-    });
-}
+        // Validate
+        const sodienthoai = this.sodienthoai.value.trim();
+        const tendangnhap = this.tendangnhap.value.trim();
+        const matkhau = this.matkhau.value.trim();
+        const email = this.email.value.trim();
+        const cmnd = this.cmnd.value.trim();
 
-// Validation client-side
-document.addEventListener('DOMContentLoaded', function() {
-    // Form đăng ký
-    const registrationForm = document.getElementById('registrationForm');
-    if (registrationForm) {
-        registrationForm.addEventListener('submit', function(e) {
-            if (!validateRegistrationForm()) {
-                e.preventDefault();
-            }
-        });
-    }
-
-    // Form cập nhật
-    const updateForm = document.getElementById('updateForm');
-    if (updateForm) {
-        updateForm.addEventListener('submit', function(e) {
-            if (!validateUpdateForm()) {
-                e.preventDefault();
-            }
-        });
-    }
-
-    function validateRegistrationForm() {
-        let isValid = true;
-        
-        // Validate tên đăng nhập
-        const username = document.getElementById('username');
-        if (username && username.value) {
-            if (username.value.length < 4) {
-                showError(username, 'Tên đăng nhập phải có ít nhất 4 ký tự');
-                isValid = false;
-            } else if (!/^[a-zA-Z0-9_]+$/.test(username.value)) {
-                showError(username, 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới');
-                isValid = false;
-            }
-        }
-
-        // Validate họ tên
-        const fullname = document.getElementById('fullname');
-        if (fullname && fullname.value) {
-            if (fullname.value.length < 6) {
-                showError(fullname, 'Họ và tên phải có ít nhất 6 ký tự');
-                isValid = false;
-            } else if (/\d/.test(fullname.value)) {
-                showError(fullname, 'Họ và tên không được chứa số');
-                isValid = false;
-            }
+        // Validate số điện thoại
+        if (!/^[0-9]{9,11}$/.test(sodienthoai)) {
+            alert('Số điện thoại phải có 9-11 chữ số');
+            this.sodienthoai.focus();
+            return;
         }
 
         // Validate CMND
-        const cmnd = document.getElementById('cmnd');
-        if (cmnd && cmnd.value && !/^\d{9,12}$/.test(cmnd.value)) {
-            showError(cmnd, 'CMND/CCCD phải có 9-12 số');
-            isValid = false;
-        }
-
-        // Validate số điện thoại
-        const phone = document.getElementById('phone');
-        if (phone && phone.value && !/^\d{10,11}$/.test(phone.value)) {
-            showError(phone, 'Số điện thoại phải có 10-11 số');
-            isValid = false;
+        if (cmnd && !/^[0-9]{9,12}$/.test(cmnd)) {
+            alert('CMND/CCCD phải có 9-12 chữ số');
+            this.cmnd.focus();
+            return;
         }
 
         // Validate email
-        const email = document.getElementById('email');
-        if (email && email.value && !isValidEmail(email.value)) {
-            showError(email, 'Email không hợp lệ');
-            isValid = false;
+        if (email && !validateEmail(email)) {
+            alert('Email không hợp lệ');
+            this.email.focus();
+            return;
         }
 
-        return isValid;
+        // Validate tên đăng nhập và mật khẩu
+        if ((tendangnhap && !matkhau) || (!tendangnhap && matkhau)) {
+            alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+            return;
+        }
+
+        if (matkhau && matkhau.length < 6) {
+            alert('Mật khẩu phải có ít nhất 6 ký tự');
+            this.matkhau.focus();
+            return;
+        }
+
+        // Lấy dữ liệu form
+        const formData = new FormData(this);
+
+        // Hiển thị loading
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        submitBtn.disabled = true;
+
+        // Gọi AJAX đến controller
+        fetch('../../controller/letanlogon.controller.php?action=add', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text()) // Dùng .text() trước để debug
+            .then(text => {
+                console.log('Raw response:', text);
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        alert('✅ Thêm khách hàng thành công! Mã KH: ' + data.maKH);
+                        // Đóng modal và reload trang
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                        modal.hide();
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        alert('❌ ' + data.message);
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                } catch (e) {
+                    console.error('Parse error:', e);
+                    alert('⚠️ Lỗi server: ' + text.substring(0, 100));
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('⚠️ Có lỗi xảy ra, vui lòng thử lại');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+    });
+
+    // Validate email function
+    function validateEmail(email) {
+        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
     }
 
-    function validateUpdateForm() {
-        let isValid = true;
-        
-        // Validate tên đăng nhập
-        const username = document.getElementById('edit_username');
-        if (username && username.value) {
-            if (username.value.length < 4) {
-                showError(username, 'Tên đăng nhập phải có ít nhất 4 ký tự');
-                isValid = false;
-            } else if (!/^[a-zA-Z0-9_]+$/.test(username.value)) {
-                showError(username, 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới');
-                isValid = false;
-            }
+    // Xử lý xóa khách hàng
+    function deleteKhachHang(maKH, hoten) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa khách hàng "${hoten}" (${maKH})?\n\n⚠️ Hành động này sẽ xóa cả thông tin tài khoản liên quan!`)) {
+            return;
         }
 
-        // Validate họ tên
-        const fullname = document.getElementById('edit_fullname');
-        if (fullname && fullname.value) {
-            if (fullname.value.length < 6) {
-                showError(fullname, 'Họ và tên phải có ít nhất 6 ký tự');
-                isValid = false;
-            } else if (/\d/.test(fullname.value)) {
-                showError(fullname, 'Họ và tên không được chứa số');
-                isValid = false;
-            }
+        const formData = new FormData();
+        formData.append('maKH', maKH);
+
+        fetch('../../controller/letanlogon.controller.php?action=delete', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Xóa khách hàng thành công!');
+                    location.reload();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('⚠️ Có lỗi xảy ra khi xóa khách hàng');
+            });
+    }
+
+    // Reset form khi modal đóng
+    document.getElementById('addCustomerModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('addCustomerForm').reset();
+    });
+    // Hàm mở modal sửa
+    function editKhachHang(maKH) {
+        // Hiển thị loading
+        const modal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
+        modal.show();
+
+        document.getElementById('editMaKHText').textContent = maKH;
+        document.getElementById('editMaKH').value = maKH;
+
+        // Lấy thông tin khách hàng
+        fetch(`../../controller/letanlogon.controller.php?action=get&maKH=${encodeURIComponent(maKH)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const kh = data.data;
+
+                    // Điền thông tin vào form
+                    document.getElementById('editHoTen').value = kh.HoTen || '';
+                    document.getElementById('editSoDienThoai').value = kh.SoDienThoai || '';
+                    document.getElementById('editDiaChi').value = kh.DiaChi || '';
+                    document.getElementById('editTrangThai').value = kh.TrangThai || 'Không ở';
+                    document.getElementById('editTenDangNhap').value = kh.TenDangNhap || '';
+                    document.getElementById('editEmail').value = kh.Email || '';
+                    document.getElementById('editCMND').value = kh.CMND || '';
+
+                    // Clear password field
+                    document.getElementById('editMatKhau').value = '';
+                } else {
+                    alert('Không thể lấy thông tin khách hàng: ' + data.message);
+                    modal.hide();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi lấy thông tin khách hàng');
+                modal.hide();
+            });
+    }
+
+    // Xử lý form sửa
+    document.getElementById('editCustomerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Validate
+        const sodienthoai = this.sodienthoai.value.trim();
+        const tendangnhap = this.tendangnhap.value.trim();
+        const matkhau = this.matkhau.value.trim();
+        const email = this.email.value.trim();
+        const cmnd = this.cmnd.value.trim();
+
+        // Validate số điện thoại
+        if (!/^[0-9]{9,11}$/.test(sodienthoai)) {
+            alert('Số điện thoại phải có 9-11 chữ số');
+            this.sodienthoai.focus();
+            return;
         }
 
         // Validate CMND
-        const cmnd = document.getElementById('edit_cmnd');
-        if (cmnd && cmnd.value && !/^\d{9,12}$/.test(cmnd.value)) {
-            showError(cmnd, 'CMND/CCCD phải có 9-12 số');
-            isValid = false;
-        }
-
-        // Validate số điện thoại
-        const phone = document.getElementById('edit_phone');
-        if (phone && phone.value && !/^\d{10,11}$/.test(phone.value)) {
-            showError(phone, 'Số điện thoại phải có 10-11 số');
-            isValid = false;
+        if (cmnd && !/^[0-9]{9,12}$/.test(cmnd)) {
+            alert('CMND/CCCD phải có 9-12 chữ số');
+            this.cmnd.focus();
+            return;
         }
 
         // Validate email
-        const email = document.getElementById('edit_email');
-        if (email && email.value && !isValidEmail(email.value)) {
-            showError(email, 'Email không hợp lệ');
-            isValid = false;
+        if (email && !validateEmail(email)) {
+            alert('Email không hợp lệ');
+            this.email.focus();
+            return;
         }
 
-        // Validate password match
-        const password = document.getElementById('edit_password');
-        const confirmPassword = document.getElementById('edit_confirm_password');
-        
-        if (password && confirmPassword) {
-            const hasPasswordValue = password.value.trim() !== '';
-            
-            if (hasPasswordValue && password.value !== confirmPassword.value) {
-                showError(confirmPassword, 'Mật khẩu nhập lại không khớp');
-                isValid = false;
-            }
-            
-            if (hasPasswordValue && password.value.length < 6) {
-                showError(password, 'Mật khẩu phải có ít nhất 6 ký tự');
-                isValid = false;
-            }
+        // Validate tên đăng nhập và mật khẩu
+        if (tendangnhap && !matkhau) {
+            alert('Vui lòng nhập mật khẩu nếu đổi tên đăng nhập');
+            this.matkhau.focus();
+            return;
         }
 
-        return isValid;
-    }
-
-    function isValidEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    }
-
-    function showError(input, message) {
-        input.classList.add('is-invalid');
-        let feedback = input.nextElementSibling;
-        while (feedback && !feedback.classList.contains('invalid-feedback')) {
-            feedback = feedback.nextElementSibling;
+        if (matkhau && matkhau.length < 6) {
+            alert('Mật khẩu phải có ít nhất 6 ký tự');
+            this.matkhau.focus();
+            return;
         }
-        if (!feedback || !feedback.classList.contains('invalid-feedback')) {
-            feedback = document.createElement('div');
-            feedback.className = 'invalid-feedback';
-            input.parentNode.insertBefore(feedback, input.nextSibling);
-        }
-        feedback.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>' + message;
-        feedback.style.display = 'block';
-    }
 
-    // Clear validation on input
-    const inputs = document.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-        input.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-            let feedback = this.nextElementSibling;
-            while (feedback && !feedback.classList.contains('invalid-feedback')) {
-                feedback = feedback.nextElementSibling;
-            }
-            if (feedback && feedback.classList.contains('invalid-feedback')) {
-                feedback.style.display = 'none';
-            }
-        });
+        // Lấy dữ liệu form
+        const formData = new FormData(this);
+
+        // Hiển thị loading
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        submitBtn.disabled = true;
+
+        // Gọi AJAX để cập nhật
+        fetch('../../controller/letanlogon.controller.php?action=edit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Cập nhật khách hàng thành công!');
+                    // Đóng modal và reload trang
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+                    modal.hide();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    alert('❌ ' + data.message);
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('⚠️ Có lỗi xảy ra khi cập nhật');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
     });
-});
+
+    // Xử lý chọn tất cả
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.select-customer');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateDeleteButton();
+    });
+
+    // Xử lý chọn từng cái
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('select-customer')) {
+            updateDeleteButton();
+        }
+    });
+
+    // Cập nhật trạng thái nút xóa nhiều
+    function updateDeleteButton() {
+        const checkedBoxes = document.querySelectorAll('.select-customer:checked');
+        const deleteBtn = document.getElementById('btnDeleteMultiple');
+
+        if (checkedBoxes.length > 0) {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = `Xóa đã chọn (${checkedBoxes.length})`;
+        } else {
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Xóa đã chọn';
+        }
+    }
+
+    // Xóa nhiều khách hàng
+    document.getElementById('btnDeleteMultiple').addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.select-customer:checked');
+        const listMaKH = Array.from(checkedBoxes).map(cb => cb.value);
+
+        if (listMaKH.length === 0) {
+            alert('Vui lòng chọn ít nhất một khách hàng để xóa');
+            return;
+        }
+
+        if (!confirm(`Bạn có chắc chắn muốn xóa ${listMaKH.length} khách hàng đã chọn?\n\n⚠️ Hành động này không thể hoàn tác!`)) {
+            return;
+        }
+
+        const formData = new FormData();
+        listMaKH.forEach(maKH => {
+            formData.append('listMaKH[]', maKH);
+        });
+
+        // Hiển thị loading
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
+        this.disabled = true;
+
+        fetch('../../controller/letanlogon.controller.php?action=delete-multiple', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    let errorMsg = '❌ ' + data.message;
+                    if (data.errors && data.errors.length > 0) {
+                        errorMsg += '\n\nChi tiết lỗi:\n' + data.errors.join('\n');
+                    }
+                    alert(errorMsg);
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('⚠️ Có lỗi xảy ra khi xóa nhiều khách hàng');
+                this.innerHTML = originalText;
+                this.disabled = false;
+            });
+    });
 </script>
-<?php 
+
+<?php
 require_once '../layouts/footer.php';
 ?>

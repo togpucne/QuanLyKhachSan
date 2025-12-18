@@ -1,330 +1,511 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-require_once __DIR__ . '/connectDB.php';
+require_once 'connectDB.php';
 
 class LetanLogonModel {
     private $conn;
-
+    
     public function __construct() {
         $connect = new Connect();
         $this->conn = $connect->openConnect();
     }
-
-    // Kiểm tra tên đăng nhập đã tồn tại chưa
-    public function checkUsernameExists($username, $excludeAccountId = null) {
-        $sql = "SELECT id FROM tai_khoan WHERE TenDangNhap = ?";
-        if ($excludeAccountId) {
-            $sql .= " AND id != ?";
-        }
-        $stmt = $this->conn->prepare($sql);
+    
+    // Lấy tất cả khách hàng
+    public function getAllKhachHang() {
+        $query = "SELECT 
+                    kh.MaKH,
+                    kh.HoTen,
+                    kh.SoDienThoai,
+                    kh.DiaChi,
+                    kh.TrangThai,
+                    kh.created_at,
+                    kh.updated_at,
+                    kh.MaTaiKhoan,
+                    tk.Email,
+                    tk.CMND
+                  FROM khachhang kh
+                  LEFT JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id
+                  ORDER BY kh.created_at DESC";
         
-        if ($excludeAccountId) {
-            $stmt->bind_param("si", $username, $excludeAccountId);
-        } else {
-            $stmt->bind_param("s", $username);
-        }
+        $result = mysqli_query($this->conn, $query);
+        $khachhang = [];
         
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0;
-    }
-
-    // Kiểm tra CMND đã tồn tại chưa
-    public function checkCMNDExists($cmnd, $excludeAccountId = null) {
-        $sql = "SELECT id FROM tai_khoan WHERE CMND = ?";
-        if ($excludeAccountId) {
-            $sql .= " AND id != ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        
-        if ($excludeAccountId) {
-            $stmt->bind_param("si", $cmnd, $excludeAccountId);
-        } else {
-            $stmt->bind_param("s", $cmnd);
-        }
-        
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0;
-    }
-
-    // Kiểm tra số điện thoại đã tồn tại chưa
-    public function checkPhoneExists($phone, $excludeMaKH = null) {
-        $sql = "SELECT MaKH FROM khachhang WHERE SoDienThoai = ?";
-        if ($excludeMaKH) {
-            $sql .= " AND MaKH != ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        
-        if ($excludeMaKH) {
-            $stmt->bind_param("ss", $phone, $excludeMaKH);
-        } else {
-            $stmt->bind_param("s", $phone);
-        }
-        
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0;
-    }
-
-    // Kiểm tra email đã tồn tại chưa
-    public function checkEmailExists($email, $excludeAccountId = null) {
-        if (empty($email)) return false;
-        
-        $sql = "SELECT id FROM tai_khoan WHERE Email = ?";
-        if ($excludeAccountId) {
-            $sql .= " AND id != ?";
-        }
-        $stmt = $this->conn->prepare($sql);
-        
-        if ($excludeAccountId) {
-            $stmt->bind_param("si", $email, $excludeAccountId);
-        } else {
-            $stmt->bind_param("s", $email);
-        }
-        
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->num_rows > 0;
-    }
-
-    // Đăng ký tài khoản mới
-    public function registerAccount($data) {
-        $this->conn->begin_transaction();
-
-        try {
-            // Mật khẩu mặc định là 123456
-            $defaultPassword = '123456';
-            $hashedPassword = password_hash($defaultPassword, PASSWORD_DEFAULT);
-            
-            // Thêm vào bảng tai_khoan
-            $sqlAccount = "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND) 
-                          VALUES (?, ?, 'khachhang', 1, ?, ?)";
-            $stmtAccount = $this->conn->prepare($sqlAccount);
-            $stmtAccount->bind_param("ssss", 
-                $data['username'],
-                $hashedPassword, 
-                $data['email'], 
-                $data['cmnd']
-            );
-            
-            if (!$stmtAccount->execute()) {
-                throw new Exception("Lỗi thêm tài khoản: " . $stmtAccount->error);
-            }
-
-            $accountId = $this->conn->insert_id;
-
-            // Tạo MaKH tự động
-            $maKH = 'KH' . date('Ymd') . str_pad($accountId, 4, '0', STR_PAD_LEFT);
-
-            // Thêm vào bảng khachhang
-            $sqlCustomer = "INSERT INTO khachhang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai, MaTaiKhoan) 
-                           VALUES (?, ?, ?, ?, 'Không ở', ?)";
-            $stmtCustomer = $this->conn->prepare($sqlCustomer);
-            $stmtCustomer->bind_param("ssssi", 
-                $maKH, 
-                $data['fullname'], 
-                $data['phone'], 
-                $data['address'], 
-                $accountId
-            );
-            
-            if (!$stmtCustomer->execute()) {
-                throw new Exception("Lỗi thêm khách hàng: " . $stmtCustomer->error);
-            }
-
-            $this->conn->commit();
-            return [
-                'success' => true, 
-                'account_id' => $accountId, 
-                'maKH' => $maKH,
-                'username' => $data['username'],
-                'password' => $defaultPassword // Trả về mật khẩu mặc định
-            ];
-
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    // Lấy danh sách tất cả khách hàng
-    public function getAllCustomers() {
-        $sql = "SELECT k.MaKH, k.HoTen, k.SoDienThoai, k.DiaChi, k.TrangThai, 
-                       t.id as account_id, t.TenDangNhap, t.Email, t.CMND, t.created_at,
-                       t.VaiTro, t.TrangThai as tai_khoan_trangthai
-                FROM khachhang k 
-                JOIN tai_khoan t ON k.MaTaiKhoan = t.id 
-                WHERE t.VaiTro = 'khachhang' 
-                ORDER BY k.created_at DESC";
-        
-        $result = $this->conn->query($sql);
-        $customers = [];
-        
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $customers[] = $row;
+        if ($result) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $khachhang[] = $row;
             }
         }
         
-        return $customers;
+        return $khachhang;
     }
-
-    // Lấy thông tin khách hàng theo MaKH
-    public function getCustomerByMaKH($maKH) {
-        $sql = "SELECT k.MaKH, k.HoTen, k.SoDienThoai, k.DiaChi, k.TrangThai, 
-                       t.id as account_id, t.TenDangNhap, t.Email, t.CMND, t.VaiTro,
-                       t.TrangThai as tai_khoan_trangthai
-                FROM khachhang k 
-                JOIN tai_khoan t ON k.MaTaiKhoan = t.id 
-                WHERE k.MaKH = ?";
+    
+    // Lấy 1 khách hàng theo mã
+    public function getKhachHangByMaKH($maKH) {
+        $query = "SELECT 
+                    kh.MaKH,
+                    kh.HoTen,
+                    kh.SoDienThoai,
+                    kh.DiaChi,
+                    kh.TrangThai,
+                    kh.created_at,
+                    kh.updated_at,
+                    kh.MaTaiKhoan,
+                    tk.Email,
+                    tk.CMND,
+                    tk.TenDangNhap
+                  FROM khachhang kh
+                  LEFT JOIN tai_khoan tk ON kh.MaTaiKhoan = tk.id
+                  WHERE kh.MaKH = ?";
         
-        $stmt = $this->conn->prepare($sql);
+        $stmt = $this->conn->prepare($query);
         $stmt->bind_param("s", $maKH);
         $stmt->execute();
         $result = $stmt->get_result();
+        $khachhang = $result->fetch_assoc();
+        $stmt->close();
         
-        $row = $result->fetch_assoc();
-        return $row ? $row : null;
+        return $khachhang;
     }
-
-    // Cập nhật thông tin khách hàng
-    public function updateCustomer($maKH, $data) {
-        $this->conn->begin_transaction();
-
+    
+    // Thêm khách hàng mới - SỬA LẠI PHẦN TẠO MÃ KH
+    public function addKhachHang($data) {
+        mysqli_begin_transaction($this->conn);
+        
         try {
-            // Lấy thông tin hiện tại
-            $customer = $this->getCustomerByMaKH($maKH);
-            if (!$customer) {
-                throw new Exception("Không tìm thấy khách hàng");
+            $maTaiKhoan = 0;
+            
+            // Nếu có thông tin tài khoản
+            if (!empty($data['tendangnhap']) && !empty($data['matkhau'])) {
+                // Kiểm tra trùng username
+                if ($this->checkDuplicateUsername($data['tendangnhap'])) {
+                    throw new Exception('Tên đăng nhập đã tồn tại');
+                }
+                
+                // Mã hóa mật khẩu MD5
+                $hashedPassword = md5($data['matkhau']);
+                
+                // Tạo tài khoản mới
+                $queryTK = "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at) 
+                            VALUES (?, ?, 'khachhang', 1, ?, ?, NOW())";
+                
+                $stmt = $this->conn->prepare($queryTK);
+                $stmt->bind_param("ssss", 
+                    $data['tendangnhap'],
+                    $hashedPassword,
+                    $data['email'],
+                    $data['cmnd']
+                );
+                
+                if (!$stmt->execute()) {
+                    throw new Exception('Lỗi khi tạo tài khoản: ' . $stmt->error);
+                }
+                
+                $maTaiKhoan = $stmt->insert_id;
+                $stmt->close();
             }
-
-            $accountId = $customer['account_id'];
-
-            // Cập nhật bảng khachhang
-            $sqlCustomer = "UPDATE khachhang 
-                           SET HoTen = ?, SoDienThoai = ?, DiaChi = ?, TrangThai = ?
-                           WHERE MaKH = ?";
-            $stmtCustomer = $this->conn->prepare($sqlCustomer);
-            $stmtCustomer->bind_param("sssss", 
-                $data['fullname'], 
-                $data['phone'], 
-                $data['address'],
+            
+            // Tạo mã KH mới - FIX LỖI TRÙNG
+            $nextMaKH = $this->getNextMaKH();
+            
+            // Thêm khách hàng
+            $queryKH = "INSERT INTO khachhang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai, MaTaiKhoan, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, NOW())";
+        
+            $stmt = $this->conn->prepare($queryKH);
+            $stmt->bind_param("sssssi", 
+                $nextMaKH,
+                $data['hoten'],
+                $data['sodienthoai'],
+                $data['diachi'],
                 $data['trangthai'],
+                $maTaiKhoan
+            );
+            
+            if (!$stmt->execute()) {
+                // Kiểm tra lỗi duplicate key
+                if ($this->conn->errno == 1062) {
+                    throw new Exception('Mã KH đã tồn tại. Vui lòng thử lại.');
+                }
+                throw new Exception('Lỗi khi thêm khách hàng: ' . $stmt->error);
+            }
+            
+            $stmt->close();
+            mysqli_commit($this->conn);
+            return ['success' => true, 'maKH' => $nextMaKH];
+            
+        } catch (Exception $e) {
+            mysqli_rollback($this->conn);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    // Cập nhật khách hàng - THÊM CHỨC NĂNG SỬA
+    public function updateKhachHang($maKH, $data) {
+        mysqli_begin_transaction($this->conn);
+        
+        try {
+            // Lấy thông tin cũ
+            $khachHangCu = $this->getKhachHangByMaKH($maKH);
+            if (!$khachHangCu) {
+                throw new Exception('Không tìm thấy khách hàng');
+            }
+            
+            $maTaiKhoanCu = $khachHangCu['MaTaiKhoan'];
+            
+            // Xử lý tài khoản
+            if (!empty($data['tendangnhap']) && !empty($data['matkhau'])) {
+                // Nếu chưa có tài khoản -> tạo mới
+                if (!$maTaiKhoanCu || $maTaiKhoanCu == 0) {
+                    // Kiểm tra trùng username
+                    if ($this->checkDuplicateUsername($data['tendangnhap'])) {
+                        throw new Exception('Tên đăng nhập đã tồn tại');
+                    }
+                    
+                    $hashedPassword = md5($data['matkhau']);
+                    $queryTK = "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at) 
+                                VALUES (?, ?, 'khachhang', 1, ?, ?, NOW())";
+                    
+                    $stmt = $this->conn->prepare($queryTK);
+                    $stmt->bind_param("ssss", 
+                        $data['tendangnhap'],
+                        $hashedPassword,
+                        $data['email'],
+                        $data['cmnd']
+                    );
+                    
+                    if (!$stmt->execute()) {
+                        throw new Exception('Lỗi khi tạo tài khoản: ' . $stmt->error);
+                    }
+                    
+                    $maTaiKhoan = $stmt->insert_id;
+                    $stmt->close();
+                } else {
+                    // Đã có tài khoản -> cập nhật
+                    $maTaiKhoan = $maTaiKhoanCu;
+                    $hashedPassword = md5($data['matkhau']);
+                    
+                    $queryTK = "UPDATE tai_khoan 
+                                SET TenDangNhap = ?, 
+                                    MatKhau = ?,
+                                    Email = ?,
+                                    CMND = ?,
+                                    updated_at = NOW()
+                                WHERE id = ?";
+                    
+                    $stmt = $this->conn->prepare($queryTK);
+                    $stmt->bind_param("ssssi", 
+                        $data['tendangnhap'],
+                        $hashedPassword,
+                        $data['email'],
+                        $data['cmnd'],
+                        $maTaiKhoan
+                    );
+                    
+                    if (!$stmt->execute()) {
+                        throw new Exception('Lỗi khi cập nhật tài khoản: ' . $stmt->error);
+                    }
+                    $stmt->close();
+                }
+            } else {
+                // Không cập nhật tài khoản
+                $maTaiKhoan = $maTaiKhoanCu;
+            }
+            
+            // Cập nhật thông tin khách hàng
+            $queryKH = "UPDATE khachhang 
+                        SET HoTen = ?, 
+                            SoDienThoai = ?, 
+                            DiaChi = ?, 
+                            TrangThai = ?,
+                            MaTaiKhoan = ?,
+                            updated_at = NOW()
+                        WHERE MaKH = ?";
+            
+            $stmt = $this->conn->prepare($queryKH);
+            $stmt->bind_param("ssssis", 
+                $data['hoten'],
+                $data['sodienthoai'],
+                $data['diachi'],
+                $data['trangthai'],
+                $maTaiKhoan,
                 $maKH
             );
             
-            if (!$stmtCustomer->execute()) {
-                throw new Exception("Lỗi cập nhật khách hàng: " . $stmtCustomer->error);
+            if (!$stmt->execute()) {
+                throw new Exception('Lỗi khi cập nhật khách hàng: ' . $stmt->error);
             }
-
-            // Cập nhật bảng tai_khoan
-            $sqlAccount = "UPDATE tai_khoan 
-                          SET TenDangNhap = ?, Email = ?, CMND = ?, TrangThai = ?
-                          WHERE id = ?";
-            $stmtAccount = $this->conn->prepare($sqlAccount);
-            $stmtAccount->bind_param("sssii", 
-                $data['username'],
-                $data['email'], 
-                $data['cmnd'],
-                $data['tai_khoan_trangthai'],
-                $accountId
-            );
             
-            if (!$stmtAccount->execute()) {
-                throw new Exception("Lỗi cập nhật tài khoản: " . $stmtAccount->error);
-            }
-
-            // Cập nhật mật khẩu nếu có
-            if (!empty($data['password'])) {
-                $sqlPassword = "UPDATE tai_khoan SET MatKhau = ? WHERE id = ?";
-                $stmtPassword = $this->conn->prepare($sqlPassword);
-                $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-                $stmtPassword->bind_param("si", $hashedPassword, $accountId);
-                
-                if (!$stmtPassword->execute()) {
-                    throw new Exception("Lỗi cập nhật mật khẩu: " . $stmtPassword->error);
-                }
-            }
-
-            $this->conn->commit();
+            $stmt->close();
+            mysqli_commit($this->conn);
             return ['success' => true, 'message' => 'Cập nhật thành công'];
-
+            
         } catch (Exception $e) {
-            $this->conn->rollback();
-            return ['success' => false, 'error' => $e->getMessage()];
+            mysqli_rollback($this->conn);
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
-
-    // Reset mật khẩu về 123456
-    public function resetPassword($maKH) {
+    
+    // Xóa khách hàng - FIX LỖI KHÔNG XÓA ĐƯỢC
+    public function deleteKhachHang($maKH) {
+        mysqli_begin_transaction($this->conn);
+        
         try {
-            $customer = $this->getCustomerByMaKH($maKH);
-            if (!$customer) {
-                throw new Exception("Không tìm thấy khách hàng");
+            // Kiểm tra xem khách hàng có tồn tại không
+            $checkQuery = "SELECT MaTaiKhoan FROM khachhang WHERE MaKH = ?";
+            $stmt = $this->conn->prepare($checkQuery);
+            $stmt->bind_param("s", $maKH);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows == 0) {
+                throw new Exception('Không tìm thấy khách hàng để xóa');
             }
-
-            $accountId = $customer['account_id'];
-            $defaultPassword = '123456';
-            $hashedPassword = password_hash($defaultPassword, PASSWORD_DEFAULT);
-
-            // Reset mật khẩu
-            $sql = "UPDATE tai_khoan SET MatKhau = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("si", $hashedPassword, $accountId);
+            
+            $row = $result->fetch_assoc();
+            $maTaiKhoan = $row['MaTaiKhoan'];
+            $stmt->close();
+            
+            // Xóa khách hàng trước (vì có thể có ràng buộc khóa ngoại)
+            $deleteKH = "DELETE FROM khachhang WHERE MaKH = ?";
+            $stmt = $this->conn->prepare($deleteKH);
+            $stmt->bind_param("s", $maKH);
             
             if (!$stmt->execute()) {
-                throw new Exception("Lỗi reset mật khẩu: " . $stmt->error);
+                // Nếu lỗi do khóa ngoại, thử xóa tài khoản trước
+                if ($this->conn->errno == 1451) {
+                    // Xóa tài khoản trước nếu có
+                    if ($maTaiKhoan && $maTaiKhoan > 0) {
+                        $deleteTK = "DELETE FROM tai_khoan WHERE id = ?";
+                        $stmt2 = $this->conn->prepare($deleteTK);
+                        $stmt2->bind_param("i", $maTaiKhoan);
+                        if (!$stmt2->execute()) {
+                            throw new Exception('Lỗi khi xóa tài khoản: ' . $stmt2->error);
+                        }
+                        $stmt2->close();
+                    }
+                    
+                    // Thử xóa khách hàng lại
+                    $stmt->execute();
+                } else {
+                    throw new Exception('Lỗi khi xóa khách hàng: ' . $stmt->error);
+                }
             }
-
-            return ['success' => true, 'message' => 'Reset mật khẩu thành công!', 'password' => $defaultPassword];
-
-        } catch (Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    // Xóa khách hàng và tài khoản
-    public function deleteCustomer($maKH) {
-        $this->conn->begin_transaction();
-
-        try {
-            $customer = $this->getCustomerByMaKH($maKH);
-            if (!$customer) {
-                throw new Exception("Không tìm thấy khách hàng");
-            }
-
-            $accountId = $customer['account_id'];
-
-            // Xóa từ bảng khachhang
-            $sqlCustomer = "DELETE FROM khachhang WHERE MaKH = ?";
-            $stmtCustomer = $this->conn->prepare($sqlCustomer);
-            $stmtCustomer->bind_param("s", $maKH);
+            $stmt->close();
             
-            if (!$stmtCustomer->execute()) {
-                throw new Exception("Lỗi xóa khách hàng: " . $stmtCustomer->error);
+            // Nếu vẫn chưa xóa được tài khoản và có MaTaiKhoan
+            if ($maTaiKhoan && $maTaiKhoan > 0) {
+                $checkTK = "SELECT COUNT(*) as count FROM khachhang WHERE MaTaiKhoan = ?";
+                $stmt = $this->conn->prepare($checkTK);
+                $stmt->bind_param("i", $maTaiKhoan);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $row = $result->fetch_assoc();
+                
+                if ($row['count'] == 0) {
+                    // Không còn khách hàng nào dùng tài khoản này -> xóa
+                    $deleteTK = "DELETE FROM tai_khoan WHERE id = ?";
+                    $stmt2 = $this->conn->prepare($deleteTK);
+                    $stmt2->bind_param("i", $maTaiKhoan);
+                    $stmt2->execute();
+                    $stmt2->close();
+                }
+                $stmt->close();
             }
-
-            // Xóa từ bảng tai_khoan
-            $sqlAccount = "DELETE FROM tai_khoan WHERE id = ?";
-            $stmtAccount = $this->conn->prepare($sqlAccount);
-            $stmtAccount->bind_param("i", $accountId);
             
-            if (!$stmtAccount->execute()) {
-                throw new Exception("Lỗi xóa tài khoản: " . $stmtAccount->error);
-            }
-
-            $this->conn->commit();
+            mysqli_commit($this->conn);
             return ['success' => true, 'message' => 'Xóa thành công'];
-
+            
         } catch (Exception $e) {
-            $this->conn->rollback();
-            return ['success' => false, 'error' => $e->getMessage()];
+            mysqli_rollback($this->conn);
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
-
+    
+    // Xóa nhiều khách hàng - THÊM CHỨC NĂNG XÓA NHIỀU
+    public function deleteMultipleKhachHang($listMaKH) {
+        mysqli_begin_transaction($this->conn);
+        
+        try {
+            $successCount = 0;
+            $errorMessages = [];
+            
+            foreach ($listMaKH as $maKH) {
+                $result = $this->deleteKhachHang($maKH);
+                if ($result['success']) {
+                    $successCount++;
+                } else {
+                    $errorMessages[] = "Mã $maKH: " . $result['message'];
+                }
+            }
+            
+            mysqli_commit($this->conn);
+            
+            if (count($errorMessages) > 0) {
+                return [
+                    'success' => false, 
+                    'message' => 'Xóa được ' . $successCount . '/'. count($listMaKH) . ' khách hàng',
+                    'errors' => $errorMessages
+                ];
+            }
+            
+            return [
+                'success' => true, 
+                'message' => 'Đã xóa thành công ' . $successCount . ' khách hàng'
+            ];
+            
+        } catch (Exception $e) {
+            mysqli_rollback($this->conn);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    // Các phương thức check duplicate
+    public function checkDuplicatePhone($sodienthoai, $currentMaKH = null) {
+        $query = "SELECT MaKH FROM khachhang WHERE SoDienThoai = ?";
+        $params = [$sodienthoai];
+        
+        if ($currentMaKH) {
+            $query .= " AND MaKH != ?";
+            $params[] = $currentMaKH;
+        }
+        
+        $stmt = $this->conn->prepare($query);
+        
+        if (count($params) == 1) {
+            $stmt->bind_param("s", $params[0]);
+        } else {
+            $stmt->bind_param("ss", $params[0], $params[1]);
+        }
+        
+        $stmt->execute();
+        $stmt->store_result();
+        $count = $stmt->num_rows;
+        $stmt->close();
+        return $count > 0;
+    }
+    
+    public function checkDuplicateUsername($tendangnhap, $currentTaiKhoanId = null) {
+        $query = "SELECT id FROM tai_khoan WHERE TenDangNhap = ?";
+        $params = [$tendangnhap];
+        
+        if ($currentTaiKhoanId) {
+            $query .= " AND id != ?";
+            $params[] = $currentTaiKhoanId;
+        }
+        
+        $stmt = $this->conn->prepare($query);
+        
+        if (count($params) == 1) {
+            $stmt->bind_param("s", $params[0]);
+        } else {
+            $stmt->bind_param("si", $params[0], $params[1]);
+        }
+        
+        $stmt->execute();
+        $stmt->store_result();
+        $count = $stmt->num_rows;
+        $stmt->close();
+        return $count > 0;
+    }
+    
+    public function checkDuplicateEmail($email, $currentTaiKhoanId = null) {
+        if (empty($email)) return false;
+        
+        $query = "SELECT id FROM tai_khoan WHERE Email = ?";
+        $params = [$email];
+        
+        if ($currentTaiKhoanId) {
+            $query .= " AND id != ?";
+            $params[] = $currentTaiKhoanId;
+        }
+        
+        $stmt = $this->conn->prepare($query);
+        
+        if (count($params) == 1) {
+            $stmt->bind_param("s", $params[0]);
+        } else {
+            $stmt->bind_param("si", $params[0], $params[1]);
+        }
+        
+        $stmt->execute();
+        $stmt->store_result();
+        $count = $stmt->num_rows;
+        $stmt->close();
+        return $count > 0;
+    }
+    
+    public function checkDuplicateCMND($cmnd, $currentTaiKhoanId = null) {
+        if (empty($cmnd)) return false;
+        
+        $query = "SELECT id FROM tai_khoan WHERE CMND = ?";
+        $params = [$cmnd];
+        
+        if ($currentTaiKhoanId) {
+            $query .= " AND id != ?";
+            $params[] = $currentTaiKhoanId;
+        }
+        
+        $stmt = $this->conn->prepare($query);
+        
+        if (count($params) == 1) {
+            $stmt->bind_param("s", $params[0]);
+        } else {
+            $stmt->bind_param("si", $params[0], $params[1]);
+        }
+        
+        $stmt->execute();
+        $stmt->store_result();
+        $count = $stmt->num_rows;
+        $stmt->close();
+        return $count > 0;
+    }
+    
+    // Tạo mã KH mới - FIX LỖI TRÙNG KHÓA CHÍNH
+    private function getNextMaKH() {
+        // Lấy mã KH lớn nhất
+        $query = "SELECT MaKH FROM khachhang WHERE MaKH REGEXP '^KH[0-9]+$' ORDER BY LENGTH(MaKH) DESC, MaKH DESC LIMIT 1";
+        $result = mysqli_query($this->conn, $query);
+        
+        if ($result && mysqli_num_rows($result) > 0) {
+            $row = mysqli_fetch_assoc($result);
+            $maxMaKH = $row['MaKH'];
+            
+            // Lấy số từ mã KH
+            preg_match('/KH(\d+)/', $maxMaKH, $matches);
+            $currentNumber = isset($matches[1]) ? intval($matches[1]) : 0;
+            $nextNumber = $currentNumber + 1;
+            
+            // Tạo mã mới và kiểm tra trùng
+            $attempts = 0;
+            do {
+                $newMaKH = 'KH' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+                
+                // Kiểm tra xem mã đã tồn tại chưa
+                $checkQuery = "SELECT COUNT(*) as count FROM khachhang WHERE MaKH = ?";
+                $stmt = $this->conn->prepare($checkQuery);
+                $stmt->bind_param("s", $newMaKH);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $row = $result->fetch_assoc();
+                $stmt->close();
+                
+                if ($row['count'] == 0) {
+                    return $newMaKH; // Mã không trùng
+                }
+                
+                $nextNumber++; // Tăng số lên nếu trùng
+                $attempts++;
+                
+                if ($attempts > 100) {
+                    // Tạo mã ngẫu nhiên nếu vẫn trùng
+                    return 'KH' . str_pad(rand(1000, 9999), 4, '0', STR_PAD_LEFT);
+                }
+                
+            } while (true);
+        } else {
+            return 'KH001'; // Mã đầu tiên
+        }
+    }
+    
     public function __destruct() {
         if ($this->conn) {
             $this->conn->close();

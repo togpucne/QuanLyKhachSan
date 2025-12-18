@@ -8,14 +8,9 @@ error_reporting(E_ALL);
 
 // KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false,
-        'message' => 'Vui lòng đăng nhập để đặt phòng'
-    ]);
+    header('Location: http://localhost/ABC-Resort/client/controller/user.controller.php?action=login');
     exit;
 }
-
 require_once __DIR__ . '/../model/connectDB.php';
 require_once __DIR__ . '/../model/payment.model.php';
 

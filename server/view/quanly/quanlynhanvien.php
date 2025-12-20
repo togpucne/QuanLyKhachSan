@@ -140,29 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
       $result = $model->suaNhanVien($maNhanVien, $data);
 
       if ($result['success']) {
-        $message = "Cập nhật nhân viên thành công!<br><br>";
-
-        // THÊM PHẦN NÀY ĐỂ HIỂN THỊ TRẠNG THÁI ĐÃ UPDATE
-        $message .= "<strong>Trạng thái đã cập nhật:</strong><br>";
-        $message .= "• Nhân viên: <strong>" . $_POST['trang_thai'] . "</strong><br>";
-
-        if (isset($result['trang_thai_tk'])) {
-          $trangThaiTKText = ($result['trang_thai_tk'] == '1') ? 'Hoạt động (1)' : 'Không hoạt động (0)';
-          $message .= "• Tài khoản: <strong>" . $trangThaiTKText . "</strong><br>";
-        }
-
-        if ($email) {
-          $message .= "• Email đã cập nhật: " . $email . "<br>";
-        }
-
-        if ($cmnd) {
-          $message .= "• CMND đã cập nhật: " . $cmnd . "<br>";
-        }
-
-        if (isset($result['mat_khau_moi'])) {
-          $message .= "• Mật khẩu mới: " . $result['mat_khau_moi'] . "<br>";
-        }
-
+        $message = "Cập nhật nhân viên thành công!";      
         $_SESSION['success'] = $message;
       } else {
         $_SESSION['error'] = "Lỗi khi cập nhật nhân viên! " . ($result['message'] ?? '');

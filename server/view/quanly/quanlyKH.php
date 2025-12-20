@@ -50,7 +50,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'them') {
 
     // Validate cơ bản
     $errors = [];
-    if (empty($data['HoTen'])) $errors[] = "Họ tên không được để trống";
+    
+    // VALIDATE HỌ TÊN: không được có số hoặc ký tự đặc biệt
+    if (empty($data['HoTen'])) {
+        $errors[] = "Họ tên không được để trống";
+    } else {
+        // Kiểm tra tên không chứa số
+        if (preg_match('/[0-9]/', $data['HoTen'])) {
+            $errors[] = "Họ tên không được chứa số";
+        }
+        
+        // Kiểm tra tên không chứa ký tự đặc biệt (cho phép dấu tiếng Việt, dấu cách và dấu chấm)
+        if (!preg_match('/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s\.]+$/u', $data['HoTen'])) {
+            $errors[] = "Họ tên không được chứa ký tự đặc biệt";
+        }
+        
+        // Kiểm tra ít nhất 2 ký tự
+        if (strlen(trim($data['HoTen'])) < 2) {
+            $errors[] = "Họ tên phải có ít nhất 2 ký tự";
+        }
+    }
+    
+    // Validate các trường khác
     if (empty($data['SoDienThoai'])) $errors[] = "Số điện thoại không được để trống";
     if (!empty($data['SoDienThoai']) && !preg_match('/^\d{10,11}$/', $data['SoDienThoai'])) {
         $errors[] = "Số điện thoại phải có 10-11 chữ số";
@@ -117,7 +138,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'sua' && !empty($maKH))
 
     // Validate
     $errors = [];
-    if (empty($data['HoTen'])) $errors[] = "Họ tên không được để trống";
+    
+    // VALIDATE HỌ TÊN: không được có số hoặc ký tự đặc biệt
+    if (empty($data['HoTen'])) {
+        $errors[] = "Họ tên không được để trống";
+    } else {
+        // Kiểm tra tên không chứa số
+        if (preg_match('/[0-9]/', $data['HoTen'])) {
+            $errors[] = "Họ tên không được chứa số";
+        }
+        
+        // Kiểm tra tên không chứa ký tự đặc biệt (cho phép dấu tiếng Việt, dấu cách và dấu chấm)
+        if (!preg_match('/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s\.]+$/u', $data['HoTen'])) {
+            $errors[] = "Họ tên không được chứa ký tự đặc biệt";
+        }
+        
+        // Kiểm tra ít nhất 2 ký tự
+        if (strlen(trim($data['HoTen'])) < 2) {
+            $errors[] = "Họ tên phải có ít nhất 2 ký tự";
+        }
+    }
+    
+    // Validate các trường khác
     if (empty($data['SoDienThoai'])) $errors[] = "Số điện thoại không được để trống";
     if (!empty($data['SoDienThoai']) && !preg_match('/^\d{10,11}$/', $data['SoDienThoai'])) {
         $errors[] = "Số điện thoại phải có 10-11 chữ số";

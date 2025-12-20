@@ -88,25 +88,63 @@ class QuanLyNhanVienModel
         $this->db->closeConnect($conn);
         return $data;
     }
-
-    // LẤY CHI TIẾT NHÂN VIÊN (KÈM TÀI KHOẢN)
     public function getChiTietNhanVien($maNhanVien)
     {
         $conn = $this->db->openConnect();
 
-        $sql = "SELECT nv.*, tk.id as tai_khoan_id, tk.Email, tk.VaiTro, tk.TrangThai as TrangThaiTK
+        if (!$conn) {
+            error_log("ERROR - Không thể kết nối database");
+            return null;
+        }
+
+        try {
+            $sql = "SELECT nv.*, 
+                       tk.id as tai_khoan_id, 
+                       tk.Email, 
+                       tk.VaiTro, 
+                       tk.TrangThai as TrangThaiTK,
+                       tk.CMND
                 FROM nhanvien nv 
                 LEFT JOIN tai_khoan tk ON nv.MaTaiKhoan = tk.id 
                 WHERE nv.MaNhanVien = ?";
 
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $maNhanVien);
-        $stmt->execute();
-        $result = $stmt->get_result();
+            error_log("DEBUG - SQL: " . $sql);
+            error_log("DEBUG - MaNhanVien: " . $maNhanVien);
 
-        $nhanVien = $result->fetch_assoc();
-        $this->db->closeConnect($conn);
-        return $nhanVien;
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                error_log("ERROR - Prepare statement failed: " . $conn->error);
+                $this->db->closeConnect($conn);
+                return null;
+            }
+
+            $stmt->bind_param("s", $maNhanVien);
+
+            if (!$stmt->execute()) {
+                error_log("ERROR - Execute failed: " . $stmt->error);
+                $this->db->closeConnect($conn);
+                return null;
+            }
+
+            $result = $stmt->get_result();
+            if (!$result) {
+                error_log("ERROR - Get result failed: " . $stmt->error);
+                $this->db->closeConnect($conn);
+                return null;
+            }
+
+            $nhanVien = $result->fetch_assoc();
+
+            error_log("DEBUG - Kết quả: " . json_encode($nhanVien));
+            error_log("DEBUG - Số hàng: " . $result->num_rows);
+
+            $this->db->closeConnect($conn);
+            return $nhanVien;
+        } catch (Exception $e) {
+            error_log("EXCEPTION - getChiTietNhanVien: " . $e->getMessage());
+            $this->db->closeConnect($conn);
+            return null;
+        }
     }
 
     // TÌM KIẾM NHÂN VIÊN
@@ -334,6 +372,11 @@ class QuanLyNhanVienModel
     // SỬA NHÂN VIÊN - TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN KHI NHÂN VIÊN NGHỈ LÀM
     public function suaNhanVien($maNhanVien, $data)
     {
+        // THÊM DEBUG
+        error_log("=== DEBUG suaNhanVien BẮT ĐẦU ===");
+        error_log("Mã NV: $maNhanVien");
+        error_log("Email trong data: " . ($data['email'] ?? 'KHÔNG CÓ'));
+        error_log("CMND trong data: " . ($data['cmnd'] ?? 'KHÔNG CÓ'));
         $conn = $this->db->openConnect();
         $conn->begin_transaction();
 
@@ -388,19 +431,82 @@ class QuanLyNhanVienModel
                     $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đã nghỉ' vì đã đến ngày nghỉ việc: {$ngayNghiViecFormatted}.";
                 }
             }
+            error_log("DEBUG - MaTaiKhoan tìm được: " . ($maTaiKhoan ?? 'KHÔNG CÓ'));
 
-            // 3. CẬP NHẬT THÔNG TIN NHÂN VIÊN
+            // 2. CẬP NHẬT BẢNG TAI_KHOAN (EMAIL VÀ CMND) - SỬA LẠI Ở ĐÂY!!!
+            if ($maTaiKhoan) {
+                // Validate và cập nhật email nếu có trong $data
+                if (isset($data['email']) && !empty($data['email'])) {
+                    $email = $data['email'];
+
+                    // Validate email
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        throw new Exception("Email không hợp lệ!");
+                    }
+
+                    // Kiểm tra @gmail.com
+                    if (!preg_match('/@gmail\.com$/', $email)) {
+                        throw new Exception("Email phải có định dạng @gmail.com!");
+                    }
+
+                    // Kiểm tra email trùng (trừ chính tài khoản này)
+                    if ($this->kiemTraEmailTrung($email, $maTaiKhoan)) {
+                        throw new Exception("Email đã tồn tại trong hệ thống!");
+                    }
+
+                    // Cập nhật email
+                    $sql_update_email = "UPDATE tai_khoan SET Email = ?, updated_at = NOW() WHERE id = ?";
+                    $stmt_update_email = $conn->prepare($sql_update_email);
+                    $stmt_update_email->bind_param("si", $email, $maTaiKhoan);
+
+                    if (!$stmt_update_email->execute()) {
+                        throw new Exception("Lỗi cập nhật email: " . $stmt_update_email->error);
+                    }
+                }
+
+                // Cập nhật CMND nếu có trong $data
+                if (isset($data['cmnd']) && !empty($data['cmnd'])) {
+                    $cmnd = $data['cmnd'];
+
+                    // Validate CMND (9-12 số)
+                    if (!preg_match('/^\d{9,12}$/', $cmnd)) {
+                        throw new Exception("CMND phải có 9-12 chữ số!");
+                    }
+
+                    // THÊM KIỂM TRA TRÙNG CMND
+                    // Kiểm tra CMND trùng (trừ chính tài khoản này)
+                    $sql_check_cmnd = "SELECT COUNT(*) as count FROM tai_khoan WHERE CMND = ? AND id != ?";
+                    $stmt_check_cmnd = $conn->prepare($sql_check_cmnd);
+                    $stmt_check_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
+                    $stmt_check_cmnd->execute();
+                    $result_check_cmnd = $stmt_check_cmnd->get_result();
+                    $row_cmnd = $result_check_cmnd->fetch_assoc();
+
+                    if ($row_cmnd['count'] > 0) {
+                        throw new Exception("CMND đã tồn tại trong hệ thống!");
+                    }
+
+                    $sql_update_cmnd = "UPDATE tai_khoan SET CMND = ?, updated_at = NOW() WHERE id = ?";
+                    $stmt_update_cmnd = $conn->prepare($sql_update_cmnd);
+                    $stmt_update_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
+
+                    if (!$stmt_update_cmnd->execute()) {
+                        throw new Exception("Lỗi cập nhật CMND: " . $stmt_update_cmnd->error);
+                    }
+                }
+            }
+            // 3. CẬP NHẬT BẢNG NHANVIEN
             $sql = "UPDATE nhanvien SET 
-                HoTen = ?, 
-                DiaChi = ?, 
-                SDT = ?, 
-                NgayVaoLam = ?, 
-                NgayNghiViec = ?, 
-                PhongBan = ?, 
-                LuongCoBan = ?, 
-                TrangThai = ?,
-                updated_at = NOW()
-                WHERE MaNhanVien = ?";
+            HoTen = ?, 
+            DiaChi = ?, 
+            SDT = ?, 
+            NgayVaoLam = ?, 
+            NgayNghiViec = ?, 
+            PhongBan = ?, 
+            LuongCoBan = ?, 
+            TrangThai = ?,
+            updated_at = NOW()
+            WHERE MaNhanVien = ?";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param(
@@ -720,4 +826,3 @@ class QuanLyNhanVienModel
         }
     }
 }
-?>

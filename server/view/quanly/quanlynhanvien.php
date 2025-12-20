@@ -110,6 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
 
     case 'sua':
       $maNhanVien = $_POST['ma_nhan_vien'];
+
+      // THÊM 2 DÒNG NÀY ĐỂ LẤY EMAIL VÀ CMND
+      $email = $_POST['email'] ?? '';
+      $cmnd = $_POST['cmnd'] ?? '';
+
       $data = [
         'HoTen' => $_POST['ho_ten'],
         'DiaChi' => $_POST['dia_chi'],
@@ -118,7 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
         'NgayNghiViec' => $_POST['ngay_nghi_viec'] ?? NULL,
         'PhongBan' => $_POST['phong_ban'],
         'LuongCoBan' => $_POST['luong_co_ban'],
-        'TrangThai' => $_POST['trang_thai']
+        'TrangThai' => $_POST['trang_thai'],
+        'email' => $email,  // <=== THÊM DÒNG NÀY
+        'cmnd' => $cmnd     // <=== THÊM DÒNG NÀY
       ];
 
       if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
@@ -131,6 +138,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
 
       if ($result['success']) {
         $message = "Cập nhật nhân viên thành công!";
+
+        // THÊM PHẦN NÀY ĐỂ HIỂN THỊ EMAIL ĐÃ UPDATE
+        if ($email) {
+          $message .= "<br>Email đã cập nhật: " . $email;
+        }
+
+        if ($cmnd) {
+          $message .= "<br>CMND đã cập nhật: " . $cmnd;
+        }
 
         if (isset($result['mat_khau_moi'])) {
           $message .= "<br>Mật khẩu mới: " . $result['mat_khau_moi'];
@@ -529,95 +545,95 @@ include_once '../layouts/header.php';
       // Trong hàm showSuaNhanVienModal, sửa phần form HTML:
 
       const formHTML = `
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Họ Tên <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="ho_ten" required value="${nv.HoTen || ''}">
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="sdt" required value="${nv.SDT || ''}">
-        </div>
-        <div class="col-12 mb-3">
-            <label class="form-label">Địa Chỉ</label>
-            <textarea class="form-control" name="dia_chi" rows="2">${nv.DiaChi || ''}</textarea>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Ngày Vào Làm <span class="text-danger">*</span></label>
-            <input type="date" class="form-control" name="ngay_vao_lam" required value="${nv.NgayVaoLam || ''}">
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Ngày Nghỉ Việc</label>
-            <input type="date" class="form-control" name="ngay_nghi_viec" value="${nv.NgayNghiViec || ''}">
-            <small class="text-muted">Chỉ điền nếu nhân viên đã nghỉ</small>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Phòng Ban <span class="text-danger">*</span></label>
-            <select class="form-control" name="phong_ban" required>
-                <option value="">-- Chọn phòng ban --</option>
-                <option value="Kinh Doanh" ${nv.PhongBan === 'Kinh Doanh' ? 'selected' : ''}>Kinh Doanh</option>
-                <option value="Lễ Tân" ${nv.PhongBan === 'Lễ Tân' ? 'selected' : ''}>Lễ Tân</option>
-                <option value="Buồng Phòng" ${nv.PhongBan === 'Buồng Phòng' ? 'selected' : ''}>Buồng Phòng</option>
-                <option value="Kế Toán" ${nv.PhongBan === 'Kế Toán' ? 'selected' : ''}>Kế Toán</option>
-                <option value="Quản Lý" ${nv.PhongBan === 'Quản Lý' ? 'selected' : ''}>Quản Lý</option>
-            </select>
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" name="luong_co_ban" required min="0" step="100000" value="${nv.LuongCoBan || 0}">
-        </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
-            <select class="form-control" name="trang_thai" required>
-                <option value="Đang làm" ${nv.TrangThai === 'Đang làm' ? 'selected' : ''}>Đang làm</option>
-                <option value="Đã nghỉ" ${nv.TrangThai === 'Đã nghỉ' ? 'selected' : ''}>Đã nghỉ</option>
-            </select>
-        </div>
-        
-        ${nv.Email ? `
-        <div class="col-12 mb-3">
-            <div class="border p-3 rounded">
-                <h6>Thông tin tài khoản</h6>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" class="form-control" name="email" 
-                               value="${nv.Email || ''}" required
-                               placeholder="example@gmail.com">
-                        <small class="text-muted">Phải có định dạng @gmail.com</small>
-                        <div id="email-error" class="invalid-feedback" style="display: none;"></div>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Họ Tên <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" name="ho_ten" required value="${nv.HoTen || ''}">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" name="sdt" required value="${nv.SDT || ''}">
+    </div>
+    <div class="col-12 mb-3">
+        <label class="form-label">Địa Chỉ</label>
+        <textarea class="form-control" name="dia_chi" rows="2">${nv.DiaChi || ''}</textarea>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Ngày Vào Làm <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" name="ngay_vao_lam" required value="${nv.NgayVaoLam || ''}">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Ngày Nghỉ Việc</label>
+        <input type="date" class="form-control" name="ngay_nghi_viec" value="${nv.NgayNghiViec || ''}">
+        <small class="text-muted">Chỉ điền nếu nhân viên đã nghỉ</small>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Phòng Ban <span class="text-danger">*</span></label>
+        <select class="form-control" name="phong_ban" required>
+            <option value="">-- Chọn phòng ban --</option>
+            <option value="Kinh Doanh" ${nv.PhongBan === 'Kinh Doanh' ? 'selected' : ''}>Kinh Doanh</option>
+            <option value="Lễ Tân" ${nv.PhongBan === 'Lễ Tân' ? 'selected' : ''}>Lễ Tân</option>
+            <option value="Buồng Phòng" ${nv.PhongBan === 'Buồng Phòng' ? 'selected' : ''}>Buồng Phòng</option>
+            <option value="Kế Toán" ${nv.PhongBan === 'Kế Toán' ? 'selected' : ''}>Kế Toán</option>
+            <option value="Quản Lý" ${nv.PhongBan === 'Quản Lý' ? 'selected' : ''}>Quản Lý</option>
+        </select>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
+        <input type="number" class="form-control" name="luong_co_ban" required min="0" step="100000" value="${nv.LuongCoBan || 0}">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
+        <select class="form-control" name="trang_thai" required>
+            <option value="Đang làm" ${nv.TrangThai === 'Đang làm' ? 'selected' : ''}>Đang làm</option>
+            <option value="Đã nghỉ" ${nv.TrangThai === 'Đã nghỉ' ? 'selected' : ''}>Đã nghỉ</option>
+        </select>
+    </div>
+    
+    ${nv.Email ? `
+    <div class="col-12 mb-3">
+        <div class="border p-3 rounded">
+            <h6>Thông tin tài khoản</h6>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" name="email" 
+                           value="${nv.Email || ''}" required
+                           placeholder="example@gmail.com">
+                    <small class="text-muted">Phải có định dạng @gmail.com</small>
+                    <div id="email-error" class="invalid-feedback" style="display: none;"></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">CMND/CCCD</label>
+                    <input type="text" class="form-control" name="cmnd" 
+                           value="${nv.CMND || ''}"  <!-- SỬA TỪ nv.CMND THÀNH nv.CMND -->
+                           placeholder="Nhập số CMND/CCCD" maxlength="12">
+                    <small class="text-muted">9-12 chữ số</small>
+                </div>
+                <div class="col-12">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="reset_mat_khau" value="1" id="resetPassword">
+                        <label class="form-check-label" for="resetPassword">
+                            Reset mật khẩu
+                        </label>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">CMND/CCCD</label>
-                        <input type="text" class="form-control" name="cmnd" 
-                               value="${nv.CMND || ''}"
-                               placeholder="Nhập số CMND/CCCD" maxlength="12">
-                        <small class="text-muted">9-12 chữ số</small>
+                    <div id="passwordField" style="display: none;">
+                        <input type="text" class="form-control mb-2" name="mat_khau_moi" value="123456">
+                        <small class="text-muted">Để trống sẽ reset về: 123456</small>
                     </div>
-                    <div class="col-12">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="reset_mat_khau" value="1" id="resetPassword">
-                            <label class="form-check-label" for="resetPassword">
-                                Reset mật khẩu
-                            </label>
-                        </div>
-                        <div id="passwordField" style="display: none;">
-                            <input type="text" class="form-control mb-2" name="mat_khau_moi" value="123456">
-                            <small class="text-muted">Để trống sẽ reset về: 123456</small>
-                        </div>
-                        <input type="hidden" name="ma_tai_khoan" value="${nv.MaTaiKhoan}">
-                    </div>
+                    <input type="hidden" name="ma_tai_khoan" value="${nv.MaTaiKhoan}">
                 </div>
             </div>
         </div>
-        ` : `
-        <div class="col-12 mb-3">
-            <div class="alert alert-warning">
-                Nhân viên chưa có tài khoản hệ thống
-            </div>
-        </div>
-        `}
     </div>
+    ` : `
+    <div class="col-12 mb-3">
+        <div class="alert alert-warning">
+            Nhân viên chưa có tài khoản hệ thống
+        </div>
+    </div>
+    `}
+</div>
 `;
 
       document.getElementById('suaFormContent').innerHTML = formHTML;

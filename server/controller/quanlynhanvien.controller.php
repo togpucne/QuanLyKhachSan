@@ -209,8 +209,6 @@ function themPOST($model)
     exit();
 }
 
-// Thêm vào phần xử lý POST action, trong function suaPOST()
-
 function suaPOST($model) {
     if (!isset($_POST['ma_nhan_vien'])) {
         $_SESSION['error'] = "Thiếu mã nhân viên";
@@ -219,6 +217,12 @@ function suaPOST($model) {
     }
     
     $maNhanVien = $_POST['ma_nhan_vien'];
+    
+    // Lấy dữ liệu từ form
+    $email = $_POST['email'] ?? '';
+    $cmnd = $_POST['cmnd'] ?? '';
+    
+    // SỬA MẢNG $data - THÊM 2 DÒNG NÀY:
     $data = [
         'HoTen' => $_POST['ho_ten'],
         'DiaChi' => $_POST['dia_chi'] ?? '',
@@ -227,17 +231,13 @@ function suaPOST($model) {
         'NgayNghiViec' => $_POST['ngay_nghi_viec'] ?? '0000-00-00',
         'PhongBan' => $_POST['phong_ban'],
         'LuongCoBan' => $_POST['luong_co_ban'],
-        'TrangThai' => $_POST['trang_thai']
+        'TrangThai' => $_POST['trang_thai'],
+        'email' => $email,  // <=== THÊM DÒNG NÀY
+        'cmnd' => $cmnd     // <=== THÊM DÒNG NÀY
     ];
     
-    // ========== THÊM PHẦN XỬ LÝ EMAIL ==========
-    $email = $_POST['email'] ?? '';
-    $cmnd = $_POST['cmnd'] ?? '';
-    
-    // Lấy thông tin tài khoản hiện tại
-    $nhanVien = $model->getChiTietNhanVien($maNhanVien);
-    $taiKhoanID = $nhanVien['tai_khoan_id'] ?? null;
-    
+    // XÓA phần xử lý email riêng này (nếu có):
+    /*
     // Xử lý cập nhật email nếu có
     if ($taiKhoanID && ($email || $cmnd)) {
         $tkData = [];
@@ -255,6 +255,7 @@ function suaPOST($model) {
             exit();
         }
     }
+    */
     
     // Kiểm tra nếu có yêu cầu reset mật khẩu
     if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
@@ -262,50 +263,23 @@ function suaPOST($model) {
         $data['mat_khau_moi'] = $_POST['mat_khau_moi'] ?? '123456';
     }
     
+    // Gọi model
     $result = $model->suaNhanVien($maNhanVien, $data);
     
     if ($result['success']) {
         $message = "✅ Cập nhật nhân viên thành công!<br>";
         
         // Thông báo cập nhật email nếu có
-        if ($email && $taiKhoanID) {
+        if ($email) {
             $message .= "📧 Email đã được cập nhật: <strong>$email</strong><br>";
         }
         
         // Thông báo cập nhật CMND nếu có
-        if ($cmnd && $taiKhoanID) {
+        if ($cmnd) {
             $message .= "🆔 CMND đã được cập nhật: <strong>$cmnd</strong><br>";
         }
         
-        // Thêm thông báo nếu đã tự động cập nhật
-        if (isset($result['auto_updated']) && $result['auto_updated']) {
-            $message .= "<div class='alert alert-info'>";
-            $message .= "<strong>📢 Thông báo tự động:</strong><br>";
-            $message .= $result['message'] . "<br>";
-            
-            // Hiển thị thông tin chi tiết
-            $message .= "Trạng thái nhân viên đã cập nhật: <strong>{$result['trang_thai_nv']}</strong><br>";
-            
-            if ($result['trang_thai_nv'] === 'Đang làm') {
-                $message .= "🎉 Tài khoản đã được <strong>kích hoạt lại</strong> (Trạng thái: Hoạt động)<br>";
-                $message .= "Nhân viên có thể đăng nhập bình thường.";
-            } else {
-                $message .= "🔒 Tài khoản đã được <strong>khóa</strong> (Trạng thái: Không hoạt động)<br>";
-                $message .= "Nhân viên không thể đăng nhập.";
-            }
-            
-            $message .= "</div><br>";
-        }
-        
-        $message .= "<strong>Thông tin đã cập nhật:</strong><br>";
-        $message .= "• Trạng thái nhân viên: <strong>{$result['trang_thai_nv']}</strong><br>";
-        $message .= "• Trạng thái tài khoản: <strong>" . ($result['trang_thai_tk'] == '1' ? '✅ Hoạt động' : '❌ Không hoạt động') . "</strong><br>";
-        
-        if (isset($result['mat_khau_moi'])) {
-            $message .= "• Mật khẩu mới: <strong>{$result['mat_khau_moi']}</strong><br>";
-        }
-        
-        $_SESSION['success'] = $message;
+        // ... phần còn lại ...
     } else {
         $_SESSION['error'] = "❌ Lỗi khi cập nhật nhân viên: " . ($result['message'] ?? '');
     }

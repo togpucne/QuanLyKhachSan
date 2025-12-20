@@ -695,7 +695,7 @@ include_once '../layouts/header.php';
         }
 
         // Họ tên
-        
+
       }, 100);
 
       // Hiển thị modal
@@ -735,9 +735,26 @@ include_once '../layouts/header.php';
       // 1. Kiểm tra Họ tên bằng hàm chung
       const hoTenInput = form.querySelector('input[name="ho_ten"]');
       if (hoTenInput) {
-        const validation = validateHoTen(hoTenInput);
-        if (!validation.valid) {
-          alert(validation.message);
+        const name = hoTenInput.value.trim();
+
+        // CHỈ KIỂM TRA ĐỘ DÀI VÀ FORMAT, KHÔNG KIỂM TRA TRÙNG
+        if (!name) {
+          alert('❌ Họ tên không được để trống!');
+          hoTenInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+
+        if (name.length < 2) {
+          alert('❌ Họ tên phải có ít nhất 2 ký tự!');
+          hoTenInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+
+        // Chỉ kiểm tra ký tự không hợp lệ
+        if (/[!@#$%^&*()_+=\[\]{};:"\\|<>\/?~`0-9]/.test(name)) {
+          alert('❌ Họ tên không được chứa số hoặc ký tự đặc biệt!');
           hoTenInput.focus();
           isSubmitting = false;
           return false;
@@ -976,15 +993,31 @@ include_once '../layouts/header.php';
         const newLuongInput = luongInput.cloneNode(true);
         luongInput.parentNode.replaceChild(newLuongInput, luongInput);
 
+        // SỬA: Bỏ alert khi blur, chỉ highlight màu
         newLuongInput.addEventListener('blur', function() {
-          const luong = parseInt(this.value) || 0;
+          const luong = parseFloat(this.value) || 0;
           if (luong <= 0) {
-            this.value = '';
-            setTimeout(() => {
-              alert('❌ Lương cơ bản phải lớn hơn 0!');
-              this.focus();
-            }, 10);
+            // Chỉ highlight màu đỏ, không alert
+            this.style.borderColor = 'red';
+            this.style.boxShadow = '0 0 5px red';
+            this.value = '5000000'; // Đặt giá trị mặc định
+          } else {
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
           }
+        });
+
+        // Khi click vào input thì reset style
+        newLuongInput.addEventListener('focus', function() {
+          this.style.borderColor = '';
+          this.style.boxShadow = '';
+        });
+
+        // Format khi nhập
+        newLuongInput.addEventListener('input', function() {
+          let value = this.value.replace(/[^\d]/g, '');
+          value = parseInt(value) || 0;
+          this.value = value;
         });
 
         // Format khi nhập

@@ -344,10 +344,12 @@ $role = $_SESSION['vaitro'];
         }
 
 
+.dropdown-divider {
+    margin: 0.5rem 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1); /* Mảnh hơn */
+    opacity: 0.6; /* Làm nhạt hơn */
+}
 
-        .dropdown-divider {
-            margin: 0.5rem 0;
-        }
 
         /* Avatar icon */
         .nav-link.dropdown-toggle .fa-user-circle {

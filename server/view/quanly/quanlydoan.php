@@ -281,199 +281,202 @@ include_once '../layouts/header.php';
 <div class="container-fluid">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-users me-2"></i>Quản Lý Đoàn
-        </h1>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#themDoanModal">
-            <i class="fas fa-plus me-2"></i>Thêm Đoàn Mới
-        </button>
-    </div>
 
-    <!-- Thống kê nhanh -->
-    <?php if ($thongKe): ?>
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card border-left-primary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Tổng số đoàn
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    <?= $thongKe['tongDoan'] ?> đoàn
-                                </div>
+        <div>
+            <h1 class="h3 mb-1">Quản Lý Đoàn </h1>
+            <p class="text-muted">Thêm/ xóa sửa khách hàng trong đoàn</p>
+        </div>
+   
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#themDoanModal">
+        <i class="fas fa-plus me-2"></i>Thêm Đoàn Mới
+    </button>
+</div>
+
+<!-- Thống kê nhanh -->
+<?php if ($thongKe): ?>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Tổng số đoàn
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-users fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-left-success shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Tổng số người
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    <?= $thongKe['tongNguoi'] ?> người
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-user-friends fa-2x text-gray-300"></i>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                <?= $thongKe['tongDoan'] ?> đoàn
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-left-info shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    Trung bình người/đoàn
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    <?= $thongKe['trungBinhNguoi'] ?> người
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
-                            </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
-
-    <!-- Search and Filter -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form method="GET" action="">
-                <div class="row">
-                    <div class="col-md-8">
-                        <input type="text" class="form-control" name="keyword"
-                            placeholder="Tìm kiếm theo mã đoàn, tên đoàn, mã trưởng đoàn..."
-                            value="<?= htmlspecialchars($keyword) ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-search me-1"></i>Tìm Kiếm
-                        </button>
-                        <a href="quanlydoan.php" class="btn btn-secondary">
-                            <i class="fas fa-refresh me-1"></i>Reset
-                        </a>
+        <div class="col-md-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Tổng số người
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                <?= $thongKe['tongNguoi'] ?> người
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-friends fa-2x text-gray-300"></i>
+                        </div>
                     </div>
                 </div>
-            </form>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Trung bình người/đoàn
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                <?= $thongKe['trungBinhNguoi'] ?> người
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+<?php endif; ?>
 
-    <!-- Alert Messages -->
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-check-circle me-2"></i>
-            <?= $_SESSION['success'] ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php unset($_SESSION['success']); ?>
-    <?php endif; ?>
+<!-- Search and Filter -->
+<div class="card shadow mb-4">
+    <div class="card-body">
+        <form method="GET" action="">
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" name="keyword"
+                        placeholder="Tìm kiếm theo mã đoàn, tên đoàn, mã trưởng đoàn..."
+                        value="<?= htmlspecialchars($keyword) ?>">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Tìm Kiếm
+                    </button>
+                    <a href="quanlydoan.php" class="btn btn-secondary">
+                        <i class="fas fa-refresh me-1"></i>Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            <?= $_SESSION['error'] ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
+<!-- Alert Messages -->
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="fas fa-check-circle me-2"></i>
+        <?= $_SESSION['success'] ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
 
-    <!-- Danh sách đoàn -->
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h6 class="m-0 font-weight-bold">
-                <i class="fas fa-list me-2"></i>Danh Sách Đoàn
-                <span class="badge bg-light text-dark ms-2"><?= count($danhSachDoan) ?> đoàn</span>
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover table-striped">
-                    <thead class="table-dark">
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        <?= $_SESSION['error'] ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+<!-- Danh sách đoàn -->
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h6 class="m-0 font-weight-bold">
+            <i class="fas fa-list me-2"></i>Danh Sách Đoàn
+            <span class="badge bg-light text-dark ms-2"><?= count($danhSachDoan) ?> đoàn</span>
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th width="50"><input type="checkbox" id="selectAll"></th>
+                        <th width="60">STT</th>
+                        <th width="120">Mã Đoàn</th>
+                        <th>Tên Đoàn</th>
+                        <th width="150">Trưởng Đoàn</th>
+                        <th width="120">Số Lượng</th>
+                        <th width="120">Ngày Đến</th>
+                        <th width="120">Ngày Đi</th>
+                        <th width="150" class="text-center">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($danhSachDoan)): ?>
                         <tr>
-                            <th width="50"><input type="checkbox" id="selectAll"></th>
-                            <th width="60">STT</th>
-                            <th width="120">Mã Đoàn</th>
-                            <th>Tên Đoàn</th>
-                            <th width="150">Trưởng Đoàn</th>
-                            <th width="120">Số Lượng</th>
-                            <th width="120">Ngày Đến</th>
-                            <th width="120">Ngày Đi</th>
-                            <th width="150" class="text-center">Thao Tác</th>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-3"></i><br>
+                                Không có dữ liệu đoàn
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($danhSachDoan)): ?>
+                    <?php else: ?>
+                        <?php $stt = 1; ?>
+                        <?php foreach ($danhSachDoan as $doan): ?>
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
-                                    <i class="fas fa-inbox fa-2x mb-3"></i><br>
-                                    Không có dữ liệu đoàn
+                                <td><input type="checkbox" name="ma_doan_list[]" value="<?= $doan['MaDoan'] ?>" class="row-checkbox"></td>
+                                <td><?= $stt++ ?></td>
+                                <td><span class="badge bg-success fs-6"><?= htmlspecialchars($doan['MaDoan']) ?></span></td>
+                                <td>
+                                    <strong><?= htmlspecialchars($doan['TenDoan']) ?></strong>
+                                    <?php if (!empty($doan['GhiChu'])): ?>
+                                        <br><small class="text-muted"><?= htmlspecialchars($doan['GhiChu']) ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info"><?= htmlspecialchars($doan['MaTruongDoan']) ?></span>
+                                    <br><small><?= htmlspecialchars($doan['TenTruongDoan']) ?></small>
+                                </td>
+                                <td><span class="badge bg-primary fs-6"><?= $doan['SoLuongThanhVien'] ?> người</span></td>
+                                <td><span class="text-success fw-bold"><?= date('d/m/Y', strtotime($doan['NgayDen'])) ?></span></td>
+                                <td><span class="text-danger fw-bold"><?= date('d/m/Y', strtotime($doan['NgayDi'])) ?></span></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <button type="button" class="btn btn-info"
+                                            onclick="showThanhVienModal('<?= $doan['MaDoan'] ?>', '<?= htmlspecialchars($doan['TenDoan']) ?>')"
+                                            title="Quản lý thành viên">
+                                            <i class="fas fa-user-plus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-warning"
+                                            onclick="showSuaDoanModal('<?= $doan['MaDoan'] ?>')"
+                                            title="Sửa thông tin đoàn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <a href="quanlydoan.php?action=xoa&ma_doan=<?= $doan['MaDoan'] ?>"
+                                            class="btn btn-danger"
+                                            onclick="return confirm('Bạn có chắc muốn xóa đoàn <?= $doan['MaDoan'] ?>?')"
+                                            title="Xóa đoàn">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
-                        <?php else: ?>
-                            <?php $stt = 1; ?>
-                            <?php foreach ($danhSachDoan as $doan): ?>
-                                <tr>
-                                    <td><input type="checkbox" name="ma_doan_list[]" value="<?= $doan['MaDoan'] ?>" class="row-checkbox"></td>
-                                    <td><?= $stt++ ?></td>
-                                    <td><span class="badge bg-success fs-6"><?= htmlspecialchars($doan['MaDoan']) ?></span></td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($doan['TenDoan']) ?></strong>
-                                        <?php if (!empty($doan['GhiChu'])): ?>
-                                            <br><small class="text-muted"><?= htmlspecialchars($doan['GhiChu']) ?></small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info"><?= htmlspecialchars($doan['MaTruongDoan']) ?></span>
-                                        <br><small><?= htmlspecialchars($doan['TenTruongDoan']) ?></small>
-                                    </td>
-                                    <td><span class="badge bg-primary fs-6"><?= $doan['SoLuongThanhVien'] ?> người</span></td>
-                                    <td><span class="text-success fw-bold"><?= date('d/m/Y', strtotime($doan['NgayDen'])) ?></span></td>
-                                    <td><span class="text-danger fw-bold"><?= date('d/m/Y', strtotime($doan['NgayDi'])) ?></span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm w-100">
-                                            <button type="button" class="btn btn-info"
-                                                onclick="showThanhVienModal('<?= $doan['MaDoan'] ?>', '<?= htmlspecialchars($doan['TenDoan']) ?>')"
-                                                title="Quản lý thành viên">
-                                                <i class="fas fa-user-plus"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-warning"
-                                                onclick="showSuaDoanModal('<?= $doan['MaDoan'] ?>')"
-                                                title="Sửa thông tin đoàn">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <a href="quanlydoan.php?action=xoa&ma_doan=<?= $doan['MaDoan'] ?>"
-                                                class="btn btn-danger"
-                                                onclick="return confirm('Bạn có chắc muốn xóa đoàn <?= $doan['MaDoan'] ?>?')"
-                                                title="Xóa đoàn">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 </div>
 
 <!-- ============================================

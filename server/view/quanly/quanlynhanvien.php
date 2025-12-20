@@ -185,10 +185,13 @@ include_once '../layouts/header.php';
 
 <div class="container-fluid">
   <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Quản Lý Nhân Viên</h3>
+  <div class="d-flex justify-content-between align-items-center py-4">
+    <div>
+      <h1 class="h3 mb-1">Quản Lý Nhân Viên</h1>
+      <p class="text-muted">Thêm/sửa/xóa nhân viên Resort</p>
+    </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#themNhanVienModal">
-      Thêm Nhân Viên Mới
+      <i class="fas fa-plus me-2"></i>Thêm Nhân Viên Mới
     </button>
   </div>
 
@@ -676,7 +679,7 @@ include_once '../layouts/header.php';
       return false;
     }
     return true;
-  }); 
+  });
 
   document.addEventListener('DOMContentLoaded', function() {
     // Format số tiền trong bảng

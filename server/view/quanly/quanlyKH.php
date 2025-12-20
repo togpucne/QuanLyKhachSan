@@ -190,35 +190,41 @@ if ($action === 'taikhoan') {
 
 <div class="container-fluid py-4">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-users me-2"></i>
-            <?php
-            if ($action === 'them') echo "Thêm Khách Hàng Mới";
-            elseif ($action === 'sua') echo "Sửa Thông Tin Khách Hàng";
-            elseif ($action === 'taikhoan') echo "Quản Lý Tài Khoản Khách Hàng";
-            else echo "Quản Lý Khách Hàng";
-            ?>
-        </h1>
+    <div class="d-flex justify-content-between align-items-center py-4">
         <div>
-            <span class="me-3 text-muted">
-                <i class="fas fa-user me-1"></i>Xin chào: <strong><?php echo $_SESSION['user_name'] ?? 'Quản lý'; ?></strong>
-            </span>
+            <h1 class="h3 mb-1">
+                <?php
+                if ($action === 'them') echo "Thêm Khách Hàng Mới";
+                elseif ($action === 'sua') echo "Sửa Thông Tin Khách Hàng";
+                elseif ($action === 'taikhoan') echo "Quản Lý Tài Khoản Khách Hàng";
+                else echo "Quản Lý Khách Hàng";
+                ?>
+            </h1>
+            <p class="text-muted">
+                <?php
+                if ($action === 'them') echo "Nhập thông tin khách hàng mới";
+                elseif ($action === 'sua') echo "Chỉnh sửa thông tin khách hàng";
+                elseif ($action === 'taikhoan') echo "Quản lý tài khoản đăng nhập của khách hàng";
+                else echo "Danh sách và quản lý khách hàng resort";
+                ?>
+            </p>
+        </div>
 
+        <div>
             <?php if ($action === 'taikhoan'): ?>
-                <a href="?action=index" class="btn btn-secondary me-2">
+                <a href="?action=index" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Quay lại
                 </a>
             <?php elseif ($action === 'them' || $action === 'sua'): ?>
-                <a href="quanlykh.php" class="btn btn-secondary">
+                <a href="quanlykh.php" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Quay lại
                 </a>
             <?php else: ?>
-                <a href="?action=taikhoan" class="btn btn-info me-2">
+                <a href="?action=taikhoan" class="btn btn-outline-info me-2">
                     <i class="fas fa-user-circle me-1"></i>Tài khoản KH
                 </a>
                 <a href="?action=them" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Thêm Khách Hàng
+                    <i class="fas fa-plus me-1"></i>Thêm Khách Hàng
                 </a>
             <?php endif; ?>
         </div>

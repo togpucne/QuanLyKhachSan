@@ -73,7 +73,13 @@ $loaiDichVu = $loaiDichVu ?? [];
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
-            <h1 class="mt-4">Quản Lý Dịch Vụ</h1>
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    <h1 class="h3 mb-1">Quản Lý Dịch Vụ </h1>
+                    <p class="text-muted">Thêm/xóa dịch vụ ở Resort</p>
+                </div>
+            </div>
 
             <!-- Thanh công cụ -->
             <div class="card mb-4">

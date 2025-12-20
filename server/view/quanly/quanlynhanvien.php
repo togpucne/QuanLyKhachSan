@@ -111,11 +111,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
     case 'sua':
       $maNhanVien = $_POST['ma_nhan_vien'];
 
-      // THÊM 2 DÒNG NÀY ĐỂ LẤY EMAIL VÀ CMND
+      // DEBUG: Kiểm tra dữ liệu từ form
+      error_log("=== DEBUG CONTROLLER - BẮT ĐẦU SỬA ===");
+      error_log("Mã NV: " . $maNhanVien);
+      error_log("Trạng thái từ form: " . ($_POST['trang_thai'] ?? 'KHÔNG CÓ'));
+      error_log("Toàn bộ POST: " . json_encode($_POST));
+
       $email = $_POST['email'] ?? '';
       $cmnd = $_POST['cmnd'] ?? '';
-
-      // THÊM: Lấy mã tài khoản từ form
       $ma_tai_khoan = $_POST['ma_tai_khoan'] ?? '';
 
       $data = [
@@ -126,10 +129,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
         'NgayNghiViec' => $_POST['ngay_nghi_viec'] ?? NULL,
         'PhongBan' => $_POST['phong_ban'],
         'LuongCoBan' => $_POST['luong_co_ban'],
-        'TrangThai' => $_POST['trang_thai'],
-        'email' => $email,  // <=== THÊM DÒNG NÀY
-        'cmnd' => $cmnd,    // <=== THÊM DÒNG NÀY
-        'ma_tai_khoan' => $ma_tai_khoan  // <=== THÊM DÒNG NÀY
+        'TrangThai' => $_POST['trang_thai'], // TRẠNG THÁI TỪ FORM
+        'email' => $email,
+        'cmnd' => $cmnd,
+        'ma_tai_khoan' => $ma_tai_khoan
       ];
 
       if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
@@ -137,10 +140,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
         $data['mat_khau_moi'] = $_POST['mat_khau_moi'] ?? '123456';
       }
 
+      error_log("Data gửi đến Model: " . json_encode($data));
+      error_log("=== DEBUG CONTROLLER - KẾT THÚC ===");
+
       $result = $model->suaNhanVien($maNhanVien, $data);
 
       if ($result['success']) {
-        $message = "Cập nhật nhân viên thành công!";      
+        $message = "Cập nhật nhân viên thành công!";
         $_SESSION['success'] = $message;
       } else {
         $_SESSION['error'] = "Lỗi khi cập nhật nhân viên! " . ($result['message'] ?? '');

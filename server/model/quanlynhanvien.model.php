@@ -370,189 +370,148 @@ class QuanLyNhanVienModel
         return strtotime($ngayNghiViec) >= strtotime($ngayVaoLam);
     }
     public function suaNhanVien($maNhanVien, $data)
-    {
-        error_log("======================================");
-        error_log("🔍 DEBUG suaNhanVien - BẮT ĐẦU");
-        error_log("Mã NV: $maNhanVien");
-        error_log("Trạng thái từ form: " . ($data['TrangThai'] ?? 'KHÔNG CÓ'));
-        error_log("Toàn bộ data: " . json_encode($data));
-        error_log("======================================");
+{
+    error_log("======================================");
+    error_log("🔍 DEBUG suaNhanVien - BẮT ĐẦU");
+    error_log("Mã NV: $maNhanVien");
+    error_log("Trạng thái từ form: " . ($data['TrangThai'] ?? 'KHÔNG CÓ'));
+    error_log("======================================");
 
-        $conn = $this->db->openConnect();
-        $conn->begin_transaction();
+    $conn = $this->db->openConnect();
+    $conn->begin_transaction();
 
-        try {
-            // 1. Validate dữ liệu
-            $validationErrors = $this->validateSuaNhanVien($maNhanVien, $data);
-            if (!empty($validationErrors)) {
-                throw new Exception(implode("<br>", $validationErrors));
+    try {
+        // 1. Validate dữ liệu
+        $validationErrors = $this->validateSuaNhanVien($maNhanVien, $data);
+        if (!empty($validationErrors)) {
+            throw new Exception(implode("<br>", $validationErrors));
+        }
+
+        // 2. Kiểm tra ngày nghỉ hợp lệ
+        if (!$this->kiemTraNgayNghiHopLe($data['NgayVaoLam'], $data['NgayNghiViec'])) {
+            throw new Exception("Ngày nghỉ việc phải sau ngày vào làm!");
+        }
+
+        // 3. Lấy mã tài khoản HIỆN TẠI từ database
+        $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
+        $stmt_get_tk = $conn->prepare($sql_get_tk);
+        $stmt_get_tk->bind_param("i", $maNhanVien);
+        $stmt_get_tk->execute();
+        $result_get_tk = $stmt_get_tk->get_result();
+        $currentInfo = $result_get_tk->fetch_assoc();
+
+        $maTaiKhoan = $currentInfo['MaTaiKhoan'] ?? null;
+
+        error_log("🔍 DEBUG - MaTaiKhoan: " . ($maTaiKhoan ?? 'NULL'));
+        error_log("🔍 DEBUG - Trạng thái NV từ form: " . $data['TrangThai']);
+
+        // 4. XỬ LÝ LOGIC ĐỒNG BỘ TRẠNG THÁI
+        $trangThaiNV = $data['TrangThai']; // 'Đang làm' hoặc 'Đã nghỉ'
+        $trangThaiTK = ($trangThaiNV === 'Đang làm') ? '1' : '0';
+
+        error_log("🔍 DEBUG - Trạng thái NV: $trangThaiNV");
+        error_log("🔍 DEBUG - Trạng thái TK sẽ cập nhật: $trangThaiTK");
+
+        // 5. XỬ LÝ TÀI KHOẢN NẾU CÓ
+        if ($maTaiKhoan) {
+            // 5.1. Cập nhật email nếu có
+            if (isset($data['email']) && !empty($data['email'])) {
+                $email = $data['email'];
+
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    throw new Exception("Email không hợp lệ!");
+                }
+
+                if (!preg_match('/@gmail\.com$/', $email)) {
+                    throw new Exception("Email phải có định dạng @gmail.com!");
+                }
+
+                // Kiểm tra email trùng (trừ chính tài khoản này)
+                $sql_check_email = "SELECT COUNT(*) as count FROM tai_khoan WHERE Email = ? AND id != ?";
+                $stmt_check_email = $conn->prepare($sql_check_email);
+                $stmt_check_email->bind_param("si", $email, $maTaiKhoan);
+                $stmt_check_email->execute();
+                $result_check_email = $stmt_check_email->get_result();
+                $row_email = $result_check_email->fetch_assoc();
+
+                if ($row_email['count'] > 0) {
+                    throw new Exception("Email đã tồn tại trong hệ thống!");
+                }
+
+                $sql_update_email = "UPDATE tai_khoan SET Email = ?, updated_at = NOW() WHERE id = ?";
+                $stmt_update_email = $conn->prepare($sql_update_email);
+                $stmt_update_email->bind_param("si", $email, $maTaiKhoan);
+
+                if (!$stmt_update_email->execute()) {
+                    throw new Exception("Lỗi cập nhật email: " . $stmt_update_email->error);
+                }
             }
 
-            // 2. Kiểm tra ngày nghỉ hợp lệ
-            if (!$this->kiemTraNgayNghiHopLe($data['NgayVaoLam'], $data['NgayNghiViec'])) {
-                throw new Exception("Ngày nghỉ việc phải sau ngày vào làm!");
-            }
+            // 5.2. Cập nhật CMND nếu có
+            if (isset($data['cmnd']) && !empty($data['cmnd'])) {
+                $cmnd = $data['cmnd'];
 
-            // 3. Lấy mã tài khoản HIỆN TẠI từ database
-            $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
-            $stmt_get_tk = $conn->prepare($sql_get_tk);
-            $stmt_get_tk->bind_param("s", $maNhanVien);
-            $stmt_get_tk->execute();
-            $result_get_tk = $stmt_get_tk->get_result();
-            $currentInfo = $result_get_tk->fetch_assoc();
-
-            $maTaiKhoan = $currentInfo['MaTaiKhoan'] ?? null;
-
-            error_log("🔍 DEBUG - MaTaiKhoan từ database: " . ($maTaiKhoan ?? 'NULL'));
-            error_log("🔍 DEBUG - Trạng thái từ form để cập nhật NV: " . $data['TrangThai']);
-
-            // 4. Xử lý logic tự động dựa trên ngày nghỉ
-            $today = date('Y-m-d');
-            $ngayNghiViec = $data['NgayNghiViec'] ?? null;
-            $ngayNghiViecFormatted = ($ngayNghiViec == '0000-00-00' || empty($ngayNghiViec)) ? null : $ngayNghiViec;
-
-            $autoUpdated = false;
-            $autoMessage = '';
-
-            // Logic xử lý tự động - GIỮ NGUYÊN
-            if (empty($ngayNghiViec) || $ngayNghiViec == '0000-00-00') {
-                if ($data['TrangThai'] === 'Đã nghỉ') {
-                    $data['TrangThai'] = 'Đang làm';
-                    $autoUpdated = true;
-                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ đã được xóa.";
+                if (!preg_match('/^\d{9,12}$/', $cmnd)) {
+                    throw new Exception("CMND phải có 9-12 chữ số!");
                 }
-            } elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) > strtotime($today)) {
-                if ($data['TrangThai'] === 'Đã nghỉ') {
-                    $data['TrangThai'] = 'Đang làm';
-                    $autoUpdated = true;
-                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ được gia hạn đến {$ngayNghiViecFormatted}.";
+
+                // Kiểm tra CMND trùng
+                $sql_check_cmnd = "SELECT COUNT(*) as count FROM tai_khoan WHERE CMND = ? AND id != ?";
+                $stmt_check_cmnd = $conn->prepare($sql_check_cmnd);
+                $stmt_check_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
+                $stmt_check_cmnd->execute();
+                $result_check_cmnd = $stmt_check_cmnd->get_result();
+                $row_cmnd = $result_check_cmnd->fetch_assoc();
+
+                if ($row_cmnd['count'] > 0) {
+                    throw new Exception("CMND đã tồn tại trong hệ thống!");
                 }
-            } elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) <= strtotime($today)) {
-                if ($data['TrangThai'] === 'Đang làm') {
-                    $data['TrangThai'] = 'Đã nghỉ';
-                    $autoUpdated = true;
-                    $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đã nghỉ' vì đã đến ngày nghỉ việc: {$ngayNghiViecFormatted}.";
+
+                $sql_update_cmnd = "UPDATE tai_khoan SET CMND = ?, updated_at = NOW() WHERE id = ?";
+                $stmt_update_cmnd = $conn->prepare($sql_update_cmnd);
+                $stmt_update_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
+
+                if (!$stmt_update_cmnd->execute()) {
+                    throw new Exception("Lỗi cập nhật CMND: " . $stmt_update_cmnd->error);
                 }
             }
 
-            // 5. XỬ LÝ TÀI KHOẢN NẾU CÓ
-            if ($maTaiKhoan) {
-                // 5.1. Chuyển đổi trạng thái: "Đang làm" -> '1', "Đã nghỉ" -> '0'
-                // SỬ DỤNG TRẠNG THÁI ĐÃ ĐƯỢC TỰ ĐỘNG CẬP NHẬT (nếu có)
-                $trangThaiFinal = $data['TrangThai']; // Đã được tự động cập nhật nếu có
-                $trangThaiTaiKhoan = ($trangThaiFinal === 'Đang làm') ? '1' : '0';
-
-                error_log("🔍 DEBUG - Trạng thái cuối cùng: $trangThaiFinal");
-                error_log("🔍 DEBUG - Trạng thái TK sẽ update: " . $trangThaiTaiKhoan);
-
-                // 5.2. Cập nhật email và CMND nếu có trong $data
-                if (isset($data['email']) && !empty($data['email'])) {
-                    $email = $data['email'];
-
-                    // Validate email
-                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        throw new Exception("Email không hợp lệ!");
-                    }
-
-                    // Kiểm tra @gmail.com
-                    if (!preg_match('/@gmail\.com$/', $email)) {
-                        throw new Exception("Email phải có định dạng @gmail.com!");
-                    }
-
-                    // Kiểm tra email trùng (trừ chính tài khoản này)
-                    $sql_check_email = "SELECT COUNT(*) as count FROM tai_khoan WHERE Email = ? AND id != ?";
-                    $stmt_check_email = $conn->prepare($sql_check_email);
-                    $stmt_check_email->bind_param("si", $email, $maTaiKhoan);
-                    $stmt_check_email->execute();
-                    $result_check_email = $stmt_check_email->get_result();
-                    $row_email = $result_check_email->fetch_assoc();
-
-                    if ($row_email['count'] > 0) {
-                        throw new Exception("Email đã tồn tại trong hệ thống!");
-                    }
-
-                    $sql_update_email = "UPDATE tai_khoan SET Email = ?, updated_at = NOW() WHERE id = ?";
-                    $stmt_update_email = $conn->prepare($sql_update_email);
-                    $stmt_update_email->bind_param("si", $email, $maTaiKhoan);
-
-                    if (!$stmt_update_email->execute()) {
-                        throw new Exception("Lỗi cập nhật email: " . $stmt_update_email->error);
-                    }
-
-                    error_log("✅ DEBUG - Đã cập nhật email: $email");
-                }
-
-                // 5.3. Cập nhật CMND nếu có trong $data
-                if (isset($data['cmnd']) && !empty($data['cmnd'])) {
-                    $cmnd = $data['cmnd'];
-
-                    // Validate CMND (9-12 số)
-                    if (!preg_match('/^\d{9,12}$/', $cmnd)) {
-                        throw new Exception("CMND phải có 9-12 chữ số!");
-                    }
-
-                    // Kiểm tra CMND trùng
-                    $sql_check_cmnd = "SELECT COUNT(*) as count FROM tai_khoan WHERE CMND = ? AND id != ?";
-                    $stmt_check_cmnd = $conn->prepare($sql_check_cmnd);
-                    $stmt_check_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
-                    $stmt_check_cmnd->execute();
-                    $result_check_cmnd = $stmt_check_cmnd->get_result();
-                    $row_cmnd = $result_check_cmnd->fetch_assoc();
-
-                    if ($row_cmnd['count'] > 0) {
-                        throw new Exception("CMND đã tồn tại trong hệ thống!");
-                    }
-
-                    $sql_update_cmnd = "UPDATE tai_khoan SET CMND = ?, updated_at = NOW() WHERE id = ?";
-                    $stmt_update_cmnd = $conn->prepare($sql_update_cmnd);
-                    $stmt_update_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
-
-                    if (!$stmt_update_cmnd->execute()) {
-                        throw new Exception("Lỗi cập nhật CMND: " . $stmt_update_cmnd->error);
-                    }
-
-                    error_log("✅ DEBUG - Đã cập nhật CMND: $cmnd");
-                }
-
-                // 5.4. QUAN TRỌNG: Cập nhật TRẠNG THÁI tài khoản
-                $sql_update_tk_status = "UPDATE tai_khoan SET 
+            // 5.3. QUAN TRỌNG: Cập nhật TRẠNG THÁI tài khoản
+            $sql_update_tk_status = "UPDATE tai_khoan SET 
                 TrangThai = ?, 
                 updated_at = NOW() 
                 WHERE id = ?";
-                $stmt_update_tk_status = $conn->prepare($sql_update_tk_status);
-                $stmt_update_tk_status->bind_param("si", $trangThaiTaiKhoan, $maTaiKhoan);
+            $stmt_update_tk_status = $conn->prepare($sql_update_tk_status);
+            $stmt_update_tk_status->bind_param("si", $trangThaiTK, $maTaiKhoan);
 
-                if (!$stmt_update_tk_status->execute()) {
-                    throw new Exception("Lỗi cập nhật trạng thái tài khoản: " . $stmt_update_tk_status->error);
-                }
-
-                error_log("✅ DEBUG - Đã cập nhật trạng thái tài khoản thành công!");
-                error_log("   • ID tài khoản: $maTaiKhoan");
-                error_log("   • Trạng thái TK mới: $trangThaiTaiKhoan");
-
-                // 5.5. Reset mật khẩu nếu có yêu cầu
-                if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1') {
-                    $matKhauMoi = $data['mat_khau_moi'] ?? '123456';
-                    $matKhauMd5 = md5($matKhauMoi);
-
-                    $sql_reset = "UPDATE tai_khoan SET MatKhau = ?, updated_at = NOW() WHERE id = ?";
-                    $stmt_reset = $conn->prepare($sql_reset);
-                    $stmt_reset->bind_param("si", $matKhauMd5, $maTaiKhoan);
-
-                    if (!$stmt_reset->execute()) {
-                        throw new Exception("Lỗi reset mật khẩu: " . $stmt_reset->error);
-                    }
-
-                    // Lưu mật khẩu mới để trả về
-                    $matKhauReset = $matKhauMoi;
-                    error_log("✅ DEBUG - Đã reset mật khẩu thành: $matKhauMoi");
-                }
-            } else {
-                error_log("🔍 DEBUG - Nhân viên không có tài khoản, không cần cập nhật TK");
+            if (!$stmt_update_tk_status->execute()) {
+                error_log("❌ Lỗi SQL update trạng thái TK: " . $stmt_update_tk_status->error);
+                throw new Exception("Lỗi cập nhật trạng thái tài khoản: " . $stmt_update_tk_status->error);
             }
 
-            // 6. CẬP NHẬT BẢNG NHANVIEN - SỬA LỖI BIND_PARAM
-            $sql_nv = "UPDATE nhanvien SET 
+            error_log("✅ Đã cập nhật trạng thái TK thành: $trangThaiTK");
+
+            // 5.4. Reset mật khẩu nếu có yêu cầu
+            if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1') {
+                $matKhauMoi = $data['mat_khau_moi'] ?? '123456';
+                $matKhauMd5 = md5($matKhauMoi);
+
+                $sql_reset = "UPDATE tai_khoan SET MatKhau = ?, updated_at = NOW() WHERE id = ?";
+                $stmt_reset = $conn->prepare($sql_reset);
+                $stmt_reset->bind_param("si", $matKhauMd5, $maTaiKhoan);
+
+                if (!$stmt_reset->execute()) {
+                    throw new Exception("Lỗi reset mật khẩu: " . $stmt_reset->error);
+                }
+
+                $matKhauReset = $matKhauMoi;
+            }
+        } else {
+            error_log("⚠️ Nhân viên không có tài khoản, không cập nhật TK");
+        }
+
+        // 6. CẬP NHẬT BẢNG NHANVIEN
+        $sql_nv = "UPDATE nhanvien SET 
             HoTen = ?, 
             DiaChi = ?, 
             SDT = ?, 
@@ -564,85 +523,57 @@ class QuanLyNhanVienModel
             updated_at = NOW()
             WHERE MaNhanVien = ?";
 
-            error_log("🔍 DEBUG - SQL UPDATE nhanvien:");
-            error_log("   HoTen: " . $data['HoTen']);
-            error_log("   DiaChi: " . $data['DiaChi']);
-            error_log("   SDT: " . $data['SDT']);
-            error_log("   NgayVaoLam: " . $data['NgayVaoLam']);
-            error_log("   NgayNghiViec: " . ($data['NgayNghiViec'] ?? 'NULL'));
-            error_log("   PhongBan: " . $data['PhongBan']);
-            error_log("   LuongCoBan: " . $data['LuongCoBan']);
-            error_log("   TrangThai (QUAN TRỌNG): " . $trangThaiFinal); // Dùng trạng thái cuối cùng
-            error_log("   MaNhanVien: $maNhanVien");
+        $stmt_nv = $conn->prepare($sql_nv);
+        $ngayNghiViecValue = $data['NgayNghiViec'] ?? null;
 
-            $stmt_nv = $conn->prepare($sql_nv);
-            $ngayNghiViecValue = $data['NgayNghiViec'] ?? null;
+        // Sửa bind_param: "ssssssdsi"
+        $stmt_nv->bind_param(
+            "ssssssdsi",
+            $data['HoTen'],
+            $data['DiaChi'],
+            $data['SDT'],
+            $data['NgayVaoLam'],
+            $ngayNghiViecValue,
+            $data['PhongBan'],
+            $data['LuongCoBan'],
+            $trangThaiNV,  // Trạng thái nhân viên
+            $maNhanVien
+        );
 
-            // QUAN TRỌNG: Sửa bind_param từ "ssssssdss" thành "sssssssss"
-            // vì LuongCoBan (decimal) và TrangThai (ENUM) đều bind là string
-            $stmt_nv->bind_param(
-                "sssssssss",  // 9 tham số string
-                $data['HoTen'],
-                $data['DiaChi'],
-                $data['SDT'],
-                $data['NgayVaoLam'],
-                $ngayNghiViecValue,
-                $data['PhongBan'],
-                $data['LuongCoBan'],  // decimal nhưng bind là string
-                $trangThaiFinal,      // ENUM nhưng bind là string - DÙNG TRẠNG THÁI CUỐI
-                $maNhanVien
-            );
-
-            if (!$stmt_nv->execute()) {
-                error_log("❌ DEBUG - Lỗi execute UPDATE nhanvien: " . $stmt_nv->error);
-                throw new Exception("Lỗi cập nhật nhân viên: " . $stmt_nv->error);
-            }
-
-            $affectedRows = $stmt_nv->affected_rows;
-            error_log("✅ DEBUG - Đã cập nhật nhân viên thành công!");
-            error_log("   • Số dòng bị ảnh hưởng: $affectedRows");
-            error_log("   • Trạng thái NV mới: " . $trangThaiFinal);
-
-            // 7. COMMIT TRANSACTION
-            $conn->commit();
-            error_log("✅ DEBUG - Transaction đã commit thành công!");
-            $this->db->closeConnect($conn);
-
-            // 8. TRẢ VỀ KẾT QUẢ
-            $result = [
-                'success' => true,
-                'maTaiKhoan' => $maTaiKhoan,
-                'trang_thai_nv' => $trangThaiFinal,  // Trạng thái cuối cùng
-            ];
-
-            if ($maTaiKhoan) {
-                $result['trang_thai_tk'] = $trangThaiTaiKhoan ?? null;  // '1'/'0'
-            }
-
-            if (isset($matKhauReset)) {
-                $result['mat_khau_moi'] = $matKhauReset;
-            }
-
-            // Thêm thông báo nếu đã tự động cập nhật
-            if ($autoUpdated) {
-                $result['auto_updated'] = true;
-                $result['message'] = $autoMessage;
-                error_log("🔍 DEBUG - Đã tự động cập nhật: $autoMessage");
-            }
-
-            error_log("======================================");
-            error_log("🎉 DEBUG suaNhanVien - KẾT THÚC THÀNH CÔNG");
-            error_log("Kết quả: " . json_encode($result));
-            error_log("======================================");
-
-            return $result;
-        } catch (Exception $e) {
-            $conn->rollback();
-            error_log("❌ DEBUG - Lỗi trong suaNhanVien: " . $e->getMessage());
-            $this->db->closeConnect($conn);
-            return ['success' => false, 'message' => $e->getMessage()];
+        if (!$stmt_nv->execute()) {
+            error_log("❌ Lỗi SQL update NV: " . $stmt_nv->error);
+            throw new Exception("Lỗi cập nhật nhân viên: " . $stmt_nv->error);
         }
+
+        $affectedRows = $stmt_nv->affected_rows;
+        error_log("✅ Đã cập nhật NV. Số dòng ảnh hưởng: $affectedRows");
+
+        // 7. COMMIT TRANSACTION
+        $conn->commit();
+        error_log("✅ Transaction commit thành công!");
+        $this->db->closeConnect($conn);
+
+        // 8. TRẢ VỀ KẾT QUẢ
+        $result = [
+            'success' => true,
+            'trang_thai_nv' => $trangThaiNV,
+            'trang_thai_tk' => $maTaiKhoan ? $trangThaiTK : null
+        ];
+
+        if (isset($matKhauReset)) {
+            $result['mat_khau_moi'] = $matKhauReset;
+        }
+
+        error_log("🎉 Kết quả: " . json_encode($result));
+        return $result;
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("❌ Lỗi trong suaNhanVien: " . $e->getMessage());
+        $this->db->closeConnect($conn);
+        return ['success' => false, 'message' => $e->getMessage()];
     }
+}
 
     // XÓA NHÂN VIÊN - XÓA LUÔN TÀI KHOẢN THEO YÊU CẦU
     public function xoaNhanVien($maNhanVien)

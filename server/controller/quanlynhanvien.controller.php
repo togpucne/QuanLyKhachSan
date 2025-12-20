@@ -149,7 +149,8 @@ function xoaGET($model)
 // CÁC HÀM XỬ LÝ POST
 // ============================================
 
-function themPOST($model) {
+function themPOST($model)
+{
     // Validate dữ liệu
     $requiredFields = ['email', 'mat_khau', 'ho_ten', 'sdt', 'ngay_vao_lam', 'phong_ban', 'luong_co_ban', 'trang_thai'];
     foreach ($requiredFields as $field) {
@@ -159,21 +160,21 @@ function themPOST($model) {
             exit();
         }
     }
-    
+
     // Kiểm tra lương
     if ($_POST['luong_co_ban'] <= 0) {
         $_SESSION['error'] = "❌ Lương cơ bản phải lớn hơn 0!";
         header('Location: quanlynhanvien.controller.php');
         exit();
     }
-    
+
     // Kiểm tra mật khẩu
     if (strlen($_POST['mat_khau']) < 6) {
         $_SESSION['error'] = "❌ Mật khẩu phải có ít nhất 6 ký tự!";
         header('Location: quanlynhanvien.controller.php');
         exit();
     }
-    
+
     // Dữ liệu nhân viên
     $data = [
         'HoTen' => $_POST['ho_ten'],
@@ -188,28 +189,38 @@ function themPOST($model) {
         'email' => $_POST['email'],
         'mat_khau' => $_POST['mat_khau']
     ];
-    
+
     $result = $model->themNhanVien($data);
-    
+
     if ($result['success']) {
-        // ... phần success message giữ nguyên ...
+        $message = "✅ Thêm nhân viên thành công!<br><br>";
+
+        $message .= "<strong>Thông tin nhân viên:</strong><br>";
+        $message .= "• Mã NV: <strong>" . $result['maNhanVien'] . "</strong><br>";
+        $message .= "• Họ tên: <strong>" . $_POST['ho_ten'] . "</strong><br>";
+        $message .= "• Phòng ban: <strong>" . $_POST['phong_ban'] . "</strong><br>";
+        $message .= "• Trạng thái NV: <strong>" . $_POST['trang_thai'] . "</strong><br>";
+        $message .= "• Trạng thái TK: <strong>" . (($result['trang_thai_tk'] == '1') ? 'Đang hoạt động' : 'Không hoạt động') . "</strong><br><br>";
+
+        $_SESSION['success'] = $message;
     } else {
         $_SESSION['error'] = "❌ " . ($result['message'] ?? 'Lỗi khi thêm nhân viên');
     }
-    
+
     header('Location: quanlynhanvien.controller.php');
     exit();
 }
 
-function suaPOST($model) {
+function suaPOST($model)
+{
     if (!isset($_POST['ma_nhan_vien'])) {
         $_SESSION['error'] = "❌ Thiếu mã nhân viên";
         header('Location: quanlynhanvien.controller.php');
         exit();
     }
-    
+
     $maNhanVien = $_POST['ma_nhan_vien'];
-    
+
     // Kiểm tra các trường bắt buộc không để trống khi update
     $requiredFields = ['ho_ten', 'sdt', 'ngay_vao_lam', 'phong_ban', 'luong_co_ban', 'trang_thai'];
     foreach ($requiredFields as $field) {
@@ -219,18 +230,18 @@ function suaPOST($model) {
             exit();
         }
     }
-    
+
     // Kiểm tra lương
     if ($_POST['luong_co_ban'] <= 0) {
         $_SESSION['error'] = "❌ Lương cơ bản phải lớn hơn 0!";
         header('Location: quanlynhanvien.controller.php');
         exit();
     }
-    
+
     // Lấy dữ liệu từ form
     $email = $_POST['email'] ?? '';
     $cmnd = $_POST['cmnd'] ?? '';
-    
+
     $data = [
         'HoTen' => $_POST['ho_ten'],
         'DiaChi' => $_POST['dia_chi'] ?? '',
@@ -243,41 +254,48 @@ function suaPOST($model) {
         'email' => $email,
         'cmnd' => $cmnd
     ];
-    
+
     // Kiểm tra nếu có yêu cầu reset mật khẩu
     if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
         $data['reset_mat_khau'] = '1';
         $data['mat_khau_moi'] = $_POST['mat_khau_moi'] ?? '123456';
     }
-    
+
     // Gọi model
     $result = $model->suaNhanVien($maNhanVien, $data);
-    
+
     if ($result['success']) {
         $message = "✅ Cập nhật nhân viên thành công!<br>";
-        
+
+        // HIỂN THỊ TRẠNG THÁI ĐÃ CẬP NHẬT
+        $message .= "📝 <strong>Trạng thái đã cập nhật:</strong><br>";
+        $message .= "• Nhân viên: <strong>" . $data['TrangThai'] . "</strong><br>";
+        if (isset($result['trang_thai_tk']) && $result['maTaiKhoan']) {
+            $trangThaiTKText = ($result['trang_thai_tk'] == '1') ? 'Hoạt động (1)' : 'Không hoạt động (0)';
+            $message .= "• Tài khoản: <strong>" . $trangThaiTKText . "</strong><br>";
+        }
+
         if ($email) {
             $message .= "📧 Email đã được cập nhật: <strong>$email</strong><br>";
         }
-        
+
         if ($cmnd) {
             $message .= "🆔 CMND đã được cập nhật: <strong>$cmnd</strong><br>";
         }
-        
+
         if (isset($result['mat_khau_moi'])) {
             $message .= "🔑 Mật khẩu mới: <strong>" . $result['mat_khau_moi'] . "</strong><br>";
         }
-        
+
         if (isset($result['auto_updated']) && $result['auto_updated']) {
             $message .= "⚠️ <em>" . $result['message'] . "</em><br>";
         }
-        
+
         $_SESSION['success'] = $message;
     } else {
         $_SESSION['error'] = "❌ " . ($result['message'] ?? 'Lỗi khi cập nhật nhân viên');
     }
-    
+
     header('Location: quanlynhanvien.controller.php');
     exit();
 }
-?>

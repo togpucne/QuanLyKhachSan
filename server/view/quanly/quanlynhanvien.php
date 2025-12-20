@@ -115,6 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
       $email = $_POST['email'] ?? '';
       $cmnd = $_POST['cmnd'] ?? '';
 
+      // THÊM: Lấy mã tài khoản từ form
+      $ma_tai_khoan = $_POST['ma_tai_khoan'] ?? '';
+
       $data = [
         'HoTen' => $_POST['ho_ten'],
         'DiaChi' => $_POST['dia_chi'],
@@ -125,31 +128,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action'])) {
         'LuongCoBan' => $_POST['luong_co_ban'],
         'TrangThai' => $_POST['trang_thai'],
         'email' => $email,  // <=== THÊM DÒNG NÀY
-        'cmnd' => $cmnd     // <=== THÊM DÒNG NÀY
+        'cmnd' => $cmnd,    // <=== THÊM DÒNG NÀY
+        'ma_tai_khoan' => $ma_tai_khoan  // <=== THÊM DÒNG NÀY
       ];
 
       if (isset($_POST['reset_mat_khau']) && $_POST['reset_mat_khau'] == '1') {
         $data['reset_mat_khau'] = '1';
-        $data['ma_tai_khoan'] = $_POST['ma_tai_khoan'];
         $data['mat_khau_moi'] = $_POST['mat_khau_moi'] ?? '123456';
       }
 
       $result = $model->suaNhanVien($maNhanVien, $data);
 
       if ($result['success']) {
-        $message = "Cập nhật nhân viên thành công!";
+        $message = "Cập nhật nhân viên thành công!<br><br>";
 
-        // THÊM PHẦN NÀY ĐỂ HIỂN THỊ EMAIL ĐÃ UPDATE
+        // THÊM PHẦN NÀY ĐỂ HIỂN THỊ TRẠNG THÁI ĐÃ UPDATE
+        $message .= "<strong>Trạng thái đã cập nhật:</strong><br>";
+        $message .= "• Nhân viên: <strong>" . $_POST['trang_thai'] . "</strong><br>";
+
+        if (isset($result['trang_thai_tk'])) {
+          $trangThaiTKText = ($result['trang_thai_tk'] == '1') ? 'Hoạt động (1)' : 'Không hoạt động (0)';
+          $message .= "• Tài khoản: <strong>" . $trangThaiTKText . "</strong><br>";
+        }
+
         if ($email) {
-          $message .= "<br>Email đã cập nhật: " . $email;
+          $message .= "• Email đã cập nhật: " . $email . "<br>";
         }
 
         if ($cmnd) {
-          $message .= "<br>CMND đã cập nhật: " . $cmnd;
+          $message .= "• CMND đã cập nhật: " . $cmnd . "<br>";
         }
 
         if (isset($result['mat_khau_moi'])) {
-          $message .= "<br>Mật khẩu mới: " . $result['mat_khau_moi'];
+          $message .= "• Mật khẩu mới: " . $result['mat_khau_moi'] . "<br>";
         }
 
         $_SESSION['success'] = $message;
@@ -332,7 +343,8 @@ include_once '../layouts/header.php';
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" name="email" required placeholder="nhanvien@company.com">
+                <input type="email" class="form-control" name="email" required placeholder="nhanvien@gmail.com">
+                <small class="text-muted">Ví dụ: nhanvien@gmail.com</small>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
@@ -352,7 +364,7 @@ include_once '../layouts/header.php';
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="sdt" required placeholder="Nhập số điện thoại">
+              <input type="text" class="form-control" name="sdt" required placeholder="Ví dụ: 0912345678">
             </div>
             <div class="col-12 mb-3">
               <label class="form-label">Địa Chỉ</label>
@@ -378,12 +390,13 @@ include_once '../layouts/header.php';
                 <option value="Quản Lý">Quản Lý</option>
               </select>
             </div>
-            <!-- Thay thế dòng input lương này -->
+            <!-- SỬA INPUT LƯƠNG -->
             <div class="col-md-6 mb-3">
-              <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
-              <!-- SỬA: XÓA step="100000" -->
-              <input type="number" class="form-control" name="luong_co_ban" required min="1"
-                placeholder="Nhập lương cơ bản">
+              <label class="form-label">Lương Cơ Bản (VND) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control luong-input" name="luong_co_ban"
+                required min="100000" placeholder="Ví dụ: 5000000"
+                value="5000000"> <!-- Thêm giá trị mặc định -->
+              <small class="text-muted">Tối thiểu: 100,000 VND</small>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
@@ -406,7 +419,6 @@ include_once '../layouts/header.php';
     </div>
   </div>
 </div>
-
 <!-- Modal Sửa Nhân Viên -->
 <div class="modal fade" id="suaNhanVienModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -683,42 +695,7 @@ include_once '../layouts/header.php';
         }
 
         // Họ tên
-        const hoTenInput = document.querySelector('#suaFormContent input[name="ho_ten"]');
-        if (hoTenInput) {
-          hoTenInput.addEventListener('blur', function() {
-            const name = this.value.trim();
-
-            // Kiểm tra số
-            if (/\d/.test(name)) {
-              this.value = '';
-              setTimeout(() => {
-                alert('❌ Họ tên không được chứa số!');
-                this.focus();
-              }, 10);
-              return;
-            }
-
-            // Kiểm tra ký tự đặc biệt
-            if (/[!@#$%^&*()_+=\[\]{};:"\\|<>\/?~`]/.test(name)) {
-              this.value = '';
-              setTimeout(() => {
-                alert('❌ Họ tên không được chứa ký tự đặc biệt!');
-                this.focus();
-              }, 10);
-              return;
-            }
-
-            // Kiểm tra độ dài
-            if (name.length > 0 && name.length < 2) {
-              this.value = '';
-              setTimeout(() => {
-                alert('❌ Họ tên phải có ít nhất 2 ký tự!');
-                this.focus();
-              }, 10);
-              return;
-            }
-          });
-        }
+        
       }, 100);
 
       // Hiển thị modal

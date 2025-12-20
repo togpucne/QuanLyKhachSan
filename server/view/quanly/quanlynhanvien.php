@@ -604,11 +604,11 @@ include_once '../layouts/header.php';
                     <div id="email-error" class="invalid-feedback" style="display: none;"></div>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">CMND/CCCD</label>
-                    <input type="text" class="form-control" name="cmnd" 
-                           value="${nv.CMND || ''}"  <!-- SỬA TỪ nv.CMND THÀNH nv.CMND -->
+                    <label class="form-label">CMND/CCCD <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="cmnd" required
+                           value="${nv.CMND || ''}"  
                            placeholder="Nhập số CMND/CCCD" maxlength="12">
-                    <small class="text-muted">9-12 chữ số</small>
+                    <small class="text-muted">CMND/CCCD 9-12 chữ số</small>
                 </div>
                 <div class="col-12">
                     <div class="form-check mb-2">
@@ -676,7 +676,7 @@ include_once '../layouts/header.php';
       return false;
     }
     return true;
-  });
+  }); 
 
   document.addEventListener('DOMContentLoaded', function() {
     // Format số tiền trong bảng

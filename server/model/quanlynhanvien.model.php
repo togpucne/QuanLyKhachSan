@@ -177,38 +177,31 @@ class QuanLyNhanVienModel
         return $data;
     }
 
-    // THÊM NHÂN VIÊN MỚI VỚI EMAIL LÀ TÊN ĐĂNG NHẬP
+    // Sửa hàm themNhanVien trong class QuanLyNhanVienModel
     public function themNhanVien($data)
     {
         $conn = $this->db->openConnect();
         $conn->begin_transaction();
 
         try {
-            // 1. KIỂM TRA EMAIL ĐÃ TỒN TẠI CHƯA
-            $sql_check = "SELECT id FROM tai_khoan WHERE Email = ?";
-            $stmt_check = $conn->prepare($sql_check);
-            $stmt_check->bind_param("s", $data['email']);
-            $stmt_check->execute();
-            $result_check = $stmt_check->get_result();
-
-            if ($result_check->num_rows > 0) {
-                throw new Exception("Email đã tồn tại trong hệ thống!");
+            // VALIDATE DỮ LIỆU TRƯỚC KHI THÊM
+            $validationErrors = $this->validateThemNhanVien($data);
+            if (!empty($validationErrors)) {
+                throw new Exception(implode("<br>", $validationErrors));
             }
 
-            // 2. TẠO TÀI KHOẢN MỚI - SỬA LẠI Ở ĐÂY!!!
+            // 1. TẠO TÀI KHOẢN MỚI
             $matKhauMd5 = md5($data['mat_khau']);
-            // SỬA: TenDangNhap = Họ tên nhân viên, KHÔNG PHẢI email
-            $tenDangNhap = $data['HoTen']; // <-- SỬA TỪ $data['email'] THÀNH $data['HoTen']
-            $emailDangNhap = $data['email']; // Email vẫn giữ nguyên
+            $tenDangNhap = $data['HoTen'];
+            $emailDangNhap = $data['email'];
             $vaiTro = $this->convertPhongBanToVaiTro($data['PhongBan']);
 
             $sql_tk = "INSERT INTO tai_khoan 
-                  (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at, updated_at) 
-                  VALUES (?, ?, ?, '1', ?, ?, NOW(), NOW())";
+              (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND, created_at, updated_at) 
+              VALUES (?, ?, ?, '1', ?, ?, NOW(), NOW())";
 
             $stmt_tk = $conn->prepare($sql_tk);
             $cmnd = $data['CMND'] ?? '';
-            // SỬA: Tham số 1 = $tenDangNhap (Họ tên), tham số 4 = $emailDangNhap
             $stmt_tk->bind_param("sssss", $tenDangNhap, $matKhauMd5, $vaiTro, $emailDangNhap, $cmnd);
 
             if (!$stmt_tk->execute()) {
@@ -217,15 +210,15 @@ class QuanLyNhanVienModel
 
             $maTaiKhoan = $stmt_tk->insert_id;
 
-            // 3. TẠO MÃ NHÂN VIÊN
+            // 2. TẠO MÃ NHÂN VIÊN
             $maNhanVien = $this->generateMaNhanVien();
 
-            // 4. THÊM NHÂN VIÊN
+            // 3. THÊM NHÂN VIÊN
             $sql = "INSERT INTO nhanvien (
-                MaNhanVien, HoTen, DiaChi, SDT, NgayVaoLam, 
-                NgayNghiViec, PhongBan, LuongCoBan, TrangThai, MaTaiKhoan,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+            MaNhanVien, HoTen, DiaChi, SDT, NgayVaoLam, 
+            NgayNghiViec, PhongBan, LuongCoBan, TrangThai, MaTaiKhoan,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
 
             $stmt = $conn->prepare($sql);
             $stmt->bind_param(
@@ -253,9 +246,9 @@ class QuanLyNhanVienModel
                 'success' => true,
                 'maNhanVien' => $maNhanVien,
                 'email' => $data['email'],
-                'mat_khau' => $data['mat_khau'], // Trả về mật khẩu gốc để hiển thị
+                'mat_khau' => $data['mat_khau'],
                 'maTaiKhoan' => $maTaiKhoan,
-                'ten_dang_nhap' => $tenDangNhap // Thêm thông tin TenDangNhap đã lưu
+                'ten_dang_nhap' => $tenDangNhap
             ];
         } catch (Exception $e) {
             $conn->rollback();
@@ -370,23 +363,28 @@ class QuanLyNhanVienModel
         return strtotime($ngayNghiViec) >= strtotime($ngayVaoLam);
     }
     // SỬA NHÂN VIÊN - TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN KHI NHÂN VIÊN NGHỈ LÀM
+    // Sửa hàm suaNhanVien trong class QuanLyNhanVienModel
     public function suaNhanVien($maNhanVien, $data)
     {
-        // THÊM DEBUG
         error_log("=== DEBUG suaNhanVien BẮT ĐẦU ===");
         error_log("Mã NV: $maNhanVien");
-        error_log("Email trong data: " . ($data['email'] ?? 'KHÔNG CÓ'));
-        error_log("CMND trong data: " . ($data['cmnd'] ?? 'KHÔNG CÓ'));
+
         $conn = $this->db->openConnect();
         $conn->begin_transaction();
 
         try {
-            // 0. KIỂM TRA NGÀY NGHỈ HỢP LỆ (phải sau ngày vào làm)
+            // 0. VALIDATE DỮ LIỆU TRƯỚC KHI SỬA
+            $validationErrors = $this->validateSuaNhanVien($maNhanVien, $data);
+            if (!empty($validationErrors)) {
+                throw new Exception(implode("<br>", $validationErrors));
+            }
+
+            // 1. Kiểm tra ngày nghỉ hợp lệ
             if (!$this->kiemTraNgayNghiHopLe($data['NgayVaoLam'], $data['NgayNghiViec'])) {
                 throw new Exception("Ngày nghỉ việc phải sau ngày vào làm!");
             }
 
-            // 1. Lấy thông tin tài khoản hiện tại
+            // 2. Lấy thông tin tài khoản hiện tại
             $sql_get_tk = "SELECT MaTaiKhoan FROM nhanvien WHERE MaNhanVien = ?";
             $stmt_get_tk = $conn->prepare($sql_get_tk);
             $stmt_get_tk->bind_param("s", $maNhanVien);
@@ -395,66 +393,40 @@ class QuanLyNhanVienModel
             $currentInfo = $result_get_tk->fetch_assoc();
             $maTaiKhoan = $currentInfo['MaTaiKhoan'];
 
-            // 2. KIỂM TRA VÀ XỬ LÝ LOGIC TỰ ĐỘNG
+            // 3. Xử lý logic tự động
             $today = date('Y-m-d');
             $ngayNghiViec = $data['NgayNghiViec'] ?? null;
             $ngayNghiViecFormatted = ($ngayNghiViec == '0000-00-00' || empty($ngayNghiViec)) ? null : $ngayNghiViec;
 
-            // LOGIC MỚI: Xử lý 3 trường hợp
             $autoUpdated = false;
             $autoMessage = '';
 
-            // Trường hợp 1: Clear ngày nghỉ (để trống hoặc 0000-00-00)
+            // Logic xử lý tự động (giữ nguyên)
             if (empty($ngayNghiViec) || $ngayNghiViec == '0000-00-00') {
                 if ($data['TrangThai'] === 'Đã nghỉ') {
-                    // Nếu clear ngày nghỉ mà trạng thái vẫn là "Đã nghỉ", chuyển về "Đang làm"
                     $data['TrangThai'] = 'Đang làm';
                     $autoUpdated = true;
                     $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ đã được xóa.";
                 }
-            }
-            // Trường hợp 2: Có ngày nghỉ, nhưng là trong tương lai
-            elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) > strtotime($today)) {
+            } elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) > strtotime($today)) {
                 if ($data['TrangThai'] === 'Đã nghỉ') {
-                    // Nếu gia hạn thêm (ngày nghỉ trong tương lai), chuyển về "Đang làm"
                     $data['TrangThai'] = 'Đang làm';
                     $autoUpdated = true;
                     $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đang làm' vì ngày nghỉ được gia hạn đến {$ngayNghiViecFormatted}.";
                 }
-            }
-            // Trường hợp 3: Đã đến hoặc qua ngày nghỉ
-            elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) <= strtotime($today)) {
+            } elseif ($ngayNghiViecFormatted && strtotime($ngayNghiViecFormatted) <= strtotime($today)) {
                 if ($data['TrangThai'] === 'Đang làm') {
-                    // Đã đến ngày nghỉ, tự động chuyển thành "Đã nghỉ"
                     $data['TrangThai'] = 'Đã nghỉ';
                     $autoUpdated = true;
                     $autoMessage = "Đã tự động cập nhật trạng thái thành 'Đã nghỉ' vì đã đến ngày nghỉ việc: {$ngayNghiViecFormatted}.";
                 }
             }
-            error_log("DEBUG - MaTaiKhoan tìm được: " . ($maTaiKhoan ?? 'KHÔNG CÓ'));
 
-            // 2. CẬP NHẬT BẢNG TAI_KHOAN (EMAIL VÀ CMND) - SỬA LẠI Ở ĐÂY!!!
+            // 4. Cập nhật bảng tai_khoan (email và CMND)
             if ($maTaiKhoan) {
-                // Validate và cập nhật email nếu có trong $data
                 if (isset($data['email']) && !empty($data['email'])) {
                     $email = $data['email'];
 
-                    // Validate email
-                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        throw new Exception("Email không hợp lệ!");
-                    }
-
-                    // Kiểm tra @gmail.com
-                    if (!preg_match('/@gmail\.com$/', $email)) {
-                        throw new Exception("Email phải có định dạng @gmail.com!");
-                    }
-
-                    // Kiểm tra email trùng (trừ chính tài khoản này)
-                    if ($this->kiemTraEmailTrung($email, $maTaiKhoan)) {
-                        throw new Exception("Email đã tồn tại trong hệ thống!");
-                    }
-
-                    // Cập nhật email
                     $sql_update_email = "UPDATE tai_khoan SET Email = ?, updated_at = NOW() WHERE id = ?";
                     $stmt_update_email = $conn->prepare($sql_update_email);
                     $stmt_update_email->bind_param("si", $email, $maTaiKhoan);
@@ -464,27 +436,8 @@ class QuanLyNhanVienModel
                     }
                 }
 
-                // Cập nhật CMND nếu có trong $data
                 if (isset($data['cmnd']) && !empty($data['cmnd'])) {
                     $cmnd = $data['cmnd'];
-
-                    // Validate CMND (9-12 số)
-                    if (!preg_match('/^\d{9,12}$/', $cmnd)) {
-                        throw new Exception("CMND phải có 9-12 chữ số!");
-                    }
-
-                    // THÊM KIỂM TRA TRÙNG CMND
-                    // Kiểm tra CMND trùng (trừ chính tài khoản này)
-                    $sql_check_cmnd = "SELECT COUNT(*) as count FROM tai_khoan WHERE CMND = ? AND id != ?";
-                    $stmt_check_cmnd = $conn->prepare($sql_check_cmnd);
-                    $stmt_check_cmnd->bind_param("si", $cmnd, $maTaiKhoan);
-                    $stmt_check_cmnd->execute();
-                    $result_check_cmnd = $stmt_check_cmnd->get_result();
-                    $row_cmnd = $result_check_cmnd->fetch_assoc();
-
-                    if ($row_cmnd['count'] > 0) {
-                        throw new Exception("CMND đã tồn tại trong hệ thống!");
-                    }
 
                     $sql_update_cmnd = "UPDATE tai_khoan SET CMND = ?, updated_at = NOW() WHERE id = ?";
                     $stmt_update_cmnd = $conn->prepare($sql_update_cmnd);
@@ -495,7 +448,8 @@ class QuanLyNhanVienModel
                     }
                 }
             }
-            // 3. CẬP NHẬT BẢNG NHANVIEN
+
+            // 5. Cập nhật bảng nhanvien
             $sql = "UPDATE nhanvien SET 
             HoTen = ?, 
             DiaChi = ?, 
@@ -526,14 +480,14 @@ class QuanLyNhanVienModel
                 throw new Exception("Lỗi cập nhật nhân viên: " . $stmt->error);
             }
 
-            // 4. TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI TÀI KHOẢN DỰA VÀO TRẠNG THÁI NHÂN VIÊN
+            // 6. Tự động cập nhật trạng thái tài khoản
             if ($maTaiKhoan) {
                 $trangThaiTaiKhoan = ($data['TrangThai'] === 'Đang làm') ? '1' : '0';
 
                 $sql_update_tk = "UPDATE tai_khoan SET 
-                             TrangThai = ?, 
-                             updated_at = NOW() 
-                             WHERE id = ?";
+                         TrangThai = ?, 
+                         updated_at = NOW() 
+                         WHERE id = ?";
                 $stmt_update_tk = $conn->prepare($sql_update_tk);
                 $stmt_update_tk->bind_param("si", $trangThaiTaiKhoan, $maTaiKhoan);
 
@@ -542,7 +496,7 @@ class QuanLyNhanVienModel
                 }
             }
 
-            // 5. NẾU CÓ YÊU CẦU RESET MẬT KHẨU
+            // 7. Reset mật khẩu nếu có yêu cầu
             if (isset($data['reset_mat_khau']) && $data['reset_mat_khau'] == '1' && $maTaiKhoan) {
                 $matKhauMoi = $data['mat_khau_moi'] ?? '123456';
                 $matKhauMd5 = md5($matKhauMoi);
@@ -555,7 +509,6 @@ class QuanLyNhanVienModel
                     throw new Exception("Lỗi reset mật khẩu: " . $stmt_reset->error);
                 }
 
-                // Lưu mật khẩu mới để trả về
                 $matKhauReset = $matKhauMoi;
             }
 
@@ -573,7 +526,6 @@ class QuanLyNhanVienModel
                 $result['mat_khau_moi'] = $matKhauReset;
             }
 
-            // Thêm thông báo nếu đã tự động cập nhật
             if ($autoUpdated) {
                 $result['auto_updated'] = true;
                 $result['message'] = $autoMessage;
@@ -824,5 +776,175 @@ class QuanLyNhanVienModel
         } finally {
             $this->db->closeConnect($conn);
         }
+    }
+    // Thêm vào class QuanLyNhanVienModel (sau phương thức getChiTietNhanVien)
+
+    /**
+     * Kiểm tra số điện thoại trùng
+     */
+    public function kiemTraSDTTrung($sdt, $maNhanVien = '')
+    {
+        $conn = $this->db->openConnect();
+
+        $sql = "SELECT COUNT(*) as count FROM nhanvien WHERE SDT = ?";
+        if (!empty($maNhanVien)) {
+            $sql .= " AND MaNhanVien != ?";
+        }
+
+        $stmt = $conn->prepare($sql);
+        if (!empty($maNhanVien)) {
+            $stmt->bind_param("ss", $sdt, $maNhanVien);
+        } else {
+            $stmt->bind_param("s", $sdt);
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        $this->db->closeConnect($conn);
+        return $row['count'] > 0;
+    }
+
+    /**
+     * Kiểm tra CMND trùng
+     */
+    public function kiemTraCMNDTrung($cmnd, $taiKhoanID = '')
+    {
+        if (empty($cmnd)) return false;
+
+        $conn = $this->db->openConnect();
+
+        $sql = "SELECT COUNT(*) as count FROM tai_khoan WHERE CMND = ?";
+        if (!empty($taiKhoanID)) {
+            $sql .= " AND id != ?";
+        }
+
+        $stmt = $conn->prepare($sql);
+        if (!empty($taiKhoanID)) {
+            $stmt->bind_param("si", $cmnd, $taiKhoanID);
+        } else {
+            $stmt->bind_param("s", $cmnd);
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        $this->db->closeConnect($conn);
+        return $row['count'] > 0;
+    }
+
+    /**
+     * Kiểm tra dữ liệu trước khi thêm nhân viên
+     */
+    public function validateThemNhanVien($data)
+    {
+        $errors = [];
+
+        // 1. Kiểm tra email
+        if (empty($data['email'])) {
+            $errors[] = "Email không được để trống";
+        } else {
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Email không hợp lệ";
+            }
+
+            if (!preg_match('/@gmail\.com$/', $data['email'])) {
+                $errors[] = "Email phải có định dạng @gmail.com";
+            }
+
+            if ($this->kiemTraEmailTrung($data['email'])) {
+                $errors[] = "Email đã tồn tại trong hệ thống";
+            }
+        }
+
+        // 2. Kiểm tra SDT
+        if (empty($data['SDT'])) {
+            $errors[] = "Số điện thoại không được để trống";
+        } else {
+            if (!preg_match('/^[0-9]{10,11}$/', $data['SDT'])) {
+                $errors[] = "Số điện thoại phải có 10-11 chữ số";
+            }
+
+            if ($this->kiemTraSDTTrung($data['SDT'])) {
+                $errors[] = "Số điện thoại đã tồn tại";
+            }
+        }
+
+        // 3. Kiểm tra CMND
+        if (!empty($data['CMND'])) {
+            if (!preg_match('/^\d{9,12}$/', $data['CMND'])) {
+                $errors[] = "CMND phải có 9-12 chữ số";
+            }
+
+            if ($this->kiemTraCMNDTrung($data['CMND'])) {
+                $errors[] = "CMND đã tồn tại trong hệ thống";
+            }
+        }
+
+        // 4. Kiểm tra lương
+        if (empty($data['LuongCoBan']) || $data['LuongCoBan'] <= 0) {
+            $errors[] = "Lương cơ bản phải lớn hơn 0";
+        }
+
+        // 5. Kiểm tra mật khẩu
+        if (strlen($data['mat_khau']) < 6) {
+            $errors[] = "Mật khẩu phải có ít nhất 6 ký tự";
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Kiểm tra dữ liệu trước khi sửa nhân viên
+     */
+    public function validateSuaNhanVien($maNhanVien, $data)
+    {
+        $errors = [];
+
+        // 1. Lấy thông tin hiện tại
+        $nhanVienHienTai = $this->getChiTietNhanVien($maNhanVien);
+        $maTaiKhoanHienTai = $nhanVienHienTai['tai_khoan_id'] ?? null;
+
+        // 2. Kiểm tra email (nếu có cập nhật)
+        if (isset($data['email']) && !empty($data['email'])) {
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Email không hợp lệ";
+            } elseif (!preg_match('/@gmail\.com$/', $data['email'])) {
+                $errors[] = "Email phải có định dạng @gmail.com";
+            } elseif ($this->kiemTraEmailTrung($data['email'], $maTaiKhoanHienTai)) {
+                $errors[] = "Email đã tồn tại trong hệ thống";
+            }
+        }
+
+        // 3. Kiểm tra SDT (nếu có cập nhật)
+        if (isset($data['SDT'])) {
+            if (empty($data['SDT'])) {
+                $errors[] = "Số điện thoại không được để trống";
+            } elseif (!preg_match('/^[0-9]{10,11}$/', $data['SDT'])) {
+                $errors[] = "Số điện thoại phải có 10-11 chữ số";
+            } elseif ($this->kiemTraSDTTrung($data['SDT'], $maNhanVien)) {
+                $errors[] = "Số điện thoại đã tồn tại";
+            }
+        }
+
+        // 4. Kiểm tra CMND (nếu có cập nhật)
+        if (isset($data['cmnd']) && !empty($data['cmnd'])) {
+            if (!preg_match('/^\d{9,12}$/', $data['cmnd'])) {
+                $errors[] = "CMND phải có 9-12 chữ số";
+            } elseif ($this->kiemTraCMNDTrung($data['cmnd'], $maTaiKhoanHienTai)) {
+                $errors[] = "CMND đã tồn tại trong hệ thống";
+            }
+        }
+
+        // 5. Kiểm tra lương
+        if (isset($data['LuongCoBan'])) {
+            if (empty($data['LuongCoBan']) || $data['LuongCoBan'] <= 0) {
+                $errors[] = "Lương cơ bản phải lớn hơn 0";
+            }
+        }
+
+        return $errors;
     }
 }

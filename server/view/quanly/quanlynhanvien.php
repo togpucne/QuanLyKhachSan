@@ -1010,6 +1010,227 @@ include_once '../layouts/header.php';
       return true;
     });
   });
+  // Thêm vào phần <script> trong file quanlynhanvien.php
+
+  // Kiểm tra real-time cho form thêm
+  document.addEventListener('DOMContentLoaded', function() {
+    // Form thêm nhân viên
+    const formThem = document.getElementById('formThemNhanVien');
+    if (formThem) {
+      // Kiểm tra lương real-time
+      const luongInput = formThem.querySelector('input[name="luong_co_ban"]');
+      if (luongInput) {
+        luongInput.addEventListener('blur', function() {
+          if (this.value <= 0) {
+            alert('❌ Lương cơ bản phải lớn hơn 0!');
+            this.value = '';
+            this.focus();
+          }
+        });
+      }
+
+      // Kiểm tra SDT format
+      const sdtInput = formThem.querySelector('input[name="sdt"]');
+      if (sdtInput) {
+        sdtInput.addEventListener('blur', function() {
+          const sdt = this.value.trim();
+          if (sdt && !/^[0-9]{10,11}$/.test(sdt)) {
+            alert('❌ Số điện thoại phải có 10-11 chữ số!');
+            this.value = '';
+            this.focus();
+          }
+        });
+      }
+
+      // Kiểm tra email @gmail.com
+      const emailInput = formThem.querySelector('input[name="email"]');
+      if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+          const email = this.value.trim();
+          if (email && !email.endsWith('@gmail.com')) {
+            alert('❌ Email phải có định dạng @gmail.com!');
+            this.value = '';
+            this.focus();
+          }
+        });
+      }
+
+      // Kiểm tra CMND format
+      const cmndInput = formThem.querySelector('input[name="cmnd"]');
+      if (cmndInput) {
+        cmndInput.addEventListener('blur', function() {
+          const cmnd = this.value.trim();
+          if (cmnd && !/^\d{9,12}$/.test(cmnd)) {
+            alert('❌ CMND phải có 9-12 chữ số!');
+            this.value = '';
+            this.focus();
+          }
+        });
+      }
+    }
+
+    // Validate trước khi submit form thêm
+    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
+      // Kiểm tra các trường bắt buộc
+      const requiredFields = this.querySelectorAll('[required]');
+      for (let field of requiredFields) {
+        if (!field.value.trim()) {
+          alert(`❌ Vui lòng nhập ${field.previousElementSibling?.textContent || 'thông tin này'}!`);
+          field.focus();
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      // Kiểm tra lương
+      const luong = this.querySelector('input[name="luong_co_ban"]').value;
+      if (luong <= 0) {
+        alert('❌ Lương cơ bản phải lớn hơn 0!');
+        e.preventDefault();
+        return false;
+      }
+
+      // Kiểm tra SDT
+      const sdt = this.querySelector('input[name="sdt"]').value;
+      if (!/^[0-9]{10,11}$/.test(sdt)) {
+        alert('❌ Số điện thoại phải có 10-11 chữ số!');
+        e.preventDefault();
+        return false;
+      }
+
+      // Kiểm tra email
+      const email = this.querySelector('input[name="email"]').value;
+      if (!email.endsWith('@gmail.com')) {
+        alert('❌ Email phải có định dạng @gmail.com!');
+        e.preventDefault();
+        return false;
+      }
+
+      // Kiểm tra mật khẩu
+      const matKhau = this.querySelector('input[name="mat_khau"]').value;
+      if (matKhau.length < 6) {
+        alert('❌ Mật khẩu phải có ít nhất 6 ký tự!');
+        e.preventDefault();
+        return false;
+      }
+
+      // Confirm trước khi thêm
+      if (!confirm('Bạn có chắc muốn thêm nhân viên này?')) {
+        e.preventDefault();
+        return false;
+      }
+
+      return true;
+    });
+
+    // Validate trước khi submit form sửa
+    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
+      // Kiểm tra các trường trong form sửa
+      const formContent = document.getElementById('suaFormContent');
+      if (!formContent) return true;
+
+      // Kiểm tra các trường bắt buộc
+      const requiredFields = formContent.querySelectorAll('[required]');
+      for (let field of requiredFields) {
+        if (!field.value.trim()) {
+          alert(`❌ Vui lòng nhập ${field.previousElementSibling?.textContent || 'thông tin này'}!`);
+          field.focus();
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      // Kiểm tra lương
+      const luongInput = formContent.querySelector('input[name="luong_co_ban"]');
+      if (luongInput && luongInput.value <= 0) {
+        alert('❌ Lương cơ bản phải lớn hơn 0!');
+        luongInput.focus();
+        e.preventDefault();
+        return false;
+      }
+
+      // Kiểm tra SDT
+      const sdtInput = formContent.querySelector('input[name="sdt"]');
+      if (sdtInput && !/^[0-9]{10,11}$/.test(sdtInput.value)) {
+        alert('❌ Số điện thoại phải có 10-11 chữ số!');
+        sdtInput.focus();
+        e.preventDefault();
+        return false;
+      }
+
+      // Kiểm tra email nếu có
+      const emailInput = formContent.querySelector('input[name="email"]');
+      if (emailInput && emailInput.value) {
+        if (!emailInput.value.endsWith('@gmail.com')) {
+          alert('❌ Email phải có định dạng @gmail.com!');
+          emailInput.focus();
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      // Kiểm tra CMND nếu có
+      const cmndInput = formContent.querySelector('input[name="cmnd"]');
+      if (cmndInput && cmndInput.value && !/^\d{9,12}$/.test(cmndInput.value)) {
+        alert('❌ CMND phải có 9-12 chữ số!');
+        cmndInput.focus();
+        e.preventDefault();
+        return false;
+      }
+
+      // Confirm trước khi update
+      if (!confirm('Bạn có chắc muốn cập nhật thông tin nhân viên này?')) {
+        e.preventDefault();
+        return false;
+      }
+
+      return true;
+    });
+  });
+
+  // Hàm kiểm tra email trùng (AJAX) - thêm vào phần script
+  async function kiemTraEmailTrung(email, taiKhoanID = '') {
+    try {
+      const formData = new FormData();
+      formData.append('email', email);
+      if (taiKhoanID) {
+        formData.append('tai_khoan_id', taiKhoanID);
+      }
+
+      const response = await fetch('check_email.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      return result.exists;
+    } catch (error) {
+      console.error('Lỗi kiểm tra email:', error);
+      return false;
+    }
+  }
+
+  // Hàm kiểm tra SDT trùng (AJAX)
+  async function kiemTraSDTTrung(sdt, maNhanVien = '') {
+    try {
+      const formData = new FormData();
+      formData.append('sdt', sdt);
+      if (maNhanVien) {
+        formData.append('ma_nhan_vien', maNhanVien);
+      }
+
+      const response = await fetch('check_sdt.php', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      return result.exists;
+    } catch (error) {
+      console.error('Lỗi kiểm tra SDT:', error);
+      return false;
+    }
+  }
 </script>
 
 <?php include_once '../layouts/footer.php'; ?>

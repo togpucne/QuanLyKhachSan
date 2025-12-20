@@ -378,9 +378,12 @@ include_once '../layouts/header.php';
                 <option value="Quản Lý">Quản Lý</option>
               </select>
             </div>
+            <!-- Thay thế dòng input lương này -->
             <div class="col-md-6 mb-3">
               <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="luong_co_ban" required min="0" step="100000" placeholder="Nhập lương cơ bản">
+              <!-- SỬA: XÓA step="100000" -->
+              <input type="number" class="form-control" name="luong_co_ban" required min="1"
+                placeholder="Nhập lương cơ bản">
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
@@ -450,6 +453,14 @@ include_once '../layouts/header.php';
 </div>
 
 <script>
+  // ============================================
+  // BIẾN TOÀN CỤC
+  // ============================================
+  let isSubmitting = false; // Tránh submit nhiều lần
+
+  // ============================================
+  // MODAL CHI TIẾT NHÂN VIÊN (giữ nguyên)
+  // ============================================
   function showChiTietModal(maNhanVien) {
     fetch(`quanlynhanvien.php?action=get_nhan_vien_info&ma_nhan_vien=${maNhanVien}`)
       .then(response => response.json())
@@ -460,19 +471,6 @@ include_once '../layouts/header.php';
         }
 
         const nv = data.data;
-        const ngayVaoLam = nv.NgayVaoLam ? new Date(nv.NgayVaoLam).toLocaleDateString('vi-VN') : '--';
-        const ngayNghiViec = nv.NgayNghiViec ? new Date(nv.NgayNghiViec).toLocaleDateString('vi-VN') : '--';
-        const luongFormatted = new Intl.NumberFormat('vi-VN').format(nv.LuongCoBan) + ' đ';
-
-        let taiKhoanInfo = 'Chưa có tài khoản';
-        if (nv.Email) {
-          taiKhoanInfo = `
-            <div><strong>${nv.Email}</strong></div>
-            <div>Vai trò: ${nv.VaiTro}</div>
-            <div>Trạng thái: ${nv.TrangThaiTK == '1' ? 'Đang hoạt động' : 'Không hoạt động'}</div>
-          `;
-        }
-
         const html = `
           <div class="row">
             <div class="col-md-4">
@@ -503,16 +501,20 @@ include_once '../layouts/header.php';
               <div class="row mb-3">
                 <div class="col-md-6">
                   <div class="fw-bold">Lương cơ bản</div>
-                  <div>${luongFormatted}</div>
+                  <div>${new Intl.NumberFormat('vi-VN').format(nv.LuongCoBan)} đ</div>
                 </div>
                 <div class="col-md-6">
                   <div class="fw-bold">Ngày vào làm</div>
-                  <div>${ngayVaoLam}</div>
+                  <div>${nv.NgayVaoLam ? new Date(nv.NgayVaoLam).toLocaleDateString('vi-VN') : '--'}</div>
                 </div>
               </div>
               <div class="mb-3">
                 <div class="fw-bold">Tài khoản hệ thống</div>
-                ${taiKhoanInfo}
+                ${nv.Email ? `
+                  <div><strong>${nv.Email}</strong></div>
+                  <div>Vai trò: ${nv.VaiTro}</div>
+                  <div>Trạng thái: ${nv.TrangThaiTK == '1' ? 'Đang hoạt động' : 'Không hoạt động'}</div>
+                ` : 'Chưa có tài khoản'}
               </div>
               <div class="mb-3">
                 <div class="fw-bold">Địa chỉ</div>
@@ -531,6 +533,9 @@ include_once '../layouts/header.php';
       });
   }
 
+  // ============================================
+  // MODAL SỬA NHÂN VIÊN - ĐƠN GIẢN HÓA
+  // ============================================
   async function showSuaNhanVienModal(maNhanVien) {
     try {
       document.getElementById('sua_ma_nhan_vien').value = maNhanVien;
@@ -545,13 +550,14 @@ include_once '../layouts/header.php';
 
       const nv = dataNV.data;
 
-      // Trong hàm showSuaNhanVienModal, sửa phần form HTML:
-
       const formHTML = `
 <div class="row">
     <div class="col-md-6 mb-3">
         <label class="form-label">Họ Tên <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" name="ho_ten" required value="${nv.HoTen || ''}">
+        <input type="text" class="form-control" name="ho_ten" required 
+               value="${nv.HoTen || ''}" 
+               placeholder="Ví dụ: Nguyễn Văn A">
+        <small class="text-muted">Chỉ nhập chữ cái, không nhập số hay ký tự đặc biệt</small>
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Số Điện Thoại <span class="text-danger">*</span></label>
@@ -583,7 +589,8 @@ include_once '../layouts/header.php';
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Lương Cơ Bản <span class="text-danger">*</span></label>
-        <input type="number" class="form-control" name="luong_co_ban" required min="0" step="100000" value="${nv.LuongCoBan || 0}">
+        <input type="number" class="form-control" name="luong_co_ban" required  min="1" value="${nv.LuongCoBan || 0}" oninput="formatCurrencyInput(this)">
+        <small class="text-muted">Nhập số nguyên (VD: 9200000)</small>
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Trạng Thái <span class="text-danger">*</span></label>
@@ -604,7 +611,6 @@ include_once '../layouts/header.php';
                            value="${nv.Email || ''}" required
                            placeholder="example@gmail.com">
                     <small class="text-muted">Phải có định dạng @gmail.com</small>
-                    <div id="email-error" class="invalid-feedback" style="display: none;"></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">CMND/CCCD <span class="text-danger">*</span></label>
@@ -641,17 +647,81 @@ include_once '../layouts/header.php';
 
       document.getElementById('suaFormContent').innerHTML = formHTML;
 
-      setTimeout(() => {
-        const resetCheckbox = document.querySelector('input[name="reset_mat_khau"]');
-        const passwordField = document.getElementById('passwordField');
+      // Xử lý checkbox reset mật khẩu
+      const resetCheckbox = document.querySelector('#suaFormContent input[name="reset_mat_khau"]');
+      const passwordField = document.getElementById('passwordField');
 
-        if (resetCheckbox && passwordField) {
-          resetCheckbox.addEventListener('change', function() {
-            passwordField.style.display = this.checked ? 'block' : 'none';
+      if (resetCheckbox && passwordField) {
+        resetCheckbox.addEventListener('change', function() {
+          passwordField.style.display = this.checked ? 'block' : 'none';
+        });
+      }
+
+      // THÊM REAL-TIME VALIDATION CHO MODAL SỬA
+      setTimeout(() => {
+        // Lương
+        const luongInput = document.querySelector('#suaFormContent input[name="luong_co_ban"]');
+        if (luongInput) {
+          luongInput.removeAttribute('step');
+
+          luongInput.addEventListener('input', function() {
+            let value = this.value.replace(/[^\d]/g, '');
+            value = parseInt(value) || 0;
+            this.value = value;
+          });
+
+          luongInput.addEventListener('blur', function() {
+            const luong = parseInt(this.value) || 0;
+            if (luong <= 0) {
+              this.value = '';
+              setTimeout(() => {
+                alert('❌ Lương cơ bản phải lớn hơn 0!');
+                this.focus();
+              }, 10);
+            }
+          });
+        }
+
+        // Họ tên
+        const hoTenInput = document.querySelector('#suaFormContent input[name="ho_ten"]');
+        if (hoTenInput) {
+          hoTenInput.addEventListener('blur', function() {
+            const name = this.value.trim();
+
+            // Kiểm tra số
+            if (/\d/.test(name)) {
+              this.value = '';
+              setTimeout(() => {
+                alert('❌ Họ tên không được chứa số!');
+                this.focus();
+              }, 10);
+              return;
+            }
+
+            // Kiểm tra ký tự đặc biệt
+            if (/[!@#$%^&*()_+=\[\]{};:"\\|<>\/?~`]/.test(name)) {
+              this.value = '';
+              setTimeout(() => {
+                alert('❌ Họ tên không được chứa ký tự đặc biệt!');
+                this.focus();
+              }, 10);
+              return;
+            }
+
+            // Kiểm tra độ dài
+            if (name.length > 0 && name.length < 2) {
+              this.value = '';
+              setTimeout(() => {
+                alert('❌ Họ tên phải có ít nhất 2 ký tự!');
+                this.focus();
+              }, 10);
+              return;
+            }
           });
         }
       }, 100);
 
+      // Hiển thị modal
       new bootstrap.Modal(document.getElementById('suaNhanVienModal')).show();
 
     } catch (error) {
@@ -659,27 +729,205 @@ include_once '../layouts/header.php';
       alert('Lỗi khi tải dữ liệu!');
     }
   }
+  // ============================================
+  // VALIDATE ĐƠN GIẢN - CHỈ CẦN BẤM 1 LẦN
+  // ============================================
 
-  // Validate form
-  document.getElementById('formThemNhanVien').addEventListener('submit', function(e) {
-    const luong = document.querySelector('input[name="luong_co_ban"]').value;
-    if (luong < 0) {
-      alert('Lương cơ bản không được âm!');
-      e.preventDefault();
+  function validateForm(formId, isUpdate = false) {
+    if (isSubmitting) {
+      console.log('Đang submit, bỏ qua...');
       return false;
     }
-    return true;
-  });
 
-  document.getElementById('formSuaNhanVien').addEventListener('submit', function(e) {
-    const luong = document.querySelector('#suaFormContent input[name="luong_co_ban"]').value;
-    if (luong < 0) {
-      alert('Lương cơ bản không được âm!');
-      e.preventDefault();
+    isSubmitting = true;
+    console.log('Bắt đầu validate form...');
+
+    try {
+      let form;
+      if (isUpdate) {
+        form = document.querySelector('#suaFormContent');
+        if (!form) {
+          console.log('Không tìm thấy form sửa');
+          isSubmitting = false;
+          return false;
+        }
+      } else {
+        form = document.getElementById(formId);
+      }
+
+      // 1. Kiểm tra Họ tên bằng hàm chung
+      const hoTenInput = form.querySelector('input[name="ho_ten"]');
+      if (hoTenInput) {
+        const validation = validateHoTen(hoTenInput);
+        if (!validation.valid) {
+          alert(validation.message);
+          hoTenInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 2. Kiểm tra lương
+      const luongInput = form.querySelector('input[name="luong_co_ban"]');
+      if (luongInput) {
+        const luong = parseInt(luongInput.value) || 0;
+        if (luong <= 0) {
+          alert('❌ Lương cơ bản phải lớn hơn 0!');
+          luongInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 3. Kiểm tra SDT
+      const sdtInput = form.querySelector('input[name="sdt"]');
+      if (sdtInput) {
+        const sdt = sdtInput.value.trim();
+        if (!sdt) {
+          alert('❌ Số điện thoại không được để trống!');
+          sdtInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+
+        if (!/^[0-9]{10,11}$/.test(sdt)) {
+          alert('❌ Số điện thoại phải có 10-11 chữ số!');
+          sdtInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 4. Kiểm tra email @gmail.com
+      const emailInput = form.querySelector('input[name="email"]');
+      if (emailInput) {
+        const email = emailInput.value.trim();
+        if (!email) {
+          alert('❌ Email không được để trống!');
+          emailInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+
+        if (!email.endsWith('@gmail.com')) {
+          alert('❌ Email phải có định dạng @gmail.com!');
+          emailInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 5. Kiểm tra CMND (9-12 số)
+      const cmndInput = form.querySelector('input[name="cmnd"]');
+      if (cmndInput) {
+        const cmnd = cmndInput.value.trim();
+        if (!cmnd) {
+          alert('❌ CMND/CCCD không được để trống!');
+          cmndInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+
+        if (!/^\d{9,12}$/.test(cmnd)) {
+          alert('❌ CMND/CCCD phải có 9-12 chữ số!');
+          cmndInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 6. Kiểm tra mật khẩu (chỉ form thêm)
+      if (!isUpdate) {
+        const matKhauInput = form.querySelector('input[name="mat_khau"]');
+        if (matKhauInput) {
+          const matKhau = matKhauInput.value;
+          if (matKhau.length < 6) {
+            alert('❌ Mật khẩu phải có ít nhất 6 ký tự!');
+            matKhauInput.focus();
+            isSubmitting = false;
+            return false;
+          }
+        }
+      }
+
+      // 7. Kiểm tra ngày nghỉ hợp lệ
+      const ngayVaoLamInput = form.querySelector('input[name="ngay_vao_lam"]');
+      const ngayNghiViecInput = form.querySelector('input[name="ngay_nghi_viec"]');
+
+      if (ngayVaoLamInput && ngayNghiViecInput && ngayNghiViecInput.value) {
+        const ngayVL = new Date(ngayVaoLamInput.value);
+        const ngayNV = new Date(ngayNghiViecInput.value);
+
+        if (ngayNV < ngayVL) {
+          alert('❌ Ngày nghỉ việc phải sau ngày vào làm!');
+          ngayNghiViecInput.focus();
+          isSubmitting = false;
+          return false;
+        }
+      }
+
+      // 8. Confirm - CHỈ 1 LẦN DUY NHẤT
+      const message = isUpdate ?
+        'Bạn có chắc muốn cập nhật thông tin nhân viên này?' :
+        'Bạn có chắc muốn thêm nhân viên này?';
+
+      if (!confirm(message)) {
+        console.log('Người dùng hủy confirm');
+        isSubmitting = false;
+        return false;
+      }
+
+      console.log('Validation thành công, cho phép submit');
+      return true;
+
+    } catch (error) {
+      console.error('Lỗi validate:', error);
+      isSubmitting = false;
       return false;
     }
+  }
+  // ============================================
+  // HÀM XỬ LÝ NHẬP LIỆU LƯƠNG
+  // ============================================
+
+  // Định dạng số khi nhập
+  function formatCurrencyInput(input) {
+    // Lấy giá trị và loại bỏ ký tự không phải số
+    let value = input.value.replace(/[^\d]/g, '');
+
+    // Chuyển thành số nguyên
+    value = parseInt(value) || 0;
+
+    // Giữ nguyên giá trị (không làm tròn theo step)
+    input.value = value;
+
+    // Format hiển thị nhưng giữ giá trị thực
+    const formatted = new Intl.NumberFormat('vi-VN').format(value);
+    input.setAttribute('data-formatted', formatted);
+  }
+
+  // Validate lương khi submit
+  function validateLuong(input) {
+    const value = parseInt(input.value) || 0;
+
+    if (value <= 0) {
+      alert('❌ Lương cơ bản phải lớn hơn 0!');
+      input.focus();
+      return false;
+    }
+
+    // Kiểm tra xem có phải là số nguyên không
+    if (!Number.isInteger(value)) {
+      alert('❌ Lương phải là số nguyên!');
+      input.focus();
+      return false;
+    }
+
     return true;
-  });
+  }
+  // ============================================
+  // REAL-TIME VALIDATION CHO HỌ TÊN
+  // ============================================
 
   document.addEventListener('DOMContentLoaded', function() {
     // Format số tiền trong bảng
@@ -692,545 +940,222 @@ include_once '../layouts/header.php';
         }
       }
     });
-  });
-  // Trong hàm showSuaNhanVienModal, thêm phần xử lý khi chọn trạng thái
-  function handleTrangThaiChange() {
-    const trangThaiSelect = document.querySelector('#suaFormContent select[name="trang_thai"]');
-    if (trangThaiSelect) {
-      trangThaiSelect.addEventListener('change', function() {
-        if (this.value === 'Đã nghỉ') {
-          // Hiển thị cảnh báo
-          const warningDiv = document.createElement('div');
-          warningDiv.className = 'alert alert-warning mt-2';
-          warningDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lưu ý: Khi chọn trạng thái "Đã nghỉ", tài khoản sẽ tự động bị khóa (không hoạt động)';
 
-          // Kiểm tra xem đã có cảnh báo chưa
-          if (!document.querySelector('#trangThaiWarning')) {
-            warningDiv.id = 'trangThaiWarning';
-            this.parentNode.appendChild(warningDiv);
-          }
-        } else {
-          // Xóa cảnh báo nếu có
-          const warningDiv = document.querySelector('#trangThaiWarning');
-          if (warningDiv) {
-            warningDiv.remove();
-          }
-        }
-      });
-
-      // Kích hoạt sự kiện khi load modal
-      trangThaiSelect.dispatchEvent(new Event('change'));
-    }
-  }
-
-  // Trong hàm showSuaNhanVienModal, sau khi load form xong, gọi hàm xử lý
-  // Thêm dòng này sau phần document.getElementById('suaFormContent').innerHTML = formHTML;
-  setTimeout(() => {
-    handleTrangThaiChange();
-  }, 100);
-  // Kiểm tra ngày nghỉ hợp lệ
-  function kiemTraNgayNghi() {
-    const ngayVaoLam = document.querySelector('input[name="ngay_vao_lam"]').value;
-    const ngayNghiViec = document.querySelector('input[name="ngay_nghi_viec"]').value;
-
-    if (ngayNghiViec && ngayVaoLam) {
-      const ngayVL = new Date(ngayVaoLam);
-      const ngayNV = new Date(ngayNghiViec);
-
-      if (ngayNV < ngayVL) {
-        alert('❌ Ngày nghỉ việc phải sau ngày vào làm!');
-        document.querySelector('input[name="ngay_nghi_viec"]').value = '';
-        return false;
-      }
-
-      // Kiểm tra nếu đã qua ngày nghỉ
-      const today = new Date();
-      if (ngayNV <= today) {
-        const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã qua hoặc là hôm nay.\nBạn có muốn tự động cập nhật trạng thái thành "Đã nghỉ" không?');
-        if (confirmUpdate) {
-          document.querySelector('select[name="trang_thai"]').value = 'Đã nghỉ';
-        }
-      }
-    }
-    return true;
-  }
-
-  // Gắn sự kiện cho form
-  document.addEventListener('DOMContentLoaded', function() {
-    // Form thêm nhân viên
+    // Real-time validation cho họ tên (form thêm) - FIXED
     const formThem = document.getElementById('formThemNhanVien');
     if (formThem) {
-      const ngayNghiInput = formThem.querySelector('input[name="ngay_nghi_viec"]');
-      if (ngayNghiInput) {
-        ngayNghiInput.addEventListener('change', kiemTraNgayNghi);
+      const hoTenInput = formThem.querySelector('input[name="ho_ten"]');
+      if (hoTenInput) {
+        // Xóa event listener cũ nếu có
+        const newHoTenInput = hoTenInput.cloneNode(true);
+        hoTenInput.parentNode.replaceChild(newHoTenInput, hoTenInput);
+
+        // Thêm event listener mới với xử lý đúng
+        newHoTenInput.addEventListener('blur', function(e) {
+          const name = this.value.trim();
+
+          // Kiểm tra số
+          if (/\d/.test(name)) {
+            // FIX: Xóa giá trị và focus
+            this.value = '';
+            // Delay một chút để alert không block focus
+            setTimeout(() => {
+              alert('❌ Họ tên không được chứa số!');
+              this.focus();
+            }, 10);
+            return;
+          }
+
+          // Kiểm tra ký tự đặc biệt (cho phép dấu câu tiếng Việt cơ bản)
+          // Cho phép: dấu cách, dấu phẩy, dấu chấm, dấu gạch ngang, dấu nháy đơn
+          if (/[!@#$%^&*()_+=\[\]{};:"\\|<>\/?~`]/.test(name)) {
+            this.value = '';
+            setTimeout(() => {
+              alert('❌ Họ tên không được chứa ký tự đặc biệt (chỉ cho phép chữ cái, dấu cách, dấu phẩy, dấu chấm)!');
+              this.focus();
+            }, 10);
+            return;
+          }
+
+          // Kiểm tra độ dài
+          if (name.length > 0 && name.length < 2) {
+            this.value = '';
+            setTimeout(() => {
+              alert('❌ Họ tên phải có ít nhất 2 ký tự!');
+              this.focus();
+            }, 10);
+            return;
+          }
+        });
+      }
+
+      // Real-time validation cho lương
+      const luongInput = formThem.querySelector('input[name="luong_co_ban"]');
+      if (luongInput) {
+        // Xóa step attribute để không bị làm tròn
+        luongInput.removeAttribute('step');
+
+        // Clone để tránh event listener trùng
+        const newLuongInput = luongInput.cloneNode(true);
+        luongInput.parentNode.replaceChild(newLuongInput, luongInput);
+
+        newLuongInput.addEventListener('blur', function() {
+          const luong = parseInt(this.value) || 0;
+          if (luong <= 0) {
+            this.value = '';
+            setTimeout(() => {
+              alert('❌ Lương cơ bản phải lớn hơn 0!');
+              this.focus();
+            }, 10);
+          }
+        });
+
+        // Format khi nhập
+        newLuongInput.addEventListener('input', function() {
+          let value = this.value.replace(/[^\d]/g, '');
+          value = parseInt(value) || 0;
+          this.value = value;
+        });
       }
     }
 
-    // Form sửa nhân viên (xử lý động)
-    document.addEventListener('change', function(e) {
-      if (e.target.name === 'ngay_nghi_viec' && e.target.closest('#suaFormContent')) {
-        kiemTraNgayNghi();
+    // Reset biến submitting khi modal đóng
+    const modals = ['themNhanVienModal', 'suaNhanVienModal'];
+    modals.forEach(modalId => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.addEventListener('hidden.bs.modal', function() {
+          isSubmitting = false;
+        });
       }
-    });
-
-    // Form submit validation
-    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
-      if (!kiemTraNgayNghi()) {
-        e.preventDefault();
-        return false;
-      }
-      return true;
-    });
-
-    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
-      const ngayNghiInput = document.querySelector('#suaFormContent input[name="ngay_nghi_viec"]');
-      if (ngayNghiInput && !kiemTraNgayNghi()) {
-        e.preventDefault();
-        return false;
-      }
-      return true;
     });
   });
-  // Kiểm tra ngày nghỉ hợp lệ và thông báo
-  function kiemTraNgayNghiVaThongBao() {
-    const ngayVaoLam = document.querySelector('input[name="ngay_vao_lam"]').value;
-    const ngayNghiViecInput = document.querySelector('input[name="ngay_nghi_viec"]');
-    const trangThaiSelect = document.querySelector('select[name="trang_thai"]');
+  // ============================================
+  // HÀM VALIDATE HỌ TÊN CHUNG (Dùng chung cho cả form)
+  // ============================================
 
-    if (!ngayNghiViecInput || !ngayVaoLam) return true;
+  function validateHoTen(inputElement) {
+    const name = inputElement.value.trim();
 
-    const ngayNghiViec = ngayNghiViecInput.value;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Kiểm tra trống
+    if (!name) {
+      return {
+        valid: false,
+        message: "Họ tên không được để trống!"
+      };
+    }
 
-    if (ngayNghiViec) {
-      const ngayVL = new Date(ngayVaoLam);
-      const ngayNV = new Date(ngayNghiViec);
+    // Kiểm tra số
+    if (/\d/.test(name)) {
+      return {
+        valid: false,
+        message: "Họ tên không được chứa số!"
+      };
+    }
+
+    // Kiểm tra ký tự đặc biệt (cho phép một số dấu câu cơ bản)
+    // Cho phép: khoảng trắng, dấu phẩy, dấu chấm, dấu gạch ngang, dấu nháy đơn
+    if (/[!@#$%^&*()_+=\[\]{};:"\\|<>\/?~`]/.test(name)) {
+      return {
+        valid: false,
+        message: "Họ tên không được chứa ký tự đặc biệt!"
+      };
+    }
+
+    // Kiểm tra độ dài
+    if (name.length < 2) {
+      return {
+        valid: false,
+        message: "Họ tên phải có ít nhất 2 ký tự!"
+      };
+    }
+
+    return {
+      valid: true,
+      message: ""
+    };
+  }
+
+
+  // ============================================
+  // XỬ LÝ FORM SUBMIT - ĐƠN GIẢN
+  // ============================================
+
+  // Form thêm nhân viên
+  document.getElementById('formThemNhanVien').addEventListener('submit', function(e) {
+    if (!validateForm('formThemNhanVien', false)) {
+      e.preventDefault();
+    }
+  });
+
+  // Form sửa nhân viên
+  document.getElementById('formSuaNhanVien').addEventListener('submit', function(e) {
+    if (!validateForm('formSuaNhanVien', true)) {
+      e.preventDefault();
+    }
+  });
+
+  // ============================================
+  // XỬ LÝ NGÀY NGHỈ - ĐƠN GIẢN
+  // ============================================
+
+  // Kiểm tra ngày nghỉ khi thay đổi
+  document.addEventListener('change', function(e) {
+    if (e.target.name === 'ngay_nghi_viec') {
+      const ngayVaoLam = document.querySelector('input[name="ngay_vao_lam"]');
+      const trangThaiSelect = document.querySelector('select[name="trang_thai"]');
+
+      if (!ngayVaoLam || !ngayVaoLam.value || !e.target.value) return;
+
+      const ngayVL = new Date(ngayVaoLam.value);
+      const ngayNV = new Date(e.target.value);
 
       // Kiểm tra hợp lệ
       if (ngayNV < ngayVL) {
         alert('❌ Ngày nghỉ việc phải sau ngày vào làm!');
-        ngayNghiViecInput.value = '';
-        return false;
+        e.target.value = '';
+        return;
       }
 
-      // Kiểm tra các trường hợp
-      if (ngayNV <= today) {
-        // Đã qua hoặc đến ngày nghỉ
-        if (trangThaiSelect && trangThaiSelect.value === 'Đang làm') {
-          const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã qua hoặc là hôm nay.\nBạn có muốn tự động cập nhật trạng thái thành "Đã nghỉ" không?');
-          if (confirmUpdate) {
-            trangThaiSelect.value = 'Đã nghỉ';
-          }
-        }
-      } else {
-        // Ngày nghỉ trong tương lai
-        if (trangThaiSelect && trangThaiSelect.value === 'Đã nghỉ') {
-          const confirmUpdate = confirm('⚠️ Ngày nghỉ việc là trong tương laí.\nBạn có muốn tự động cập nhật trạng thái thành "Đang làm" không?');
-          if (confirmUpdate) {
-            trangThaiSelect.value = 'Đang làm';
-          }
-        }
-      }
-    } else {
-      // Clear ngày nghỉ
-      if (trangThaiSelect && trangThaiSelect.value === 'Đã nghỉ') {
-        const confirmUpdate = confirm('⚠️ Ngày nghỉ việc đã được xóa.\nBạn có muốn tự động cập nhật trạng thái thành "Đang làm" không?');
-        if (confirmUpdate) {
-          trangThaiSelect.value = 'Đang làm';
+      // Tự động đề xuất đổi trạng thái nếu cần
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (ngayNV <= today && trangThaiSelect && trangThaiSelect.value === 'Đang làm') {
+        if (confirm('⚠️ Ngày nghỉ việc đã qua hoặc là hôm nay.\nBạn có muốn tự động cập nhật trạng thái thành "Đã nghỉ" không?')) {
+          trangThaiSelect.value = 'Đã nghỉ';
         }
       }
     }
-    return true;
-  }
-
-  // Gắn sự kiện cho form
-  document.addEventListener('DOMContentLoaded', function() {
-    // Form thêm nhân viên
-    const formThem = document.getElementById('formThemNhanVien');
-    if (formThem) {
-      const ngayNghiInput = formThem.querySelector('input[name="ngay_nghi_viec"]');
-      const trangThaiSelect = formThem.querySelector('select[name="trang_thai"]');
-
-      if (ngayNghiInput) {
-        ngayNghiInput.addEventListener('change', kiemTraNgayNghiVaThongBao);
-      }
-      if (trangThaiSelect) {
-        trangThaiSelect.addEventListener('change', function() {
-          // Nếu chuyển từ "Đã nghỉ" sang "Đang làm", kiểm tra ngày nghỉ
-          if (this.value === 'Đang làm') {
-            kiemTraNgayNghiVaThongBao();
-          }
-        });
-      }
-    }
-
-    // Form sửa nhân viên (xử lý động)
-    document.addEventListener('change', function(e) {
-      if ((e.target.name === 'ngay_nghi_viec' || e.target.name === 'trang_thai') &&
-        e.target.closest('#suaFormContent')) {
-        kiemTraNgayNghiVaThongBao();
-      }
-    });
-    // Validate email khi submit form
-    document.getElementById('formSuaNhanVien').addEventListener('submit', function(e) {
-      const emailInput = document.querySelector('#suaFormContent input[name="email"]');
-      const cmndInput = document.querySelector('#suaFormContent input[name="cmnd"]');
-
-      if (emailInput) {
-        const email = emailInput.value.trim();
-
-        // Kiểm tra email không trống
-        if (!email) {
-          alert('Vui lòng nhập email!');
-          e.preventDefault();
-          return false;
-        }
-
-        // Kiểm tra định dạng email
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          alert('Email không hợp lệ!');
-          e.preventDefault();
-          return false;
-        }
-
-        // Kiểm tra phải là @gmail.com
-        if (!email.endsWith('@gmail.com')) {
-          alert('Email phải có định dạng @gmail.com!');
-          e.preventDefault();
-          return false;
-        }
-      }
-
-      if (cmndInput && cmndInput.value) {
-        const cmnd = cmndInput.value.trim();
-        if (!/^\d{9,12}$/.test(cmnd)) {
-          alert('CMND phải có 9-12 chữ số!');
-          e.preventDefault();
-          return false;
-        }
-      }
-
-      // Kiểm tra các validation khác
-      const luong = document.querySelector('#suaFormContent input[name="luong_co_ban"]').value;
-      if (luong < 0) {
-        alert('Lương cơ bản không được âm!');
-        e.preventDefault();
-        return false;
-      }
-
-      // Confirm trước khi update
-      if (!confirm('Bạn có chắc muốn cập nhật thông tin nhân viên này?')) {
-        e.preventDefault();
-        return false;
-      }
-
-      return true;
-    });
-
-    // Kiểm tra email real-time (tùy chọn)
-    function setupEmailValidation() {
-      const emailInput = document.querySelector('#suaFormContent input[name="email"]');
-      if (!emailInput) return;
-
-      emailInput.addEventListener('blur', function() {
-        const email = this.value.trim();
-        const emailInput = this;
-        const taiKhoanID = <?php echo $nhanVien['MaTaiKhoan'] ?? 0; ?>;
-
-        if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          // Kiểm tra định dạng @gmail.com
-          if (!email.endsWith('@gmail.com')) {
-            showEmailError(emailInput, 'Email phải có định dạng @gmail.com');
-            return;
-          }
-
-          // Gửi AJAX để kiểm tra email trùng
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', 'check_email_nhanvien.php', true);
-          xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-          xhr.onload = function() {
-            if (xhr.status === 200) {
-              const response = JSON.parse(xhr.responseText);
-              if (response.exists) {
-                showEmailError(emailInput, 'Email đã tồn tại trong hệ thống!');
-              } else {
-                showEmailSuccess(emailInput);
-              }
-            }
-          };
-
-          xhr.send(`email=${encodeURIComponent(email)}&id=${taiKhoanID}`);
-        } else if (email) {
-          showEmailError(emailInput, 'Email không hợp lệ!');
-        }
-      });
-    }
-
-    function showEmailError(input, message) {
-      input.classList.remove('is-valid');
-      input.classList.add('is-invalid');
-      const errorDiv = input.parentNode.querySelector('#email-error');
-      if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-      }
-    }
-
-    function showEmailSuccess(input) {
-      input.classList.remove('is-invalid');
-      input.classList.add('is-valid');
-      const errorDiv = input.parentNode.querySelector('#email-error');
-      if (errorDiv) {
-        errorDiv.style.display = 'none';
-      }
-    }
-
-    // Gọi setupEmailValidation khi modal hiển thị
-    document.getElementById('suaNhanVienModal').addEventListener('shown.bs.modal', function() {
-      setTimeout(setupEmailValidation, 500);
-    });
-
-    // Form submit validation
-    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
-      if (!kiemTraNgayNghiVaThongBao()) {
-        e.preventDefault();
-        return false;
-      }
-      return true;
-    });
-
-    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
-      const ngayNghiInput = document.querySelector('#suaFormContent input[name="ngay_nghi_viec"]');
-      if (ngayNghiInput && !kiemTraNgayNghiVaThongBao()) {
-        e.preventDefault();
-        return false;
-      }
-      return true;
-    });
-  });
-  // Thêm vào phần <script> trong file quanlynhanvien.php
-
-  // Kiểm tra real-time cho form thêm
-  document.addEventListener('DOMContentLoaded', function() {
-    // Form thêm nhân viên
-    const formThem = document.getElementById('formThemNhanVien');
-    if (formThem) {
-      // Kiểm tra lương real-time
-      const luongInput = formThem.querySelector('input[name="luong_co_ban"]');
-      if (luongInput) {
-        luongInput.addEventListener('blur', function() {
-          if (this.value <= 0) {
-            alert('❌ Lương cơ bản phải lớn hơn 0!');
-            this.value = '';
-            this.focus();
-          }
-        });
-      }
-
-      // Kiểm tra SDT format
-      const sdtInput = formThem.querySelector('input[name="sdt"]');
-      if (sdtInput) {
-        sdtInput.addEventListener('blur', function() {
-          const sdt = this.value.trim();
-          if (sdt && !/^[0-9]{10,11}$/.test(sdt)) {
-            alert('❌ Số điện thoại phải có 10-11 chữ số!');
-            this.value = '';
-            this.focus();
-          }
-        });
-      }
-
-      // Kiểm tra email @gmail.com
-      const emailInput = formThem.querySelector('input[name="email"]');
-      if (emailInput) {
-        emailInput.addEventListener('blur', function() {
-          const email = this.value.trim();
-          if (email && !email.endsWith('@gmail.com')) {
-            alert('❌ Email phải có định dạng @gmail.com!');
-            this.value = '';
-            this.focus();
-          }
-        });
-      }
-
-      // Kiểm tra CMND format
-      const cmndInput = formThem.querySelector('input[name="cmnd"]');
-      if (cmndInput) {
-        cmndInput.addEventListener('blur', function() {
-          const cmnd = this.value.trim();
-          if (cmnd && !/^\d{9,12}$/.test(cmnd)) {
-            alert('❌ CMND phải có 9-12 chữ số!');
-            this.value = '';
-            this.focus();
-          }
-        });
-      }
-    }
-
-    // Validate trước khi submit form thêm
-    document.getElementById('formThemNhanVien')?.addEventListener('submit', function(e) {
-      // Kiểm tra các trường bắt buộc
-      const requiredFields = this.querySelectorAll('[required]');
-      for (let field of requiredFields) {
-        if (!field.value.trim()) {
-          alert(`❌ Vui lòng nhập ${field.previousElementSibling?.textContent || 'thông tin này'}!`);
-          field.focus();
-          e.preventDefault();
-          return false;
-        }
-      }
-
-      // Kiểm tra lương
-      const luong = this.querySelector('input[name="luong_co_ban"]').value;
-      if (luong <= 0) {
-        alert('❌ Lương cơ bản phải lớn hơn 0!');
-        e.preventDefault();
-        return false;
-      }
-
-      // Kiểm tra SDT
-      const sdt = this.querySelector('input[name="sdt"]').value;
-      if (!/^[0-9]{10,11}$/.test(sdt)) {
-        alert('❌ Số điện thoại phải có 10-11 chữ số!');
-        e.preventDefault();
-        return false;
-      }
-
-      // Kiểm tra email
-      const email = this.querySelector('input[name="email"]').value;
-      if (!email.endsWith('@gmail.com')) {
-        alert('❌ Email phải có định dạng @gmail.com!');
-        e.preventDefault();
-        return false;
-      }
-
-      // Kiểm tra mật khẩu
-      const matKhau = this.querySelector('input[name="mat_khau"]').value;
-      if (matKhau.length < 6) {
-        alert('❌ Mật khẩu phải có ít nhất 6 ký tự!');
-        e.preventDefault();
-        return false;
-      }
-
-      // Confirm trước khi thêm
-      if (!confirm('Bạn có chắc muốn thêm nhân viên này?')) {
-        e.preventDefault();
-        return false;
-      }
-
-      return true;
-    });
-
-    // Validate trước khi submit form sửa
-    document.getElementById('formSuaNhanVien')?.addEventListener('submit', function(e) {
-      // Kiểm tra các trường trong form sửa
-      const formContent = document.getElementById('suaFormContent');
-      if (!formContent) return true;
-
-      // Kiểm tra các trường bắt buộc
-      const requiredFields = formContent.querySelectorAll('[required]');
-      for (let field of requiredFields) {
-        if (!field.value.trim()) {
-          alert(`❌ Vui lòng nhập ${field.previousElementSibling?.textContent || 'thông tin này'}!`);
-          field.focus();
-          e.preventDefault();
-          return false;
-        }
-      }
-
-      // Kiểm tra lương
-      const luongInput = formContent.querySelector('input[name="luong_co_ban"]');
-      if (luongInput && luongInput.value <= 0) {
-        alert('❌ Lương cơ bản phải lớn hơn 0!');
-        luongInput.focus();
-        e.preventDefault();
-        return false;
-      }
-
-      // Kiểm tra SDT
-      const sdtInput = formContent.querySelector('input[name="sdt"]');
-      if (sdtInput && !/^[0-9]{10,11}$/.test(sdtInput.value)) {
-        alert('❌ Số điện thoại phải có 10-11 chữ số!');
-        sdtInput.focus();
-        e.preventDefault();
-        return false;
-      }
-
-      // Kiểm tra email nếu có
-      const emailInput = formContent.querySelector('input[name="email"]');
-      if (emailInput && emailInput.value) {
-        if (!emailInput.value.endsWith('@gmail.com')) {
-          alert('❌ Email phải có định dạng @gmail.com!');
-          emailInput.focus();
-          e.preventDefault();
-          return false;
-        }
-      }
-
-      // Kiểm tra CMND nếu có
-      const cmndInput = formContent.querySelector('input[name="cmnd"]');
-      if (cmndInput && cmndInput.value && !/^\d{9,12}$/.test(cmndInput.value)) {
-        alert('❌ CMND phải có 9-12 chữ số!');
-        cmndInput.focus();
-        e.preventDefault();
-        return false;
-      }
-
-      // Confirm trước khi update
-      if (!confirm('Bạn có chắc muốn cập nhật thông tin nhân viên này?')) {
-        e.preventDefault();
-        return false;
-      }
-
-      return true;
-    });
   });
 
-  // Hàm kiểm tra email trùng (AJAX) - thêm vào phần script
-  async function kiemTraEmailTrung(email, taiKhoanID = '') {
-    try {
-      const formData = new FormData();
-      formData.append('email', email);
-      if (taiKhoanID) {
-        formData.append('tai_khoan_id', taiKhoanID);
+  // ============================================
+  // INITIALIZATION
+  // ============================================
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Format số tiền trong bảng
+    document.querySelectorAll('td.text-end').forEach(td => {
+      const text = td.textContent.trim();
+      if (text.includes('đ')) {
+        const number = text.replace(/[^\d]/g, '');
+        if (number) {
+          td.textContent = new Intl.NumberFormat('vi-VN').format(number) + ' đ';
+        }
       }
+    });
 
-      const response = await fetch('check_email.php', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-      return result.exists;
-    } catch (error) {
-      console.error('Lỗi kiểm tra email:', error);
-      return false;
-    }
-  }
-
-  // Hàm kiểm tra SDT trùng (AJAX)
-  async function kiemTraSDTTrung(sdt, maNhanVien = '') {
-    try {
-      const formData = new FormData();
-      formData.append('sdt', sdt);
-      if (maNhanVien) {
-        formData.append('ma_nhan_vien', maNhanVien);
+    // Reset biến submitting khi modal đóng
+    const modals = ['themNhanVienModal', 'suaNhanVienModal'];
+    modals.forEach(modalId => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.addEventListener('hidden.bs.modal', function() {
+          isSubmitting = false;
+        });
       }
-
-      const response = await fetch('check_sdt.php', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-      return result.exists;
-    } catch (error) {
-      console.error('Lỗi kiểm tra SDT:', error);
-      return false;
-    }
-  }
+    });
+  });
 </script>
 
 <?php include_once '../layouts/footer.php'; ?>

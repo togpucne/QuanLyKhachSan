@@ -533,6 +533,8 @@ $role = $_SESSION['vaitro'];
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '/ABC-Resort/server/view/quanly/quanlydichvu.php'],
                             ['icon' => 'fas fa-bed', 'text' => 'Quản lý phòng', 'link' => '/ABC-Resort/server/view/quanly/quanlyphong.php'],
                             ['icon' => 'fas fa-receipt', 'text' => 'Quản lý hóa đơn', 'link' => '/ABC-Resort/server/view/quanly/quanlyhoadondatphong.php'],
+                                ['icon' => 'fas fa-receipt', 'text' => 'Quản lý thiết bị', 'link' => '/ABC-Resort/server/view/quanly/quanlythietbi.php'],
+
                         ],
                         'ketoan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/ketoan/index.php'],

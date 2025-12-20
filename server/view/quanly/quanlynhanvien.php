@@ -390,8 +390,8 @@ include_once '../layouts/header.php';
               </select>
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label">CMND/CCCD</label>
-              <input type="text" class="form-control" name="cmnd" placeholder="Nhập số CMND/CCCD">
+              <label class="form-label">CMND/CCCD <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="cmnd" required placeholder="Nhập số CMND/CCCD">
             </div>
           </div>
         </div>

@@ -16,7 +16,27 @@ $danhSachPhong = $model->getDanhSachPhong();
 
 // LẤY DANH SÁCH LOẠI THIẾT BỊ
 $dsLoaiThietBi = $model->getDanhSachLoaiThietBi();
+// XÓA LOẠI THIẾT BỊ TỪ DANH SÁCH CHECKBOX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'xoa_loai_thiet_bi_tu_danh_sach') {
+    $tenThietBi = trim($_POST['ten_thiet_bi_xoa'] ?? '');
 
+    if ($tenThietBi) {
+        $result = $model->xoaLoaiThietBi($tenThietBi);
+
+        if ($result['success']) {
+            $_SESSION['success'] = $result['message'];
+            // Làm mới danh sách thiết bị
+            $dsLoaiThietBi = $model->getDanhSachLoaiThietBi();
+        } else {
+            $_SESSION['error'] = $result['error'];
+        }
+    } else {
+        $_SESSION['error'] = "Tên thiết bị không hợp lệ";
+    }
+
+    header('Location: quanlythietbi.php');
+    exit();
+}
 // THÊM THIẾT BỊ VÀO PHÒNG (CÓ KIỂM TRA TRÙNG)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'them_vao_phong') {
     $maPhong = $_POST['ma_phong'] ?? 0;
@@ -288,7 +308,8 @@ $thongKe = $model->getThongKe();
                         </div>
                     </div>
 
-                    <!-- Danh sách thiết bị để tích chọn -->
+
+                    <!-- Danh sách thiết bị để tích chọn (phiên bản đơn giản) -->
                     <div class="mb-4">
                         <label class="form-label">Chọn thiết bị (tích vào ô để chọn)</label>
                         <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
@@ -296,17 +317,33 @@ $thongKe = $model->getThongKe();
                                 <p class="text-muted mb-0">Chưa có thiết bị nào trong hệ thống</p>
                             <?php else: ?>
                                 <?php foreach ($dsLoaiThietBi as $thietbi): ?>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox"
-                                            name="thiet_bi[]" value="<?php echo htmlspecialchars($thietbi); ?>"
-                                            id="tb_<?php echo md5($thietbi); ?>">
-                                        <label class="form-check-label" for="tb_<?php echo md5($thietbi); ?>">
-                                            <?php echo htmlspecialchars($thietbi); ?>
-                                        </label>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                name="thiet_bi[]" value="<?php echo htmlspecialchars($thietbi); ?>"
+                                                id="tb_<?php echo md5($thietbi); ?>">
+                                            <label class="form-check-label" for="tb_<?php echo md5($thietbi); ?>">
+                                                <?php echo htmlspecialchars($thietbi); ?>
+                                            </label>
+                                        </div>
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-danger btn-sm"
+                                            onclick="xoaThietBiTuDanhSach('<?php echo htmlspecialchars($thietbi); ?>')">
+                                            <i class="bi bi-trash"></i> Xóa
+                                        </button>
                                     </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
+                    </div>
+                    <!-- Nút chọn/bỏ chọn tất cả -->
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="chonTatCa()">
+                            <i class="bi bi-check-square"></i> Chọn tất cả
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="boChonTatCa()">
+                            <i class="bi bi-square"></i> Bỏ chọn tất cả
+                        </button>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
@@ -472,6 +509,66 @@ $thongKe = $model->getThongKe();
     </div>
 
     <script>
+        // Xóa thiết bị khỏi danh sách checkbox
+        function xoaThietBiTuDanhSach(tenThietBi) {
+            if (confirm(`Bạn có chắc muốn xóa thiết bị "${tenThietBi}" khỏi hệ thống?\n\nThao tác này sẽ xóa tất cả thiết bị "${tenThietBi}" (kể cả chưa gán phòng).`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'quanlythietbi.php';
+
+                const inputAction = document.createElement('input');
+                inputAction.type = 'hidden';
+                inputAction.name = 'action';
+                inputAction.value = 'xoa_loai_thiet_bi_tu_danh_sach';
+                form.appendChild(inputAction);
+
+                const inputTenTB = document.createElement('input');
+                inputTenTB.type = 'hidden';
+                inputTenTB.name = 'ten_thiet_bi_xoa';
+                inputTenTB.value = tenThietBi;
+                form.appendChild(inputTenTB);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Chọn tất cả checkbox
+        function chonTatCa() {
+            const checkboxes = document.querySelectorAll('input[name="thiet_bi[]"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        // Bỏ chọn tất cả checkbox
+        function boChonTatCa() {
+            const checkboxes = document.querySelectorAll('input[name="thiet_bi[]"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        // Tìm kiếm trong danh sách thiết bị
+        function timKiemThietBiTrongDanhSach() {
+            const input = document.getElementById('timKiemThietBiInput');
+            const filter = input.value.toUpperCase();
+            const container = document.getElementById('danhSachThietBiContainer');
+            const items = container.getElementsByClassName('col-md-6');
+
+            for (let i = 0; i < items.length; i++) {
+                const label = items[i].getElementsByTagName('label')[0];
+                if (label) {
+                    const txtValue = label.textContent || label.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        items[i].style.display = '';
+                    } else {
+                        items[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+
         function xemThietBiPhong(maPhong, soPhong) {
             const modal = new bootstrap.Modal(document.getElementById('modalThietBiPhong'));
             const title = document.getElementById('modalTitle');

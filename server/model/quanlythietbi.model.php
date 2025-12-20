@@ -447,4 +447,55 @@ class QuanLyThietBiModel
         $this->db->closeConnect($conn);
         return $row['count'] > 0;
     }
+    // XÓA LOẠI THIẾT BỊ KHỎI HỆ THỐNG (XÓA TẤT CẢ THIẾT BỊ CÙNG LOẠI)
+    public function xoaLoaiThietBi($tenThietBi)
+    {
+        $conn = $this->db->openConnect();
+
+        try {
+            // Kiểm tra xem có thiết bị nào đang được sử dụng trong phòng không
+            $sqlCheckPhong = "SELECT COUNT(*) as count FROM thietbi WHERE TenThietBi = ? AND MaPhong IS NOT NULL";
+            $stmtCheck = $conn->prepare($sqlCheckPhong);
+            $stmtCheck->bind_param("s", $tenThietBi);
+            $stmtCheck->execute();
+            $resultCheck = $stmtCheck->get_result();
+            $row = $resultCheck->fetch_assoc();
+
+            if ($row['count'] > 0) {
+                // Đếm số phòng đang sử dụng
+                $sqlCountPhong = "SELECT COUNT(DISTINCT MaPhong) as so_phong FROM thietbi WHERE TenThietBi = ? AND MaPhong IS NOT NULL";
+                $stmtCount = $conn->prepare($sqlCountPhong);
+                $stmtCount->bind_param("s", $tenThietBi);
+                $stmtCount->execute();
+                $resultCount = $stmtCount->get_result();
+                $rowCount = $resultCount->fetch_assoc();
+
+                $this->db->closeConnect($conn);
+                return [
+                    'success' => false,
+                    'error' => "Không thể xóa! Thiết bị '$tenThietBi' đang được sử dụng trong {$rowCount['so_phong']} phòng."
+                ];
+            }
+
+            // Xóa tất cả thiết bị cùng loại
+            $sql = "DELETE FROM thietbi WHERE TenThietBi = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("s", $tenThietBi);
+
+            if ($stmt->execute()) {
+                $rowsAffected = $stmt->affected_rows;
+                $this->db->closeConnect($conn);
+                return [
+                    'success' => true,
+                    'message' => "Đã xóa loại thiết bị '$tenThietBi' khỏi hệ thống",
+                    'so_luong_xoa' => $rowsAffected
+                ];
+            } else {
+                throw new Exception('Lỗi khi xóa thiết bị');
+            }
+        } catch (Exception $e) {
+            $this->db->closeConnect($conn);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

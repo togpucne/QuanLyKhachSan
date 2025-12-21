@@ -344,11 +344,13 @@ $role = $_SESSION['vaitro'];
         }
 
 
-.dropdown-divider {
-    margin: 0.5rem 0;
-    border-top: 1px solid rgba(0, 0, 0, 0.1); /* Mảnh hơn */
-    opacity: 0.6; /* Làm nhạt hơn */
-}
+        .dropdown-divider {
+            margin: 0.5rem 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            /* Mảnh hơn */
+            opacity: 0.6;
+            /* Làm nhạt hơn */
+        }
 
 
         /* Avatar icon */
@@ -529,7 +531,7 @@ $role = $_SESSION['vaitro'];
                     $menus = [
                         'quanly' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/quanly/index.php'],
-                            ['icon' => 'fas fa-users', 'text' => 'Quản lý nhân viên', 'link' => '/ABC-Resort/server/view/quanly/quanlynhanvien.php'],
+                            ['icon' => 'fas fa-user-tie', 'text' => 'Quản lý nhân viên', 'link' => '/ABC-Resort/server/view/quanly/quanlynhanvien.php'],
                             ['icon' => 'fas fa-user-friends', 'text' => 'Quản lý khách hàng', 'link' => '/ABC-Resort/server/view/quanly/quanlyKH.php'],
                             ['icon' => 'fas fa-users', 'text' => 'Quản lý đoàn', 'link' => '/ABC-Resort/server/view/quanly/quanlydoan.php'],
                             ['icon' => 'fas fa-concierge-bell', 'text' => 'Quản lý dịch vụ', 'link' => '/ABC-Resort/server/view/quanly/quanlydichvu.php'],

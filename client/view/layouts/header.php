@@ -139,37 +139,41 @@ function getCustomerInfo($userId)
                     <!-- TRANG CHỦ SỬA VỀ INDEX.PHP -->
                     <a class="nav-link active" href="<?php echo $base_url; ?>/client/index.php">Trang Chủ</a>
 
-                    <!-- PHÒNG SỬA VỀ INDEX.PHP KÈM ANCHOR -->
-                    <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#room-list">Phòng</a>
+
+                    <!-- PHÒNG -->
+                    <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php?section=room-list">
+                        Phòng
+                    </a>
 
                     <!-- Link Khuyến mãi -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php#khuyen-mai">
-                            <i class="fas fa-gift me-1"></i>Khuyến mãi
-                        </a>
-                    </li>
+                    <a class="nav-link" href="<?php echo $base_url; ?>/client/index.php?section=khuyen-mai">
+                        <i class="fas fa-gift me-1"></i>Khuyến mãi
+                    </a>
 
-                    <!-- Dropdown Hỗ trợ -->
+
+                    <!-- Dropdown Hỗ trợ - SỬA ĐƯỜNG DẪN -->
                     <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="<?php echo $base_url; ?>/client/view/support/index.php" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-headset me-1"></i>Hỗ trợ
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/view/support/index.php">
                                     <i class="fas fa-question-circle me-2"></i>Trợ giúp
                                 </a></li>
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/view/support/index.php#contact">
                                     <i class="fas fa-phone me-2"></i>Liên hệ chúng tôi
                                 </a></li>
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="<?php echo $base_url; ?>/client/view/support/index.php">
                                     <i class="fas fa-envelope me-2"></i>Hộp thư của tôi
                                 </a></li>
                         </ul>
                     </div>
 
-                    <a class="nav-link" href="#">Đặt Phòng</a>
-                    <a class="nav-link" href="view/contact/index.php">Liên Hệ</a>
 
+                    <!-- LIÊN HỆ - SỬA ĐƯỜNG DẪN TUYỆT ĐỐI -->
+                    <a class="nav-link" href="<?php echo $base_url; ?>/client/view/contact/index.php">
+                        <i class="fas fa-address-book me-1"></i>Liên Hệ
+                    </a>
                     <!-- Dropdown Tài khoản -->
                     <div class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -286,3 +290,51 @@ function getCustomerInfo($userId)
             }
         });
     </script>
+    
+<script>
+    // Xử lý scroll khi trang load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Xử lý parameter ?section=
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionParam = urlParams.get('section');
+        
+        if (sectionParam) {
+            scrollToSectionWithDelay(sectionParam);
+            
+            // Xóa parameter sau khi scroll
+            const cleanUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', cleanUrl);
+        }
+        
+        // Xử lý hash # từ URL
+        if (window.location.hash) {
+            const hashId = window.location.hash.substring(1);
+            scrollToSectionWithDelay(hashId);
+        }
+        
+        // Xử lý click từ các trang khác (dùng sessionStorage)
+        const storedSection = sessionStorage.getItem('scrollToSection');
+        if (storedSection) {
+            scrollToSectionWithDelay(storedSection);
+            sessionStorage.removeItem('scrollToSection');
+        }
+    });
+    
+    function scrollToSectionWithDelay(sectionId) {
+        setTimeout(() => {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, 500); // Delay để trang load hoàn toàn
+    }
+    
+    // Hàm để các trang khác gọi
+    function scrollToSectionFromOtherPage(sectionId) {
+        sessionStorage.setItem('scrollToSection', sectionId);
+        window.location.href = 'index.php';
+    }
+</script>

@@ -709,17 +709,18 @@ if (is_dir($teamDir)) {
 
 <!-- ========== FLOATING BUTTONS ========== -->
 <div class="floating-btn-container">
+        <a href="https://m.me/ToaSangResort" target="_blank" class="floating-btn floating-messenger">
+        <i class="fa-brands fa-facebook-messenger"></i>
+        <span class="floating-tooltip">Chat với chúng tôi</span>
+        <span class="message-badge">NEW</span>
+    </a>
     <a href="tel:02439998877" class="floating-btn floating-phone">
         <i class="fa-solid fa-phone-volume"></i>
         <span class="floating-tooltip">Gọi ngay: 0243.999.8877</span>
         <span class="hotline-badge">HOT</span>
     </a>
     
-    <a href="https://m.me/ToaSangResort" target="_blank" class="floating-btn floating-messenger">
-        <i class="fa-brands fa-facebook-messenger"></i>
-        <span class="floating-tooltip">Chat với chúng tôi</span>
-        <span class="message-badge">NEW</span>
-    </a>
+
 </div>
 
 <script>

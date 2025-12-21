@@ -66,6 +66,10 @@ function getCustomerInfo($userId)
     <!-- DÙNG BASE URL -->
     <link href="<?php echo $base_url; ?>/client/assets/css/style.css" rel="stylesheet">
     <link rel="icon" type="image/png" href="<?php echo $base_url; ?>/client/assets/images/logo/logo_toasang-removebg.png">
+    <!-- Trong phần head của layout/header.php -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Hoặc cho Zalo icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .room-card {
             transition: all 0.3s ease;

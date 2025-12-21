@@ -258,7 +258,10 @@ if (!isset($customerInfo)) {
         display: none;
     }
 </style>
+<?php 
+    require_once __DIR__ ."../../layouts/icon.php";
 
+?>
 <div class="payment-container">
     <!-- Progress Steps -->
     <div class="row mb-4">

@@ -188,7 +188,10 @@ $connect->closeConnect($conn);
         border-bottom: 2px solid #0d6efd;
     }
 </style>
+<?php 
+    require_once __DIR__ ."../../layouts/icon.php";
 
+?>
 <!-- Phần giới thiệu resort - GIỮ NGUYÊN -->
 <section class="resort-intro py-5">
     <div class="container">

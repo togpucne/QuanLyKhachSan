@@ -78,7 +78,10 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
     }
 }
 ?>
+<?php 
+    require_once __DIR__ ."../../layouts/icon.php";
 
+?>
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8 mx-auto">

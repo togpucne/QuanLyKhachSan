@@ -542,9 +542,7 @@ $role = $_SESSION['vaitro'];
                         'ketoan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/ketoan/index.php'],
                             ['icon' => 'fas fa-money-bill-wave', 'text' => 'Quản lý doanh thu', 'link' => '/ABC-Resort/server/view/ketoan/quanlydoanhthu.php'],
-                            ['icon' => 'fas fa-receipt', 'text' => 'Hóa đơn & Thanh toán', 'link' => '/ABC-Resort/server/view/ketoan/hoadon.php'],
-                            ['icon' => 'fas fa-chart-pie', 'text' => 'Báo cáo tài chính', 'link' => '/ABC-Resort/server/view/ketoan/baocaotaichinh.php'],
-                            ['icon' => 'fas fa-calculator', 'text' => 'Kế toán tổng hợp', 'link' => '/ABC-Resort/server/view/ketoan/ketoan.php']
+                          
                         ],
                         'letan' => [
                             ['icon' => 'fas fa-tachometer-alt', 'text' => 'Tổng quan', 'link' => '/ABC-Resort/server/view/letan/index.php'],

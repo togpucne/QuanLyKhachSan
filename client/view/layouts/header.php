@@ -168,7 +168,7 @@ function getCustomerInfo($userId)
                     </div>
 
                     <a class="nav-link" href="#">Đặt Phòng</a>
-                    <a class="nav-link" href="#">Liên Hệ</a>
+                    <a class="nav-link" href="view/contact/index.php">Liên Hệ</a>
 
                     <!-- Dropdown Tài khoản -->
                     <div class="nav-item dropdown">

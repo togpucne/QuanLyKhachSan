@@ -9,6 +9,7 @@ $dichVuModel = new DichVuModel();
 $action = $_POST['action'] ?? '';
 
 // THÊM DỊCH VỤ
+// Thêm dịch vụ
 if ($action === 'themDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $tenDV = $_POST['tenDV'] ?? '';
     $donGia = $_POST['donGia'] ?? 0;
@@ -16,14 +17,18 @@ if ($action === 'themDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $moTa = $_POST['moTa'] ?? '';
     $loaiDV = $_POST['loaiDV'] ?? '';
 
-    if ($dichVuModel->themDichVu($tenDV, $donGia, $donViTinh, $moTa, $loaiDV)) {
-        echo "<script>alert('Thêm dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
+    if ($dichVuModel->isTenDVExist($tenDV)) {
+        echo "<script>alert('Tên dịch vụ đã tồn tại!');</script>";
     } else {
-        echo "<script>alert('Thêm dịch vụ thất bại!');</script>";
+        if ($dichVuModel->themDichVu($tenDV, $donGia, $donViTinh, $moTa, $loaiDV)) {
+            echo "<script>alert('Thêm dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
+        } else {
+            echo "<script>alert('Thêm dịch vụ thất bại!');</script>";
+        }
     }
 }
 
-// CẬP NHẬT DỊCH VỤ
+// Cập nhật dịch vụ
 if ($action === 'capNhatDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $maDV = $_POST['maDV'] ?? '';
     $tenDV = $_POST['tenDV'] ?? '';
@@ -33,10 +38,14 @@ if ($action === 'capNhatDichVu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $loaiDV = $_POST['loaiDV'] ?? '';
     $trangThai = $_POST['trangThai'] ?? 'Khả dụng';
 
-    if ($dichVuModel->capNhatDichVu($maDV, $tenDV, $donGia, $donViTinh, $moTa, $loaiDV, $trangThai)) {
-        echo "<script>alert('Cập nhật dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
+    if ($dichVuModel->isTenDVExist($tenDV, $maDV)) {
+        echo "<script>alert('Tên dịch vụ đã tồn tại!');</script>";
     } else {
-        echo "<script>alert('Cập nhật dịch vụ thất bại!');</script>";
+        if ($dichVuModel->capNhatDichVu($maDV, $tenDV, $donGia, $donViTinh, $moTa, $loaiDV, $trangThai)) {
+            echo "<script>alert('Cập nhật dịch vụ thành công!'); window.location.href = 'quanlydichvu.php';</script>";
+        } else {
+            echo "<script>alert('Cập nhật dịch vụ thất bại!');</script>";
+        }
     }
 }
 

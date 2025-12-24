@@ -77,23 +77,50 @@ class DichVuModel
         return $loaiDV;
     }
 
+    // Kiểm tra tên dịch vụ đã tồn tại (trừ dịch vụ hiện tại khi update)
+    public function isTenDVExist($tenDV, $maDV = null)
+    {
+        if ($maDV) {
+        // Khi cập nhật, bỏ qua dịch vụ hiện tại
+            $sql = "SELECT COUNT(*) as count FROM dichvu WHERE TenDV = ? AND MaDV != ?";
+            $stmt = mysqli_prepare($this->conn, $sql);
+            mysqli_stmt_bind_param($stmt, "si", $tenDV, $maDV);
+        } else {       
+        // Khi thêm mới
+            $sql = "SELECT COUNT(*) as count FROM dichvu WHERE TenDV = ?";
+            $stmt = mysqli_prepare($this->conn, $sql);
+            mysqli_stmt_bind_param($stmt, "s", $tenDV);
+        }
+
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+
+        return $row['count'] > 0;
+    }
     // Thêm dịch vụ mới
     public function themDichVu($tenDV, $donGia, $donViTinh, $moTa, $loaiDV)
     {
+        if ($this->isTenDVExist($tenDV)) return false;
+
         $sql = "INSERT INTO dichvu (TenDV, DonGia, DonViTinh, MoTa, LoaiDV) VALUES (?, ?, ?, ?, ?)";
         $stmt = mysqli_prepare($this->conn, $sql);
         mysqli_stmt_bind_param($stmt, "sdsss", $tenDV, $donGia, $donViTinh, $moTa, $loaiDV);
         return mysqli_stmt_execute($stmt);
     }
 
+
     // Cập nhật dịch vụ
     public function capNhatDichVu($maDV, $tenDV, $donGia, $donViTinh, $moTa, $loaiDV, $trangThai)
     {
+        if ($this->isTenDVExist($tenDV, $maDV)) return false;
+
         $sql = "UPDATE dichvu SET TenDV = ?, DonGia = ?, DonViTinh = ?, MoTa = ?, LoaiDV = ?, TrangThai = ? WHERE MaDV = ?";
         $stmt = mysqli_prepare($this->conn, $sql);
         mysqli_stmt_bind_param($stmt, "sdssssi", $tenDV, $donGia, $donViTinh, $moTa, $loaiDV, $trangThai, $maDV);
         return mysqli_stmt_execute($stmt);
     }
+
 
     // Xóa dịch vụ (chuyển trạng thái)
     public function xoaDichVu($maDV)

@@ -107,7 +107,7 @@ class UserModel
         $stmt = $this->conn->prepare(
             "SELECT id, TenDangNhap, VaiTro, Email, TrangThai 
              FROM tai_khoan 
-             WHERE Email = ? AND MatKhau = ? AND TrangThai = 1"
+             WHERE Email = ? AND MatKhau = ? AND TrangThai = 1 AND VaiTro = 'khachhang'"
         );
         $stmt->bind_param("ss", $email, $hashedPassword);
         $stmt->execute();

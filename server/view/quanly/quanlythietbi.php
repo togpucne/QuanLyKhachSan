@@ -287,7 +287,7 @@ $thongKe = $model->getThongKe();
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Số lượng mỗi loại</label>
-                        <input type="number" class="form-control" name="so_luong" value="1" min="1" max="10">
+                        <input type="number" class="form-control" name="so_luong" value="1" min="1" max="10" readonly>
                     </div>
 
                     <div class="col-md-4 mb-3">
@@ -372,7 +372,7 @@ $thongKe = $model->getThongKe();
 
                     <div class="col-md-2 mb-3">
                         <label class="form-label">Số lượng</label>
-                        <input type="number" class="form-control" name="so_luong_thiet_bi_moi"
+                        <input type="number" class="form-control" name="so_luong_thiet_bi_moi" readonly
                             value="1" min="1" max="10">
                     </div>
 

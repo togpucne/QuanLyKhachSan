@@ -422,15 +422,15 @@ if ($action === 'taikhoan') {
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Tên đăng nhập</label>
-                                    <input type="text" class="form-control" name="ten_dang_nhap"
+                                    <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="ten_dang_nhap" required
                                         value="<?php echo $action === 'sua' ? htmlspecialchars($khachHang['TenDangNhap'] ?? '') : ''; ?>"
                                         placeholder="Tên đăng nhập (nếu tạo TK)">
                                     <small class="form-text text-muted">Dùng để đăng nhập hệ thống</small>
                                 </div>
                                 <!-- Trong form sửa KH -->
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Mật khẩu</label>
+                                    <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="password" class="form-control" name="mat_khau"
                                             id="passwordInput"
@@ -493,14 +493,14 @@ if ($action === 'taikhoan') {
                                     }
                                 </script>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" name="email"
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" name="email" required
                                         value="<?php echo $action === 'sua' ? htmlspecialchars($khachHang['Email'] ?? '') : ''; ?>"
                                         placeholder="Email">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">CMND/CCCD</label>
-                                    <input type="text" class="form-control" name="cmnd"
+                                    <label class="form-label">CMND/CCCD <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="cmnd" required
                                         value="<?php echo $action === 'sua' ? htmlspecialchars($khachHang['CMND'] ?? '') : ''; ?>"
                                         placeholder="Số CMND/CCCD" maxlength="12">
                                 </div>

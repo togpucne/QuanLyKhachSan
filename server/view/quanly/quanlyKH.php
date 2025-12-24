@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'them') {
 
     // Validate cơ bản
     $errors = [];
-    
+
     // VALIDATE HỌ TÊN: không được có số hoặc ký tự đặc biệt
     if (empty($data['HoTen'])) {
         $errors[] = "Họ tên không được để trống";
@@ -59,18 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'them') {
         if (preg_match('/[0-9]/', $data['HoTen'])) {
             $errors[] = "Họ tên không được chứa số";
         }
-        
+
         // Kiểm tra tên không chứa ký tự đặc biệt (cho phép dấu tiếng Việt, dấu cách và dấu chấm)
         if (!preg_match('/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s\.]+$/u', $data['HoTen'])) {
             $errors[] = "Họ tên không được chứa ký tự đặc biệt";
         }
-        
+
         // Kiểm tra ít nhất 2 ký tự
         if (strlen(trim($data['HoTen'])) < 2) {
             $errors[] = "Họ tên phải có ít nhất 2 ký tự";
         }
     }
-    
+
     // Validate các trường khác
     if (empty($data['SoDienThoai'])) $errors[] = "Số điện thoại không được để trống";
     if (!empty($data['SoDienThoai']) && !preg_match('/^\d{10,11}$/', $data['SoDienThoai'])) {
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'sua' && !empty($maKH))
 
     // Validate
     $errors = [];
-    
+
     // VALIDATE HỌ TÊN: không được có số hoặc ký tự đặc biệt
     if (empty($data['HoTen'])) {
         $errors[] = "Họ tên không được để trống";
@@ -147,18 +147,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'sua' && !empty($maKH))
         if (preg_match('/[0-9]/', $data['HoTen'])) {
             $errors[] = "Họ tên không được chứa số";
         }
-        
+
         // Kiểm tra tên không chứa ký tự đặc biệt (cho phép dấu tiếng Việt, dấu cách và dấu chấm)
         if (!preg_match('/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s\.]+$/u', $data['HoTen'])) {
             $errors[] = "Họ tên không được chứa ký tự đặc biệt";
         }
-        
+
         // Kiểm tra ít nhất 2 ký tự
         if (strlen(trim($data['HoTen'])) < 2) {
             $errors[] = "Họ tên phải có ít nhất 2 ký tự";
         }
     }
-    
+
     // Validate các trường khác
     if (empty($data['SoDienThoai'])) $errors[] = "Số điện thoại không được để trống";
     if (!empty($data['SoDienThoai']) && !preg_match('/^\d{10,11}$/', $data['SoDienThoai'])) {
@@ -428,19 +428,70 @@ if ($action === 'taikhoan') {
                                         placeholder="Tên đăng nhập (nếu tạo TK)">
                                     <small class="form-text text-muted">Dùng để đăng nhập hệ thống</small>
                                 </div>
+                                <!-- Trong form sửa KH -->
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Mật khẩu</label>
-                                    <input type="password" class="form-control" name="mat_khau"
-                                        placeholder="Mật khẩu (nếu tạo TK)">
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" name="mat_khau"
+                                            id="passwordInput"
+                                            placeholder="••••••••"
+                                            value="<?php echo !empty($khachHang['TenDangNhap']) ? '********' : ''; ?>"
+                                            <?php echo !empty($khachHang['TenDangNhap']) ? 'readonly' : ''; ?>>
+
+                                        <?php if (!empty($khachHang['TenDangNhap'])): ?>
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                onclick="enablePasswordChange()" id="changeBtn">
+                                                <i class="fas fa-edit"></i> Đổi MK
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+
                                     <small class="form-text text-muted">
-                                        <?php if ($action === 'sua'): ?>
-                                            <strong>Chỉ điền nếu muốn đổi mật khẩu</strong><br>
-                                            <span class="text-danger">Nếu không thay đổi, để trống ô này</span>
+                                        <?php if (!empty($khachHang['TenDangNhap'])): ?>
+                                            <span class="text-success">
+                                                <i class="fas fa-lock me-1"></i>Mật khẩu đang được bảo vệ
+                                            </span>
+                                            <br>
+                                            <span class="text-danger">Nhấn "Đổi MK" nếu muốn thay đổi</span>
                                         <?php else: ?>
-                                            Ít nhất 6 ký tự
+                                            <span class="text-info">Chỉ nhập nếu muốn tạo tài khoản mới</span>
                                         <?php endif; ?>
                                     </small>
                                 </div>
+
+                                <!-- Thêm JavaScript -->
+                                <script>
+                                    function enablePasswordChange() {
+                                        const passwordInput = document.getElementById('passwordInput');
+                                        const changeBtn = document.getElementById('changeBtn');
+
+                                        // Xóa readonly và placeholder
+                                        passwordInput.removeAttribute('readonly');
+                                        passwordInput.value = '';
+                                        passwordInput.placeholder = 'Nhập mật khẩu mới';
+                                        passwordInput.focus();
+
+                                        // Đổi nút thành "Hủy"
+                                        changeBtn.innerHTML = '<i class="fas fa-times"></i> Hủy';
+                                        changeBtn.className = 'btn btn-outline-danger';
+                                        changeBtn.setAttribute('onclick', 'cancelPasswordChange()');
+                                    }
+
+                                    function cancelPasswordChange() {
+                                        const passwordInput = document.getElementById('passwordInput');
+                                        const changeBtn = document.getElementById('changeBtn');
+
+                                        // Khôi phục trạng thái ban đầu
+                                        passwordInput.setAttribute('readonly', 'readonly');
+                                        passwordInput.value = '********';
+                                        passwordInput.placeholder = '••••••••';
+
+                                        // Đổi nút trở lại
+                                        changeBtn.innerHTML = '<i class="fas fa-edit"></i> Đổi MK';
+                                        changeBtn.className = 'btn btn-outline-secondary';
+                                        changeBtn.setAttribute('onclick', 'enablePasswordChange()');
+                                    }
+                                </script>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Email</label>
                                     <input type="email" class="form-control" name="email"

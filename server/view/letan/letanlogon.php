@@ -306,27 +306,13 @@ require_once '../layouts/header.php';
             </div>
             <div class="col-md-2">
                 <select class="form-select" id="filterAccount">
-                    <option value="">Tất cả tài khoản</option>
+                 
                     <option value="1">Có tài khoản</option>
                     <option value="0">Không có tài khoản</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <select class="form-select" id="filterSort">
-                    <option value="newest">Mới nhất</option>
-                    <option value="oldest">Cũ nhất</option>
-                    <option value="name_asc">Tên A-Z</option>
-                    <option value="name_desc">Tên Z-A</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="input-group">
-                    <input type="date" class="form-control" id="filterDate">
-                    <button class="btn btn-primary" onclick="filterTable()">
-                        <i class="fas fa-search"></i> Lọc
-                    </button>
-                </div>
-            </div>
+           
+           
         </div>
     </div>
 </div>
@@ -443,19 +429,19 @@ require_once '../layouts/header.php';
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Họ tên *</label>
+                                <label class="form-label">Họ tên <span class="required-label">*</span></label>
                                 <input type="text" class="form-control" id="editHoTen" name="hoten" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Số điện thoại *</label>
+                                <label class="form-label">Số điện thoại <span class="required-label">*</span></label>
                                 <input type="tel" class="form-control" id="editSoDienThoai" name="sodienthoai" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Trạng thái *</label>
+                                <label class="form-label">Trạng thái <span class="required-label">*</span></label>
                                 <select class="form-select" id="editTrangThai" name="trangthai" required>
                                     <option value="Không ở">Không ở</option>
                                     <option value="Đang ở">Đang ở</option>
@@ -477,14 +463,14 @@ require_once '../layouts/header.php';
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Tên đăng nhập</label>
-                                <input type="text" class="form-control" id="editTenDangNhap" name="tendangnhap">
+                                <label class="form-label">Tên đăng nhập <span class="required-label">*</span></label>
+                                <input type="text" class="form-control" id="editTenDangNhap" name="tendangnhap" required>
                                 <div class="form-text">Để trống nếu không đổi</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Mật khẩu</label>
+                                <label class="form-label">Mật khẩu <span class="required-label">*</span></label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="editMatKhau" name="matkhau" placeholder="Để trống nếu không đổi">
                                     <button type="button" class="btn btn-outline-warning" onclick="resetEditPassword()" id="btnResetPassword">
@@ -496,14 +482,14 @@ require_once '../layouts/header.php';
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" id="editEmail" name="email">
+                                <label class="form-label">Email <span class="required-label">*</span></label>
+                                <input type="email" class="form-control" id="editEmail" name="email" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">CMND/CCCD</label>
-                                <input type="text" class="form-control" id="editCMND" name="cmnd">
+                                <label class="form-label">CMND/CCCD <span class="required-label">*</span></label>
+                                <input type="text" class="form-control" id="editCMND" name="cmnd" required>
                             </div>
                         </div>
                     </div>

@@ -170,7 +170,65 @@ class PaymentModel
             throw new Exception("Lỗi đặt phòng: " . $e->getMessage());
         }
     }
+    // Thêm vào class PaymentModel
+    public function processMomoPayment($maHoaDon, $amount, $transId, $orderId)
+    {
+        try {
+            $this->conn->begin_transaction();
 
+            // 1. CẬP NHẬT TRẠNG THÁI HÓA ĐƠN
+            $sql = "UPDATE hoadondatphong 
+                SET TrangThai = 'DaThanhToan',
+                    PhuongThucThanhToan = 'Momo'
+                WHERE Id = ? AND TrangThai = 'ChuaThanhToan'";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $maHoaDon);
+
+            if (!$stmt->execute()) {
+                throw new Exception("Không thể cập nhật hóa đơn: " . $stmt->error);
+            }
+
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("Hóa đơn đã được thanh toán hoặc không tồn tại");
+            }
+
+            // 2. LẤY MÃ PHÒNG TỪ HÓA ĐƠN
+            $sql = "SELECT MaPhong, NgayNhan FROM hoadondatphong WHERE Id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $maHoaDon);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($row = $result->fetch_assoc()) {
+                $maPhong = $row['MaPhong'];
+                $ngayNhan = $row['NgayNhan'];
+
+                // 3. CẬP NHẬT TRẠNG THÁI PHÒNG
+                $sqlUpdate = "UPDATE phong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = ?";
+                $stmtUpdate = $this->conn->prepare($sqlUpdate);
+                $stmtUpdate->bind_param("i", $maPhong);
+                $stmtUpdate->execute();
+
+                error_log("Đã cập nhật phòng $maPhong thành 'Đang sử dụng'");
+            }
+
+            $this->conn->commit();
+
+            return [
+                'success' => true,
+                'message' => 'Thanh toán thành công',
+                'maHoaDon' => $maHoaDon
+            ];
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Lỗi xử lý Momo: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
     // ==================== CÁC HÀM PHỤ TRỢ ====================
 
     // 1. LƯU KHÁCH HÀNG CHÍNH

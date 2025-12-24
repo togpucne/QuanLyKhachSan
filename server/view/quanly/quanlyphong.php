@@ -382,7 +382,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Giá Phòng (VND) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control border-1" name="gia_phong" required
-                                min="0" step="1000" placeholder="500000" value="0" id="giaPhong">
+                                min="200000" step="1000" placeholder="500000" value="0" id="giaPhong">
                         </div>
 
                         <div class="col-md-6">
@@ -402,7 +402,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Diện tích (m²) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control border-1" name="dien_tich" required
-                                min="0" step="0.1" placeholder="25.5" value="0">
+                                min="10" step="0.1" placeholder="25.5" value="0">
                         </div>
 
                         <div class="col-md-6">
@@ -539,7 +539,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Giá Phòng (VND) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control border-1" name="gia_phong" required
-                                min="0" step="1000" placeholder="500000" id="suaGiaPhong">
+                                min="200000" step="1000" placeholder="500000" id="suaGiaPhong">
                         </div>
 
                         <div class="col-md-6">
@@ -559,7 +559,7 @@ $danhSachPhong = $model->getDanhSachPhong($keyword, $tang, $loaiPhong, $trangTha
                         <div class="col-md-6">
                             <label class="form-label text-gray-900">Diện tích (m²) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control border-1" name="dien_tich" required
-                                min="0" step="0.1" placeholder="25.5" id="suaDienTich">
+                                min="10" step="0.1" placeholder="25.5" id="suaDienTich">
                         </div>
 
                         <div class="col-md-6">

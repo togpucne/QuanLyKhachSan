@@ -238,9 +238,9 @@ $connect->closeConnect($conn);
 
                                     <!-- Room -->
                                     <div class="col-12">
-                                        <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex justify-content-between align-items-center" >
                                             <label class="fw-semibold">Room</label>
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center" >
                                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                                     onclick="changeGuestCount('room', -1)">-</button>
                                                 <span class="mx-3 fw-semibold" id="roomCount">1</span>

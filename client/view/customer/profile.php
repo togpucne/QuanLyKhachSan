@@ -160,10 +160,10 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Họ tên *</label>
+                                        <label class="form-label">Họ tên <span class="text-danger">*</span></label>
                                         <input type="text"
                                             class="form-control <?php echo isset($errors['fullname']) ? 'is-invalid' : ''; ?>"
-                                            name="fullname"
+                                            name="fullname" 
                                             value="<?php echo htmlspecialchars($customerInfo['HoTen']); ?>"
                                             required>
                                         <?php if (isset($errors['fullname'])): ?>
@@ -172,7 +172,7 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label">Số điện thoại *</label>
+                                        <label class="form-label">Số điện thoại  <span class="text-danger">*</span></label>
                                         <input type="tel"
                                             class="form-control <?php echo isset($errors['phone']) ? 'is-invalid' : ''; ?>"
                                             name="phone"
@@ -186,13 +186,13 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
 
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Email</label>
+                                        <label class="form-label">Email  <span class="text-danger">*</span></label>
                                         <input type="email" class="form-control" value="<?php echo htmlspecialchars($customerInfo['Email']); ?>" readonly>
                                         <small class="text-muted">Email không thể thay đổi</small>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label">CMND/CCCD</label>
+                                        <label class="form-label">CMND/CCCD  <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" value="<?php echo htmlspecialchars($customerInfo['CMND']); ?>" readonly>
                                         <small class="text-muted">CMND không thể thay đổi</small>
                                     </div>
@@ -256,7 +256,7 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
             <!-- Đổi mật khẩu -->
             <div class="card shadow-sm border-0 mt-3">
                 <div class="card-header bg-light border-bottom">
-                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>Đổi mật khẩu</h5>
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>Đổi mật khẩu </h5>
                 </div>
                 <div class="card-body">
                     <?php if (isset($success_message)): ?>
@@ -265,7 +265,7 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
 
                     <form method="POST" action="<?php echo $base_url; ?>/client/controller/user.controller.php?action=changePassword">
                         <div class="mb-3">
-                            <label class="form-label">Mật khẩu hiện tại *</label>
+                            <label class="form-label">Mật khẩu hiện tại  <span class="text-danger">*</span></label>
                             <input type="password" class="form-control <?php echo isset($password_errors['current_password']) ? 'is-invalid' : ''; ?>"
                                 name="current_password" required>
                             <?php if (isset($password_errors['current_password'])): ?>
@@ -274,7 +274,7 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Mật khẩu mới *</label>
+                            <label class="form-label">Mật khẩu mới  <span class="text-danger">*</span></label>
                             <input type="password" class="form-control <?php echo isset($password_errors['new_password']) ? 'is-invalid' : ''; ?>"
                                 name="new_password" required>
                             <?php if (isset($password_errors['new_password'])): ?>
@@ -284,7 +284,7 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Nhập lại mật khẩu mới *</label>
+                            <label class="form-label">Nhập lại mật khẩu mới  <span class="text-danger">*</span></label>
                             <input type="password" class="form-control <?php echo isset($password_errors['confirm_password']) ? 'is-invalid' : ''; ?>"
                                 name="confirm_password" required>
                             <?php if (isset($password_errors['confirm_password'])): ?>

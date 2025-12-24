@@ -10,12 +10,7 @@ $amount = $_GET['amount'] ?? 0;
 $bookingCode = $_GET['bookingCode'] ?? '';
 $maHoaDon = $_GET['maHoaDon'] ?? 0;
 
-// DEBUG CHI TIẾT
-echo "<h2>Debug Momo Payment</h2>";
-echo "<p><strong>Amount from URL:</strong> " . htmlspecialchars($_GET['amount'] ?? 'N/A') . "</p>";
-echo "<p><strong>Amount type:</strong> " . gettype($_GET['amount']) . "</p>";
-echo "<p><strong>Booking Code:</strong> " . htmlspecialchars($bookingCode) . "</p>";
-echo "<p><strong>Ma Hoa Don:</strong> " . htmlspecialchars($maHoaDon) . "</p>";
+
 
 error_log("Amount from GET (raw): " . ($_GET['amount'] ?? 'empty'));
 error_log("Amount: $amount");
@@ -25,12 +20,10 @@ error_log("Ma Hoa Don: $maHoaDon");
 // KIỂM TRA VÀ CHUẨN HÓA SỐ TIỀN
 $amount = (int)$amount; // Đảm bảo là số nguyên
 
-echo "<p><strong>Amount after intval:</strong> " . number_format($amount) . " VND</p>";
 
 // Momo yêu cầu: TỐI THIỂU 10,000 VND và TỐI ĐA 50,000,000 VND
 if ($amount < 10000) {
     error_log("ERROR: Amount too small ($amount). Minimum is 10000");
-    echo "<p style='color: red'>❌ Lỗi: Số tiền quá nhỏ (" . number_format($amount) . " VND). Tối thiểu 10,000 VND</p>";
     // Đặt tối thiểu 10000 VND cho test
     $amount = 10000;
     echo "<p>Đã điều chỉnh thành: " . number_format($amount) . " VND</p>";
@@ -38,7 +31,6 @@ if ($amount < 10000) {
 
 if ($amount > 50000000) {
     error_log("ERROR: Amount too large ($amount). Maximum is 50000000");
-    echo "<p style='color: red'>❌ Lỗi: Số tiền quá lớn (" . number_format($amount) . " VND). Tối đa 50,000,000 VND</p>";
     $amount = 50000000;
     echo "<p>Đã điều chỉnh thành: " . number_format($amount) . " VND</p>";
 }
@@ -46,15 +38,11 @@ if ($amount > 50000000) {
 // Kiểm tra dữ liệu
 if (!$amount || $amount <= 0) {
     error_log("ERROR: Invalid amount after adjustment: $amount");
-    echo "<p style='color: red'>❌ Lỗi: Số tiền không hợp lệ sau điều chỉnh: $amount</p>";
     header('Location: ../controller/momo_callback.php?action=error&message=Số+tiền+không+hợp+lệ');
     exit;
 }
 
-echo "<hr><h3>Kiểm tra số tiền với Momo:</h3>";
-echo "<p>Số tiền gửi đến Momo: <strong>" . number_format($amount) . " VND</strong></p>";
-echo "<p>✅ Đạt tối thiểu 10,000 VND: " . ($amount >= 10000 ? "CÓ" : "KHÔNG") . "</p>";
-echo "<p>✅ Không vượt tối đa 50,000,000 VND: " . ($amount <= 50000000 ? "CÓ" : "KHÔNG") . "</p>";
+
 
 function execPostRequest($url, $data)
 {

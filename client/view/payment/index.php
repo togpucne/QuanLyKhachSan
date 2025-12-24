@@ -258,8 +258,8 @@ if (!isset($customerInfo)) {
         display: none;
     }
 </style>
-<?php 
-    require_once __DIR__ ."../../layouts/icon.php";
+<?php
+require_once __DIR__ . "../../layouts/icon.php";
 
 ?>
 <div class="payment-container">
@@ -356,9 +356,14 @@ if (!isset($customerInfo)) {
 
                             <div class="mb-3">
                                 <label class="form-label required-field">Họ tên</label>
-                                <input type="text" class="form-control guest-input" name="guestName[]" required
-                                    placeholder="Nhập họ và tên đầy đủ">
-                                <div class="error-message" id="guestNameError<?php echo $guestNumber; ?>">Vui lòng nhập họ tên</div>
+                                <input type="text" class="form-control guest-input guest-name-input"
+                                    name="guestName[]"
+                                    required
+                                    pattern="^[A-Za-zÀ-ỹ\s]+$"
+                                    title="Họ tên chỉ được chứa chữ cái và khoảng trắng (không có số, ký tự đặc biệt)"
+                                    data-guest-number="<?php echo $guestNumber; ?>"
+                                    placeholder="Nhập họ và tên đầy đủ (không dấu hoặc có dấu)">
+                                <div class="error-message" id="guestNameError<?php echo $guestNumber; ?>">Vui lòng nhập họ tên hợp lệ (không chứa số hoặc ký tự đặc biệt)</div>
                             </div>
 
                             <div class="row">
@@ -621,6 +626,8 @@ if (!isset($customerInfo)) {
 
     // Chuyển các biến promotions từ PHP sang JS
     const promotionsData = <?php echo json_encode($promotions); ?>;
+    // Thêm regex pattern cho tên
+    const NAME_PATTERN = /^[A-Za-zÀ-ỹ\s]+$/;
 
     // Khi trang load
     document.addEventListener('DOMContentLoaded', function() {
@@ -669,7 +676,61 @@ if (!isset($customerInfo)) {
         document.getElementById('contactAddress').addEventListener('blur', function() {
             validateAddressField(this);
         });
+        // Thêm sự kiện kiểm tra tên real-time
+        document.querySelectorAll('.guest-name-input').forEach(input => {
+            input.addEventListener('blur', function() {
+                validateNameField(this);
+            });
+            input.addEventListener('input', function() {
+                // Clear error khi người dùng bắt đầu gõ
+                const guestNumber = this.dataset.guestNumber;
+                clearError(this, `guestNameError${guestNumber}`);
+            });
+        });
+
+        // Validate tên khách hàng chính
+        document.getElementById('contactName').addEventListener('blur', function() {
+            validateNameField(this, 'contact');
+        });
+        document.getElementById('contactName').addEventListener('input', function() {
+            clearError(this, 'contactNameError');
+        });
+
+
     });
+    // Hàm validate tên
+    function validateNameField(inputElement, type = 'guest') {
+        const value = inputElement.value.trim();
+        let errorId;
+
+        if (type === 'contact') {
+            errorId = 'contactNameError';
+        } else {
+            const guestNumber = inputElement.dataset.guestNumber;
+            errorId = `guestNameError${guestNumber}`;
+        }
+
+        if (!value) {
+            showError(inputElement, errorId, 'Vui lòng nhập họ tên');
+            return false;
+        } else if (!NAME_PATTERN.test(value)) {
+            showError(inputElement, errorId, 'Họ tên không được chứa số, ký tự đặc biệt hoặc dấu chấm');
+            return false;
+        } else if (value.length < 2) {
+            showError(inputElement, errorId, 'Họ tên quá ngắn (ít nhất 2 ký tự)');
+            return false;
+        } else if (value.length > 100) {
+            showError(inputElement, errorId, 'Họ tên quá dài (tối đa 100 ký tự)');
+            return false;
+        } else {
+            clearError(inputElement, errorId);
+            return true;
+        }
+    }
+
+
+
+
 
     // Hàm validate địa chỉ real-time
     function validateAddressField(inputElement) {
@@ -825,9 +886,15 @@ if (!isset($customerInfo)) {
         const contactCMND = document.getElementById('contactCMND').value.trim();
         const contactAddress = document.getElementById('contactAddress').value.trim();
 
-        // Validate họ tên liên hệ
+        // Validate họ tên liên hệ - SỬA LẠI
         if (!contactName) {
             showError(document.getElementById('contactName'), 'contactNameError', 'Vui lòng nhập họ tên');
+            isValid = false;
+        } else if (!NAME_PATTERN.test(contactName)) {
+            showError(document.getElementById('contactName'), 'contactNameError', 'Họ tên không được chứa số, ký tự đặc biệt hoặc dấu chấm');
+            isValid = false;
+        } else if (contactName.length < 2) {
+            showError(document.getElementById('contactName'), 'contactNameError', 'Họ tên quá ngắn (ít nhất 2 ký tự)');
             isValid = false;
         }
 
@@ -879,15 +946,14 @@ if (!isset($customerInfo)) {
             const guestPhoneValue = guestPhones[i] ? guestPhones[i].value.trim() : '';
             const guestAddressValue = guestAddresses[i] ? guestAddresses[i].value.trim() : '';
 
-            // Validate họ tên
             if (!guestNameValue) {
                 showError(guestNames[i], `guestNameError${guestNumber}`, `Vui lòng nhập họ tên khách hàng ${guestNumber}`);
                 isValid = false;
-            }
-
-            // Validate số điện thoại (BẮT BUỘC)
-            if (!guestPhoneValue) {
-                showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Vui lòng nhập số điện thoại khách hàng ${guestNumber}`);
+            } else if (!NAME_PATTERN.test(guestNameValue)) {
+                showError(guestNames[i], `guestNameError${guestNumber}`, `Họ tên không được chứa số, ký tự đặc biệt hoặc dấu chấm`);
+                isValid = false;
+            } else if (guestNameValue.length < 2) {
+                showError(guestNames[i], `guestNameError${guestNumber}`, `Họ tên quá ngắn (ít nhất 2 ký tự)`);
                 isValid = false;
             } else if (!/^[0-9]{9,10}$/.test(guestPhoneValue)) {
                 showError(guestPhones[i], `guestPhoneError${guestNumber}`, `Số điện thoại không hợp lệ (9-10 số)`);

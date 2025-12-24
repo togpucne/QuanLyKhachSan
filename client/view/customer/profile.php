@@ -29,20 +29,29 @@ $customerInfo = getCustomerInfo($_SESSION['user_id']);
 
 $success = '';
 $errors = [];
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullname = trim($_POST['fullname'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $address = trim($_POST['address'] ?? '');
 
+    // VALIDATE HỌ TÊN
     if (empty($fullname)) {
         $errors['fullname'] = "Họ tên không được để trống";
+    } elseif (strlen($fullname) < 2) {
+        $errors['fullname'] = "Họ tên phải có ít nhất 2 ký tự";
+    } elseif (preg_match('/[0-9]/', $fullname)) {
+        $errors['fullname'] = "Họ tên không được chứa số";
+    } elseif (!preg_match('/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s\.]+$/u', $fullname)) {
+        $errors['fullname'] = "Họ tên không được chứa ký tự đặc biệt";
     }
 
+    // VALIDATE SỐ ĐIỆN THOẠI
     if (empty($phone)) {
         $errors['phone'] = "Số điện thoại không được để trống";
     } elseif (!preg_match('/^(03|05|07|08|09)[0-9]{8}$/', $phone)) {
-        $errors['phone'] = "Số điện thoại không hợp lệ";
+        $errors['phone'] = "Số điện thoại phải bắt đầu bằng 03,05,07,08,09 và có 10 số";
+    } elseif (isPhoneExists($phone, $_SESSION['user_id'])) {
+        $errors['phone'] = "Số điện thoại này đã được sử dụng bởi tài khoản khác";
     }
 
     if (empty($errors)) {
@@ -54,7 +63,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+function isPhoneExists($phone, $userId) {
+    require_once __DIR__ . '/../../model/connectDB.php';
+    try {
+        $connect = new Connect();
+        $conn = $connect->openConnect();
 
+        $sql = "SELECT COUNT(*) as count FROM KhachHang 
+                WHERE SoDienThoai = ? AND MaTaiKhoan != ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("si", $phone, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        
+        $stmt->close();
+        $connect->closeConnect($conn);
+        
+        return $row['count'] > 0;
+    } catch (Exception $e) {
+        error_log("Database error: " . $e->getMessage());
+        return false;
+    }
+}
 function updateCustomerInfo($userId, $fullname, $phone, $address)
 {
     require_once __DIR__ . '/../../model/connectDB.php';
@@ -62,6 +93,23 @@ function updateCustomerInfo($userId, $fullname, $phone, $address)
         $connect = new Connect();
         $conn = $connect->openConnect();
 
+        // Kiểm tra trùng SĐT trước khi cập nhật
+        $checkSql = "SELECT COUNT(*) as count FROM KhachHang 
+                    WHERE SoDienThoai = ? AND MaTaiKhoan != ?";
+        $checkStmt = $conn->prepare($checkSql);
+        $checkStmt->bind_param("si", $phone, $userId);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+        $checkRow = $checkResult->fetch_assoc();
+        
+        if ($checkRow['count'] > 0) {
+            $checkStmt->close();
+            $connect->closeConnect($conn);
+            return false; // SĐT đã tồn tại
+        }
+        $checkStmt->close();
+
+        // Thực hiện cập nhật
         $sql = "UPDATE KhachHang 
                 SET HoTen = ?, SoDienThoai = ?, DiaChi = ?, updated_at = CURRENT_TIMESTAMP 
                 WHERE MaTaiKhoan = ?";

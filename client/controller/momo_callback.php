@@ -291,7 +291,7 @@ class MomoCallbackController
                 <p class="mb-4"><?php echo htmlspecialchars($message); ?></p>
                 
                 <div class="d-flex gap-2">
-                    <a href="/ABC-Resort/client/view/booking/" class="btn btn-danger">
+                    <a href="/ABC-Resort/client/" class="btn btn-danger">
                         <i class="fas fa-arrow-left me-2"></i> Quay lại
                     </a>
                     <a href="/ABC-Resort/client/" class="btn btn-outline-danger">

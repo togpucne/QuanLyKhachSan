@@ -198,20 +198,7 @@ sort($tangList);
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <button type="button" class="btn btn-outline-danger btn-action btn-icon"
-                                                        data-action="suCo"
-                                                        data-maphong="<?php echo $phong['MaPhong']; ?>"
-                                                        data-sophong="<?php echo $phong['SoPhong']; ?>"
-                                                        title="Ghi nhận sự cố">
-                                                        <i class="fas fa-exclamation-triangle"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-warning btn-action btn-icon"
-                                                        data-action="chiPhi"
-                                                        data-maphong="<?php echo $phong['MaPhong']; ?>"
-                                                        data-sophong="<?php echo $phong['SoPhong']; ?>"
-                                                        title="Ghi nhận chi phí">
-                                                        <i class="fas fa-money-bill-wave"></i>
-                                                    </button>
+                                                   
                                                     <button type="button" class="btn btn-outline-info btn-action btn-icon"
                                                         data-action="trangThai"
                                                         data-maphong="<?php echo $phong['MaPhong']; ?>"

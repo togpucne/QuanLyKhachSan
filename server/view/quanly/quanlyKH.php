@@ -79,6 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'them') {
     if (!empty($data['Email']) && !filter_var($data['Email'], FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Email không hợp lệ";
     }
+    // VALIDATE MẬT KHẨU KHI THÊM MỚI
+    if (!empty($data['TenDangNhap'])) {
+        if (empty($data['MatKhau'])) {
+            $errors[] = "Vui lòng nhập mật khẩu khi tạo tài khoản";
+        } elseif (strlen($data['MatKhau']) < 6) {
+            $errors[] = "Mật khẩu phải có ít nhất 6 ký tự";
+        }
+    }
 
     // SỬA DÒNG ~130-150 trong View:
     if (empty($errors)) {
@@ -159,6 +167,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'sua' && !empty($maKH))
         // Kiểm tra ít nhất 2 ký tự
         if (strlen(trim($data['HoTen'])) < 2) {
             $errors[] = "Họ tên phải có ít nhất 2 ký tự";
+        }
+    }
+    // VALIDATE MẬT KHẨU KHI SỬA (CHỈ KIỂM TRA NẾU NGƯỜI DÙNG NHẬP MẬT KHẨU MỚI THẬT SỰ)
+    if (!empty($data['MatKhau']) && $data['MatKhau'] !== '********') {
+        if (strlen($data['MatKhau']) < 6) {
+            $errors[] = "Mật khẩu phải có ít nhất 6 ký tự";
         }
     }
 
@@ -812,4 +826,60 @@ if ($action === 'taikhoan') {
         });
 
     <?php endif; ?>
+</script>
+
+<!-- Thêm JavaScript -->
+<script>
+    let isPasswordChanged = false;
+
+    function enablePasswordChange() {
+        const passwordInput = document.getElementById('passwordInput');
+        const changeBtn = document.getElementById('changeBtn');
+
+        // Xóa readonly và placeholder
+        passwordInput.removeAttribute('readonly');
+        passwordInput.value = '';
+        passwordInput.placeholder = 'Nhập mật khẩu mới (ít nhất 6 ký tự)';
+        passwordInput.focus();
+
+        // Đánh dấu đã thay đổi
+        isPasswordChanged = true;
+
+        // Đổi nút thành "Hủy"
+        changeBtn.innerHTML = '<i class="fas fa-times"></i> Hủy';
+        changeBtn.className = 'btn btn-outline-danger';
+        changeBtn.setAttribute('onclick', 'cancelPasswordChange()');
+    }
+
+    function cancelPasswordChange() {
+        const passwordInput = document.getElementById('passwordInput');
+        const changeBtn = document.getElementById('changeBtn');
+
+        // Khôi phục trạng thái ban đầu
+        passwordInput.setAttribute('readonly', 'readonly');
+        passwordInput.value = '********';
+        passwordInput.placeholder = '••••••••';
+
+        // Reset flag
+        isPasswordChanged = false;
+
+        // Đổi nút trở lại
+        changeBtn.innerHTML = '<i class="fas fa-edit"></i> Đổi MK';
+        changeBtn.className = 'btn btn-outline-secondary';
+        changeBtn.setAttribute('onclick', 'enablePasswordChange()');
+    }
+
+    // Validate form
+    document.getElementById('formKH').addEventListener('submit', function(e) {
+        const passwordInput = document.getElementById('passwordInput');
+
+        // Chỉ validate mật khẩu nếu người dùng đã thay đổi
+        if (isPasswordChanged && passwordInput.value.length < 6) {
+            alert('Mật khẩu phải có ít nhất 6 ký tự!');
+            e.preventDefault();
+            return false;
+        }
+
+        return true;
+    });
 </script>

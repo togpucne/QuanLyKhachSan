@@ -98,98 +98,130 @@ class QuanLyKHModel
         return $khachHang;
     }
 
-    // Thêm KH và tạo tài khoản - Phiên bản đơn giản
     public function themKH($data)
-    {
-        $conn = $this->db->openConnect();
-        $conn->begin_transaction();
+{
+    $conn = $this->db->openConnect();
+    $conn->begin_transaction();
 
-        try {
-            $maKHAuto = $this->generateMaKH();
-            $taiKhoanID = null;
+    try {
+        $maKHAuto = $this->generateMaKH();
+        $taiKhoanID = null;
 
-            // 1. Tạo tài khoản nếu có
-            if (!empty($data['TenDangNhap']) && !empty($data['MatKhau'])) {
-                // Kiểm tra trùng
-                if ($this->kiemTraTenDangNhap($data['TenDangNhap'])) {
-                    throw new Exception("Tên đăng nhập đã tồn tại!");
-                }
+        // ========== KIỂM TRA TRÙNG CHUNG (LUÔN KIỂM TRA) ==========
+        
+        // 1. Kiểm tra SĐT trùng (LUÔN LUÔN)
+        if ($this->kiemTraSDT($data['SoDienThoai'])) {
+            throw new Exception("Số điện thoại đã tồn tại trong hệ thống!");
+        }
 
-                if (!empty($data['Email']) && $this->kiemTraEmail($data['Email'])) {
-                    throw new Exception("Email đã tồn tại!");
-                }
+        // 2. Kiểm tra Email trùng nếu có nhập (LUÔN LUÔN)
+        if (!empty($data['Email'])) {
+            // THÊM: Kiểm tra định dạng email hợp lệ
+            if (!filter_var($data['Email'], FILTER_VALIDATE_EMAIL)) {
+                throw new Exception("Email không hợp lệ!");
+            }
+            
+            // THÊM: Kiểm tra email trùng
+            if ($this->kiemTraEmail($data['Email'])) {
+                throw new Exception("Email đã tồn tại trong hệ thống!");
+            }
+        }
 
-                if (!empty($data['CMND']) && $this->kiemTraCMND($data['CMND'])) {
-                    throw new Exception("CMND đã tồn tại!");
-                }
+        // 3. Kiểm tra CMND trùng nếu có nhập (LUÔN LUÔN)
+        if (!empty($data['CMND'])) {
+            // THÊM: Kiểm tra định dạng CMND
+            if (!preg_match('/^\d{9,12}$/', $data['CMND'])) {
+                throw new Exception("CMND phải có 9-12 chữ số!");
+            }
+            
+            // THÊM: Kiểm tra CMND trùng
+            if ($this->kiemTraCMND($data['CMND'])) {
+                throw new Exception("CMND đã tồn tại trong hệ thống!");
+            }
+        }
 
-                // Chuẩn bị giá trị
-                $tenDangNhap = $data['TenDangNhap'];
-                $matKhauHash = md5($data['MatKhau']);
-                $email = $data['Email'] ?? '';
-                $cmnd = $data['CMND'] ?? '';
-
-                $sql_tk = "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND) 
-                       VALUES (?, ?, 'khachhang', 1, ?, ?)";
-
-                $stmt_tk = $conn->prepare($sql_tk);
-                $stmt_tk->bind_param("ssss", $tenDangNhap, $matKhauHash, $email, $cmnd);
-
-                if (!$stmt_tk->execute()) {
-                    throw new Exception("Lỗi tạo tài khoản!");
-                }
-
-                $taiKhoanID = $conn->insert_id;
+        // ========== TẠO TÀI KHOẢN NẾU CÓ ==========
+        
+        // 4. Tạo tài khoản nếu có
+        if (!empty($data['TenDangNhap']) && !empty($data['MatKhau'])) {
+            // Kiểm tra tên đăng nhập trùng
+            if ($this->kiemTraTenDangNhap($data['TenDangNhap'])) {
+                throw new Exception("Tên đăng nhập đã tồn tại!");
             }
 
-            // 2. Thêm khách hàng
-            $sql_kh = "INSERT INTO KhachHang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai, MaTaiKhoan) 
-                   VALUES (?, ?, ?, ?, ?, ?)";
+            // THÊM: Kiểm tra độ dài tên đăng nhập
+            if (strlen($data['TenDangNhap']) < 3) {
+                throw new Exception("Tên đăng nhập phải có ít nhất 3 ký tự!");
+            }
 
-            $stmt_kh = $conn->prepare($sql_kh);
+            // THÊM: Kiểm tra độ dài mật khẩu
+            if (strlen($data['MatKhau']) < 6) {
+                throw new Exception("Mật khẩu phải có ít nhất 6 ký tự!");
+            }
 
             // Chuẩn bị giá trị
-            $maKH = $maKHAuto;
-            $hoTen = $data['HoTen'];
-            $soDienThoai = $data['SoDienThoai'];
-            $diaChi = $data['DiaChi'] ?? '';
-            $trangThai = $data['TrangThai'];
+            $tenDangNhap = $data['TenDangNhap'];
+            $matKhauHash = md5($data['MatKhau']);
+            $email = $data['Email'] ?? '';
+            $cmnd = $data['CMND'] ?? '';
 
-            // Xử lý MaTaiKhoan (có thể là NULL)
-            if ($taiKhoanID === null) {
-                // Nếu NULL, dùng bind_param với chuỗi format 'ssssss'
-                $stmt_kh->bind_param("ssssss", $maKH, $hoTen, $soDienThoai, $diaChi, $trangThai, $taiKhoanID);
-            } else {
-                // Nếu có giá trị, dùng 'sssssi' (i cho integer)
-                if ($taiKhoanID === null) {
-                    // Truyền NULL trực tiếp
-                    $stmt_kh->bind_param("ssssss", $maKH, $hoTen, $soDienThoai, $diaChi, $trangThai, $taiKhoanID);
-                } else {
-                    $stmt_kh->bind_param("sssssi", $maKH, $hoTen, $soDienThoai, $diaChi, $trangThai, $taiKhoanID);
-                }
+            $sql_tk = "INSERT INTO tai_khoan (TenDangNhap, MatKhau, VaiTro, TrangThai, Email, CMND) 
+                       VALUES (?, ?, 'khachhang', 1, ?, ?)";
+
+            $stmt_tk = $conn->prepare($sql_tk);
+            $stmt_tk->bind_param("ssss", $tenDangNhap, $matKhauHash, $email, $cmnd);
+
+            if (!$stmt_tk->execute()) {
+                throw new Exception("Lỗi tạo tài khoản!");
             }
 
-            if (!$stmt_kh->execute()) {
-                throw new Exception("Lỗi thêm khách hàng!");
-            }
-
-            $conn->commit();
-
-            return [
-                'success' => true,
-                'maKH' => $maKHAuto,
-                'taiKhoanID' => $taiKhoanID
-            ];
-        } catch (Exception $e) {
-            $conn->rollback();
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        } finally {
-            $this->db->closeConnect($conn);
+            $taiKhoanID = $conn->insert_id;
         }
+
+        // 5. Thêm khách hàng
+        // SỬA LẠI PHẦN bind_param để tránh lỗi
+        $hoTen = $data['HoTen'];
+        $soDienThoai = $data['SoDienThoai'];
+        $diaChi = $data['DiaChi'] ?? '';
+        $trangThai = $data['TrangThai'];
+
+        if ($taiKhoanID !== null) {
+            // Có tài khoản
+            $sql_kh = "INSERT INTO KhachHang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai, MaTaiKhoan) 
+                       VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt_kh = $conn->prepare($sql_kh);
+            
+            $stmt_kh->bind_param("sssssi", $maKHAuto, $hoTen, $soDienThoai, $diaChi, $trangThai, $taiKhoanID);
+        } else {
+            // Không có tài khoản
+            $sql_kh = "INSERT INTO KhachHang (MaKH, HoTen, SoDienThoai, DiaChi, TrangThai) 
+                       VALUES (?, ?, ?, ?, ?)";
+            $stmt_kh = $conn->prepare($sql_kh);
+            
+            $stmt_kh->bind_param("sssss", $maKHAuto, $hoTen, $soDienThoai, $diaChi, $trangThai);
+        }
+
+        if (!$stmt_kh->execute()) {
+            throw new Exception("Lỗi thêm khách hàng!");
+        }
+
+        $conn->commit();
+
+        return [
+            'success' => true,
+            'maKH' => $maKHAuto,
+            'taiKhoanID' => $taiKhoanID
+        ];
+    } catch (Exception $e) {
+        $conn->rollback();
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    } finally {
+        $this->db->closeConnect($conn);
     }
+}
 
     // Sửa KH - Cập nhật toàn bộ hàm
     public function suaKH($maKH, $data)

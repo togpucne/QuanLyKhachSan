@@ -80,19 +80,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'them') {
         $errors[] = "Email không hợp lệ";
     }
 
+    // SỬA DÒNG ~130-150 trong View:
     if (empty($errors)) {
         // Kiểm tra SĐT trùng
         if ($model->kiemTraSDT($data['SoDienThoai'])) {
             $_SESSION['error'] = "Số điện thoại đã tồn tại trong hệ thống!";
         } else {
-            // Nếu có tạo tài khoản, kiểm tra thêm
-            if (!empty($data['TenDangNhap'])) {
+            // THÊM: Kiểm tra Email trùng (LUÔN KIỂM TRA)
+            if (!empty($data['Email']) && $model->kiemTraEmail($data['Email'])) {
+                $_SESSION['error'] = "Email đã tồn tại!";
+            }
+            // THÊM: Kiểm tra CMND trùng (LUÔN KIỂM TRA)
+            else if (!empty($data['CMND']) && $model->kiemTraCMND($data['CMND'])) {
+                $_SESSION['error'] = "CMND đã tồn tại!";
+            } else if (!empty($data['TenDangNhap'])) {
                 if ($model->kiemTraTenDangNhap($data['TenDangNhap'])) {
                     $_SESSION['error'] = "Tên đăng nhập đã tồn tại!";
-                } else if (!empty($data['Email']) && $model->kiemTraEmail($data['Email'])) {
-                    $_SESSION['error'] = "Email đã tồn tại!";
-                } else if (!empty($data['CMND']) && $model->kiemTraCMND($data['CMND'])) {
-                    $_SESSION['error'] = "CMND đã tồn tại!";
                 } else {
                     $result = $model->themKH($data);
                     if ($result['success']) {

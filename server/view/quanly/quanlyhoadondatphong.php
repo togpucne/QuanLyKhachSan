@@ -1,5 +1,7 @@
 <?php
 // server/view/quanly/quanlyhoadondatphong.php
+
+// ========== XỬ LÝ PHẦN ĐẦU - TRƯỚC KHI CÓ BẤT KỲ OUTPUT NÀO ==========
 session_start();
 
 // Kiểm tra quyền truy cập
@@ -8,11 +10,127 @@ if (!isset($_SESSION['vaitro']) || $_SESSION['vaitro'] !== 'quanly') {
     exit();
 }
 
+require_once __DIR__ . '/../../model/quanlyhoadondatphong.model.php';
+require_once __DIR__ . '/../../model/connectDB.php'; // Thêm để có thể kết nối database
+
+// ========== XỬ LÝ XÓA HÓA ĐƠN TRỰC TIẾP ==========
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'xoa') {
+    $id = $_POST['id'] ?? 0;
+    
+    if ($id > 0) {
+        $model = new QuanLyHoaDonDatPhongModel();
+        
+        // Kiểm tra hóa đơn tồn tại
+        $hoadon = $model->getHoaDonById($id);
+        if ($hoadon) {
+            // Lấy thông tin hóa đơn
+            $maKhachHang = $hoadon['MaKhachHang'];
+            $maPhong = $hoadon['MaPhong'];
+            
+            // 1. Xóa hóa đơn
+            $result = $model->deleteHoaDon($id);
+            
+            if ($result) {
+                // 2. Update trạng thái phòng về "Trống"
+                $db = new Connect();
+                $conn = $db->openConnect();
+                
+                if ($conn) {
+                    // Update phòng
+                    $sqlPhong = "UPDATE phong SET TrangThai = 'Trống' WHERE MaPhong = ?";
+                    $stmtPhong = $conn->prepare($sqlPhong);
+                    $stmtPhong->bind_param("i", $maPhong);
+                    $updatePhong = $stmtPhong->execute();
+                    $stmtPhong->close();
+                    
+                    // Update khách hàng
+                    $sqlKhachHang = "UPDATE KhachHang SET TrangThai = 'Không ở' WHERE MaKH = ?";
+                    $stmtKhachHang = $conn->prepare($sqlKhachHang);
+                    $stmtKhachHang->bind_param("s", $maKhachHang);
+                    $updateKhachHang = $stmtKhachHang->execute();
+                    $stmtKhachHang->close();
+                    
+                    $db->closeConnect($conn);
+                    
+                    $_SESSION['success'] = "Đã xóa hóa đơn #$id thành công!<br>";
+                    $_SESSION['success'] .= "- Phòng $maPhong đã được cập nhật về 'Trống'<br>";
+                    $_SESSION['success'] .= "- Khách hàng $maKhachHang đã được cập nhật về 'Không ở'";
+                } else {
+                    $_SESSION['error'] = "Xóa hóa đơn thành công nhưng không thể cập nhật trạng thái phòng!";
+                }
+            } else {
+                $_SESSION['error'] = "Xóa hóa đơn thất bại!";
+            }
+        } else {
+            $_SESSION['error'] = "Không tìm thấy hóa đơn #$id!";
+        }
+        
+        // Redirect về trang hiện tại
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit();
+    }
+}
+
+// ========== XỬ LÝ LẤY CHI TIẾT HÓA ĐƠN (CHO AJAX) ==========
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'chiTiet') {
+    $id = $_GET['id'] ?? 0;
+    if ($id > 0) {
+        $model = new QuanLyHoaDonDatPhongModel();
+        $hoadon = $model->getHoaDonById($id);
+        
+        header('Content-Type: application/json');
+        if ($hoadon) {
+            echo json_encode(['success' => true, 'data' => $hoadon]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Không tìm thấy hóa đơn']);
+        }
+        exit();
+    }
+}
+
+// ========== XỬ LÝ DỮ LIỆU CHO VIEW ==========
+$model = new QuanLyHoaDonDatPhongModel();
+
+// Xử lý lọc nếu có tham số
+$tuNgayFilter = isset($_GET['tu_ngay']) ? $_GET['tu_ngay'] : null;
+$denNgayFilter = isset($_GET['den_ngay']) ? $_GET['den_ngay'] : null;
+$tuKhoaFilter = isset($_GET['tu_khoa']) ? $_GET['tu_khoa'] : null;
+
+// Lấy dữ liệu theo bộ lọc
+if (!empty($tuKhoaFilter)) {
+    $hoadon = $model->searchHoaDon($tuKhoaFilter);
+    $filterType = 'search';
+    $filterValue = $tuKhoaFilter;
+} elseif ($tuNgayFilter && $denNgayFilter) {
+    $hoadon = $model->filterHoaDonByDate($tuNgayFilter, $denNgayFilter);
+    $filterType = 'date';
+    $filterValue = "$tuNgayFilter đến $denNgayFilter";
+} else {
+    $hoadon = $model->getAllHoaDon();
+    $filterType = 'all';
+}
+
+// Lấy thống kê tổng quan
+$tongDoanhThuData = $model->getTongDoanhThu();
+
+// Tính thống kê nhanh
+$tongHoaDon = count($hoadon);
+$daThanhToan = 0;
+$tongTien = 0;
+
+foreach ($hoadon as $hd) {
+    if ($hd['TrangThai'] == 'DaThanhToan') {
+        $daThanhToan++;
+        $tongTien += $hd['TongTien'];
+    }
+}
+$chuaThanhToan = $tongHoaDon - $daThanhToan;
+$trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
+
+// Bây giờ mới include header
 include_once '../layouts/header.php';
 
-require_once __DIR__ . '/../../model/quanlyhoadondatphong.model.php';
-
-// Lấy dữ liệu hóa đơn
+// ========== PHẦN HIỆN TẠI GIỮ NGUYÊN ==========
 $model = new QuanLyHoaDonDatPhongModel();
 
 // Xử lý lọc nếu có tham số
@@ -100,6 +218,23 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                 <p class="text-muted">Xem/ xóa và in danh thu từ hóa đơn</p>
             </div>
         </div>
+
+        <!-- Hiển thị thông báo -->
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle me-2"></i>
+                <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
         <!-- Bộ lọc và tìm kiếm -->
         <div class="card mb-4">
@@ -266,6 +401,12 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                 </span>
             </div>
             <div class="card-body">
+                <!-- Form xóa ẩn -->
+                <form id="formXoaHoaDon" method="POST" style="display: none;">
+                    <input type="hidden" name="action" value="xoa">
+                    <input type="hidden" name="id" id="idHoaDonXoa">
+                </form>
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -331,7 +472,7 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                                                 <button class="btn btn-sm btn-outline-primary" onclick="xemChiTiet(<?php echo $hd['Id']; ?>)">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="xoaHoaDon(<?php echo $hd['Id']; ?>)">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="xoaHoaDonTrucTiep(<?php echo $hd['Id']; ?>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -357,42 +498,53 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
             </div>
         </div>
     </div>
-                                        </div>
-    <!-- Modal chi tiết -->
-    <div class="modal fade" id="modalChiTiet" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-file-invoice me-2"></i>Chi tiết Hóa đơn
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="modalChiTietBody">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Đang tải dữ liệu...</p>
+</div>
+
+<!-- Modal chi tiết -->
+<div class="modal fade" id="modalChiTiet" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-invoice me-2"></i>Chi tiết Hóa đơn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalChiTietBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="inHoaDon()">
-                        <i class="fas fa-print me-1"></i>In hóa đơn
-                    </button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="inHoaDon()">
+                    <i class="fas fa-print me-1"></i>In hóa đơn
+                </button>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- JavaScript FIXED VERSION -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script>
+<!-- JavaScript -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
 $(document).ready(function() {
     console.log('jQuery loaded:', typeof $ !== 'undefined');
 });
 
+// Function xóa hóa đơn trực tiếp (không dùng AJAX)
+function xoaHoaDonTrucTiep(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa hóa đơn #' + id + '?\n\nSau khi xóa:\n- Phòng sẽ được cập nhật về "Trống"\n- Khách hàng sẽ được cập nhật về "Không ở"')) {
+        // Submit form trực tiếp
+        document.getElementById('idHoaDonXoa').value = id;
+        document.getElementById('formXoaHoaDon').submit();
+    }
+}
+
+// Function xem chi tiết bằng AJAX
 function xemChiTiet(id) {
     console.log('Đang xem chi tiết hóa đơn ID:', id);
 
@@ -406,15 +558,13 @@ function xemChiTiet(id) {
     var modal = new bootstrap.Modal(modalElement);
     modal.show();
 
-    // Tạo URL đúng
-    var baseUrl = window.location.origin;
-    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php?action=chiTiet&id=' + id;
-    
-    console.log('Request URL:', controllerPath);
+    // Tạo URL đúng - gọi đến chính trang hiện tại
+    var url = window.location.pathname + '?action=chiTiet&id=' + id;
+    console.log('Request URL:', url);
 
     // Load dữ liệu chi tiết
     $.ajax({
-        url: controllerPath,
+        url: url,
         type: 'GET',
         dataType: 'json',
         timeout: 10000,
@@ -568,56 +718,19 @@ function xemChiTiet(id) {
         },
         error: function(xhr, status, error) {
             console.log('AJAX Error:', status, error);
-            console.log('XHR response:', xhr.responseText);
-
-            var errorMsg = 'Lỗi kết nối đến server!';
+            var errorMsg = 'Lỗi tải dữ liệu!';
             $('#modalChiTietBody').html(`
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    ${errorMsg}<br>
-                    <small>URL: ${controllerPath}</small>
+                    ${errorMsg}
                 </div>
             `);
         }
     });
 }
 
-function xoaHoaDon(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa hóa đơn #' + id + '?')) {
-        return;
-    }
-    
-    var baseUrl = window.location.origin;
-    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php';
-    
-    console.log('Delete URL:', controllerPath);
-    
-    // Gửi request xóa dùng FormData (dễ hơn JSON)
-    var formData = new FormData();
-    formData.append('action', 'xoa');
-    formData.append('id', id);
-    
-    $.ajax({
-        url: controllerPath,
-        type: 'POST',
-        data: formData,
-        contentType: false,
-        processData: false,
-        dataType: 'json',
-        success: function(response) {
-            console.log('Delete response:', response);
-            if (response.success) {
-                alert('Đã xóa hóa đơn thành công!');
-                location.reload();
-            } else {
-                alert('Lỗi: ' + (response.error || 'Không thể xóa hóa đơn'));
-            }
-        },
-        error: function(xhr, status, error) {
-            console.log('Delete Error:', status, error);
-            alert('Lỗi kết nối đến server!');
-        }
-    });
+function resetFilter() {
+    window.location.href = '?';
 }
 
 function inHoaDon() {
@@ -703,10 +816,6 @@ function inHoaDon() {
     }
 }
 
-function resetFilter() {
-    window.location.href = '?';
-}
-
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     try {
@@ -736,29 +845,8 @@ function formatCurrency(amount) {
         currency: 'VND'
     }).format(amount).replace('₫', 'đ');
 }
-
-// Test function
-function testController() {
-    var baseUrl = window.location.origin;
-    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php?action=chiTiet&id=1';
-    
-    console.log('Testing controller:', controllerPath);
-    
-    $.ajax({
-        url: controllerPath,
-        type: 'GET',
-        success: function(response) {
-            console.log('Controller test success:', response);
-            alert('Controller hoạt động!');
-        },
-        error: function(xhr, status, error) {
-            console.log('Controller test error:', status, error);
-            alert('Controller không hoạt động! Kiểm tra đường dẫn.');
-        }
-    });
-}
 </script>
 
-    <?php
-    include_once '../layouts/footer.php';
-    ?>
+<?php
+include_once '../layouts/footer.php';
+?>

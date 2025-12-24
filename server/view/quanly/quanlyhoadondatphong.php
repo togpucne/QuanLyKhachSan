@@ -388,59 +388,38 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
 
     <!-- JavaScript FIXED VERSION -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            console.log('jQuery loaded:', typeof $ !== 'undefined');
-        });
+  <script>
+$(document).ready(function() {
+    console.log('jQuery loaded:', typeof $ !== 'undefined');
+});
 
-        function xemChiTiet(id) {
-            console.log('Đang xem chi tiết hóa đơn ID:', id);
+function xemChiTiet(id) {
+    console.log('Đang xem chi tiết hóa đơn ID:', id);
 
-            // Kiểm tra jQuery
-            if (typeof $ === 'undefined') {
-                alert('jQuery chưa được tải! Vui lòng kiểm tra kết nối internet.');
-                return;
-            }
+    // Hiển thị modal
+    var modalElement = document.getElementById('modalChiTiet');
+    if (!modalElement) {
+        alert('Không tìm thấy modal!');
+        return;
+    }
 
-            // Kiểm tra bootstrap
-            if (typeof bootstrap === 'undefined' || typeof bootstrap.Modal === 'undefined') {
-                alert('Bootstrap chưa được tải! Vui lòng kiểm tra kết nối internet.');
-                return;
-            }
+    var modal = new bootstrap.Modal(modalElement);
+    modal.show();
 
-            // Hiển thị modal
-            var modalElement = document.getElementById('modalChiTiet');
-            if (!modalElement) {
-                alert('Không tìm thấy modal!');
-                return;
-            }
+    // Tạo URL đúng
+    var baseUrl = window.location.origin;
+    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php?action=chiTiet&id=' + id;
+    
+    console.log('Request URL:', controllerPath);
 
-            var modal = new bootstrap.Modal(modalElement);
-            modal.show();
-
-            // Tạo URL đúng - KIỂM TRA ĐƯỜNG DẪN
-            var baseUrl = window.location.origin;
-            var pathArray = window.location.pathname.split('/');
-            var controllerPath = '';
-
-            // Xác định đường dẫn controller
-            if (pathArray.includes('ABC-Resort')) {
-                controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php';
-            } else {
-                controllerPath = '../../controller/quanlyhoadondatphong.controller.php';
-            }
-
-            var url = controllerPath + '?action=chiTiet&id=' + id;
-            console.log('Request URL:', url);
-
-            // Load dữ liệu chi tiết
-            $.ajax({
-                url: url,
-                type: 'GET',
-                dataType: 'json',
-                timeout: 10000, // 10 giây timeout
-                beforeSend: function() {
-                    $('#modalChiTietBody').html(`
+    // Load dữ liệu chi tiết
+    $.ajax({
+        url: controllerPath,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        beforeSend: function() {
+            $('#modalChiTietBody').html(`
                 <div class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -448,55 +427,55 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                     <p class="mt-2">Đang tải dữ liệu...</p>
                 </div>
             `);
-                },
-                success: function(response) {
-                    console.log('Response received:', response);
+        },
+        success: function(response) {
+            console.log('Response received:', response);
 
-                    if (response && response.success) {
-                        var hd = response.data;
-                        console.log('Data:', hd);
+            if (response && response.success) {
+                var hd = response.data;
 
-                        // Kiểm tra dữ liệu
-                        if (!hd) {
-                            $('#modalChiTietBody').html(`
+                if (!hd) {
+                    $('#modalChiTietBody').html(`
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             Không tìm thấy dữ liệu hóa đơn
                         </div>
                     `);
-                            return;
-                        }
+                    return;
+                }
 
-                        // Xử lý DanhSachKhach nếu có
-                        var danhSachKhachHtml = '';
-                        try {
-                            var danhSachKhach = hd.DanhSachKhach ? JSON.parse(hd.DanhSachKhach) : [];
-                            if (Array.isArray(danhSachKhach) && danhSachKhach.length > 0) {
-                                danhSachKhachHtml = `
-                            <div class="mt-3">
-                                <h6>Danh sách khách</h6>
-                                <table class="table table-sm table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Họ tên</th>
-                                            <th>Số điện thoại</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-                                danhSachKhach.forEach(function(khach) {
-                                    danhSachKhachHtml += `
-                                <tr>
-                                    <td>${khach.HoTen || ''}</td>
-                                    <td>${khach.SoDienThoai || ''}</td>
-                                </tr>`;
-                                });
-                                danhSachKhachHtml += `</tbody></table></div>`;
-                            }
-                        } catch (e) {
-                            console.log('Error parsing DanhSachKhach:', e);
+                // Format danh sách khách nếu có
+                var danhSachKhachHtml = '';
+                if (hd.DanhSachKhach) {
+                    try {
+                        var danhSachKhach = JSON.parse(hd.DanhSachKhach);
+                        if (Array.isArray(danhSachKhach) && danhSachKhach.length > 0) {
+                            danhSachKhachHtml = `
+                                <div class="mt-3">
+                                    <h6>Danh sách khách</h6>
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Họ tên</th>
+                                                <th>Số điện thoại</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+                            danhSachKhach.forEach(function(khach) {
+                                danhSachKhachHtml += `
+                                    <tr>
+                                        <td>${khach.HoTen || ''}</td>
+                                        <td>${khach.SoDienThoai || ''}</td>
+                                    </tr>`;
+                            });
+                            danhSachKhachHtml += `</tbody></table></div>`;
                         }
+                    } catch (e) {
+                        console.log('Error parsing DanhSachKhach:', e);
+                    }
+                }
 
-                        var html = `
+                var html = `
                     <div class="row">
                         <div class="col-md-8">
                             <h6>Thông tin hóa đơn #${hd.Id}</h6>
@@ -576,100 +555,209 @@ $trungBinh = $tongHoaDon > 0 ? $tongTien / $tongHoaDon : 0;
                     </div>
                 `;
 
-                        $('#modalChiTietBody').html(html);
-                    } else {
-                        var errorMsg = response && response.error ? response.error : 'Có lỗi xảy ra!';
-                        $('#modalChiTietBody').html(`
+                $('#modalChiTietBody').html(html);
+            } else {
+                var errorMsg = response && response.error ? response.error : 'Có lỗi xảy ra!';
+                $('#modalChiTietBody').html(`
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         ${errorMsg}
                     </div>
                 `);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.log('AJAX Error:', status, error);
-                    console.log('XHR:', xhr);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.log('AJAX Error:', status, error);
+            console.log('XHR response:', xhr.responseText);
 
-                    var errorMsg = '';
-                    if (status === 'timeout') {
-                        errorMsg = 'Request timeout! Kiểm tra kết nối mạng.';
-                    } else if (status === 'error') {
-                        errorMsg = 'Lỗi kết nối đến server!';
-                    } else {
-                        errorMsg = 'Lỗi: ' + status;
-                    }
-
-                    $('#modalChiTietBody').html(`
+            var errorMsg = 'Lỗi kết nối đến server!';
+            $('#modalChiTietBody').html(`
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    ${errorMsg}
+                    ${errorMsg}<br>
+                    <small>URL: ${controllerPath}</small>
                 </div>
             `);
+        }
+    });
+}
+
+function xoaHoaDon(id) {
+    if (!confirm('Bạn có chắc chắn muốn xóa hóa đơn #' + id + '?')) {
+        return;
+    }
+    
+    var baseUrl = window.location.origin;
+    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php';
+    
+    console.log('Delete URL:', controllerPath);
+    
+    // Gửi request xóa dùng FormData (dễ hơn JSON)
+    var formData = new FormData();
+    formData.append('action', 'xoa');
+    formData.append('id', id);
+    
+    $.ajax({
+        url: controllerPath,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        dataType: 'json',
+        success: function(response) {
+            console.log('Delete response:', response);
+            if (response.success) {
+                alert('Đã xóa hóa đơn thành công!');
+                location.reload();
+            } else {
+                alert('Lỗi: ' + (response.error || 'Không thể xóa hóa đơn'));
+            }
+        },
+        error: function(xhr, status, error) {
+            console.log('Delete Error:', status, error);
+            alert('Lỗi kết nối đến server!');
+        }
+    });
+}
+
+function inHoaDon() {
+    // Lấy nội dung modal để in
+    var modalBody = document.getElementById('modalChiTietBody');
+    if (!modalBody) {
+        alert('Không có dữ liệu hóa đơn để in!');
+        return;
+    }
+    
+    var printContent = modalBody.innerHTML;
+    
+    // Tạo cửa sổ in
+    var printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    // Tạo HTML cho trang in
+    var html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Hóa đơn Resort</title>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .invoice-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+                .invoice-header h1 { margin: 0; color: #2c3e50; }
+                .invoice-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; }
+                .invoice-table th { background-color: #f2f2f2; }
+                .total-amount { font-size: 18px; color: #e74c3c; font-weight: bold; }
+                .footer { margin-top: 50px; text-align: center; color: #7f8c8d; }
+                @media print { 
+                    body { margin: 0; padding: 20px; }
+                    .no-print { display: none !important; }
                 }
-            });
-        }
+                .btn-print { 
+                    background: #3498db; 
+                    color: white; 
+                    padding: 10px 20px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    margin: 10px; 
+                    border: none;
+                    cursor: pointer;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-header">
+                <h1>ABC RESORT</h1>
+                <p>Địa chỉ: 123 Đường Biển, Nha Trang, Khánh Hòa</p>
+                <p>Điện thoại: 0258 123 456 - Email: info@abcresort.com</p>
+            </div>
+            
+            <h2 style="text-align: center; color: #2c3e50;">HÓA ĐƠN THANH TOÁN</h2>
+            <p style="text-align: center; color: #7f8c8d;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>
+            
+            <div id="invoice-content">
+                ${printContent}
+            </div>
+            
+            <div class="footer">
+                <p>Cảm ơn quý khách đã sử dụng dịch vụ!</p>
+                <p>Hóa đơn điện tử có giá trị như hóa đơn GTGT</p>
+            </div>
+            
+            <div class="no-print" style="text-align: center; margin-top: 30px;">
+                <button class="btn-print" onclick="window.print()">In hóa đơn</button>
+                <button class="btn-print" onclick="window.close()" style="background: #95a5a6;">Đóng</button>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    // Đóng modal
+    var modal = bootstrap.Modal.getInstance(document.getElementById('modalChiTiet'));
+    if (modal) {
+        modal.hide();
+    }
+}
 
-        function xoaHoaDon(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa hóa đơn #' + id + '?')) {
-                $.ajax({
-                    url: '../../controller/quanlyhoadondatphong.controller.php',
-                    type: 'POST',
-                    data: JSON.stringify({
-                        action: 'xoa',
-                        id: id
-                    }),
-                    contentType: 'application/json',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert('Đã xóa hóa đơn thành công!');
-                            location.reload();
-                        } else {
-                            alert('Lỗi: ' + (response.error || 'Không thể xóa hóa đơn'));
-                        }
-                    },
-                    error: function() {
-                        alert('Lỗi kết nối đến server!');
-                    }
-                });
-            }
-        }
+function resetFilter() {
+    window.location.href = '?';
+}
 
-        function resetFilter() {
-            window.location.href = '?';
-        }
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    try {
+        var date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+        return date.toLocaleDateString('vi-VN');
+    } catch (e) {
+        return 'N/A';
+    }
+}
 
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            try {
-                var date = new Date(dateString);
-                if (isNaN(date.getTime())) return 'N/A';
-                return date.toLocaleDateString('vi-VN');
-            } catch (e) {
-                return 'N/A';
-            }
-        }
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return 'N/A';
+    try {
+        var date = new Date(dateTimeString);
+        if (isNaN(date.getTime())) return 'N/A';
+        return date.toLocaleString('vi-VN');
+    } catch (e) {
+        return 'N/A';
+    }
+}
 
-        function formatDateTime(dateTimeString) {
-            if (!dateTimeString) return 'N/A';
-            try {
-                var date = new Date(dateTimeString);
-                if (isNaN(date.getTime())) return 'N/A';
-                return date.toLocaleString('vi-VN');
-            } catch (e) {
-                return 'N/A';
-            }
-        }
+function formatCurrency(amount) {
+    if (!amount || isNaN(amount)) return '0 đ';
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount).replace('₫', 'đ');
+}
 
-        function formatCurrency(amount) {
-            if (!amount || isNaN(amount)) return '0 đ';
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            }).format(amount).replace('₫', 'đ');
+// Test function
+function testController() {
+    var baseUrl = window.location.origin;
+    var controllerPath = baseUrl + '/ABC-Resort/server/controller/quanlyhoadondatphong.controller.php?action=chiTiet&id=1';
+    
+    console.log('Testing controller:', controllerPath);
+    
+    $.ajax({
+        url: controllerPath,
+        type: 'GET',
+        success: function(response) {
+            console.log('Controller test success:', response);
+            alert('Controller hoạt động!');
+        },
+        error: function(xhr, status, error) {
+            console.log('Controller test error:', status, error);
+            alert('Controller không hoạt động! Kiểm tra đường dẫn.');
         }
-    </script>
+    });
+}
+</script>
 
     <?php
     include_once '../layouts/footer.php';

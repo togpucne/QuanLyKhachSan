@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'them_vao_phong') {
     $maPhong = $_POST['ma_phong'] ?? 0;
     $thietBiDuocChon = $_POST['thiet_bi'] ?? [];
+    $_POST['so_luong'] = 1;
     $soLuong = $_POST['so_luong'] ?? 1;
     $tinhTrang = $_POST['tinh_trang'] ?? 'Tốt';
 
@@ -81,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'them_thiet_bi_moi_vao_phong') {
     $maPhong = $_POST['ma_phong_thiet_bi_moi'] ?? 0;
     $tenThietBi = trim($_POST['ten_thiet_bi_moi'] ?? '');
+    $_POST['so_luong_thiet_bi_moi'] = 1;
     $soLuong = $_POST['so_luong_thiet_bi_moi'] ?? 1;
     $tinhTrang = $_POST['tinh_trang_thiet_bi_moi'] ?? 'Tốt';
 
@@ -287,7 +289,7 @@ $thongKe = $model->getThongKe();
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Số lượng mỗi loại</label>
-                        <input type="number" class="form-control" name="so_luong" value="1" min="1" max="10" readonly>
+                        <input type="number" class="form-control" name="so_luong" value="1" min="1" max="10" >
                     </div>
 
                     <div class="col-md-4 mb-3">
@@ -372,7 +374,7 @@ $thongKe = $model->getThongKe();
 
                     <div class="col-md-2 mb-3">
                         <label class="form-label">Số lượng</label>
-                        <input type="number" class="form-control" name="so_luong_thiet_bi_moi" readonly
+                        <input type="number" class="form-control" name="so_luong_thiet_bi_moi" 
                             value="1" min="1" max="10">
                     </div>
 
@@ -426,14 +428,14 @@ $thongKe = $model->getThongKe();
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 text-center">
                     <thead class="table-light">
                         <tr>
                             <th width="60" class="ps-4">STT</th>
                             <th>Số Phòng</th>
                             <th>Tên Phòng</th>
                             <th>Trạng Thái</th>
-                            <th>Số Thiết Bị</th>
+                            <th>Loại Thiết Bị</th>
                             <th class="text-center">Xem Thiết Bị</th>
                         </tr>
                     </thead>
